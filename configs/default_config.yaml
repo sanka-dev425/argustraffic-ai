@@ -1,0 +1,57 @@
+detector:
+  model_name: yolov8n.pt
+incidents:
+  collision:
+    deceleration_factor: 0.6
+    enabled: true
+    min_co_stalled_frames: 10
+    overlap_iou_threshold: 0.12
+  emergency_vehicle:
+    enabled: true
+    highlight_corridor: true
+  pedestrian_danger:
+    enabled: true
+    proximity_critical_px: 50.0
+    proximity_warning_px: 90.0
+    time_to_collision_sec: 1.5
+  stalled_vehicle:
+    duration_seconds: 3.5
+    enabled: true
+    lane_zones_only: true
+    max_drift_px: 5.0
+  wrong_way:
+    deviation_angle_deg: 130.0
+    enabled: true
+    min_history_points: 8
+    min_speed_px: 2.5
+model:
+  confidence_threshold: 0.35
+  input_size: 640
+  iou_threshold: 0.45
+  name: yolov8n.pt
+  target_classes:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 5
+  - 7
+server:
+  host: 0.0.0.0
+  port: 8080
+  snapshot_dir: snapshots
+  stream_fps: 30
+system:
+  device: auto
+  half_precision: true
+  log_level: INFO
+tracker:
+  history_length: 60
+  match_thresh: 0.8
+  new_track_thresh: 0.6
+  track_buffer: 30
+  track_high_thresh: 0.5
+  track_low_thresh: 0.1
+  type: bytetrack
+video_source:
+  input: rtsp://admin:password@192.168.1.2:554/onvif1

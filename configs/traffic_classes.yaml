@@ -1,0 +1,47 @@
+# Traffic and Urban Class Mapping
+classes:
+  0:
+    name: "pedestrian"
+    category: "human"
+    color: [255, 75, 75]     # Bright Red / Coral
+    priority: "high"
+  1:
+    name: "bicycle"
+    category: "vulnerable"
+    color: [255, 165, 0]    # Orange
+    priority: "medium"
+  2:
+    name: "car"
+    category: "vehicle"
+    color: [0, 230, 118]    # Neon Green
+    priority: "normal"
+  3:
+    name: "motorcycle"
+    category: "vulnerable"
+    color: [255, 215, 0]    # Gold
+    priority: "medium"
+  5:
+    name: "bus"
+    category: "heavy_vehicle"
+    color: [0, 176, 255]    # Electric Cyan
+    priority: "high"
+  7:
+    name: "truck"
+    category: "heavy_vehicle"
+    color: [156, 39, 176]   # Purple
+    priority: "high"
+  9:
+    name: "traffic_light"
+    category: "infrastructure"
+    color: [255, 235, 59]   # Yellow
+    priority: "low"
+  11:
+    name: "stop_sign"
+    category: "infrastructure"
+    color: [244, 67, 54]    # Crimson
+    priority: "low"
+
+emergency_classes:
+  - "ambulance"
+  - "police"
+  - "fire_truck"

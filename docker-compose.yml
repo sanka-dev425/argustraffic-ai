@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  argustraffic:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: argustraffic-engine
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./snapshots:/app/snapshots
+    # Optional GPU reservation if nvidia-container-toolkit is installed
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]

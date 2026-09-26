@@ -1,0 +1,67 @@
+# Python Bytecode and Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution and Packaging
+build/
+dist/
+Output/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.exe
+*.msi
+*.zip
+
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Model Weights and Large Neural Checkpoints
+*.pt
+*.pth
+*.onnx
+*.engine
+*.bin
+
+# Test, Cache and Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+snapshots/
+scratch/
+*.log
+
+# Databases & Runtime State
+*.db
+*.sqlite3
+*.sqlite
+data/
+
+# Video Media Files (Keep git lightweight)
+*.mp4
+*.avi
+*.mkv
+*.mov
+!demo_traffic.mp4
+
+# IDEs & System Caches
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

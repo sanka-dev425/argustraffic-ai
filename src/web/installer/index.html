@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArgusTraffic AI - Enterprise Setup & Provisioning Wizard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="setup-shell">
+
+    <!-- Left Sidebar Stepper -->
+    <aside class="setup-sidebar">
+      <div>
+        <div class="brand-header">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="22" y1="12" x2="18" y2="12"></line>
+              <line x1="6" y1="12" x2="2" y2="12"></line>
+              <line x1="12" y1="6" x2="12" y2="2"></line>
+              <line x1="12" y1="22" x2="12" y2="18"></line>
+            </svg>
+          </div>
+          <div>
+            <div class="brand-name">ArgusTraffic AI</div>
+            <div class="brand-tag">ENTERPRISE SUITE v2.0</div>
+          </div>
+        </div>
+
+        <nav class="stepper">
+          <div class="step-item active" id="step-nav-1">
+            <div class="step-node">1</div>
+            <div class="step-label">License & Compliance</div>
+          </div>
+          <div class="step-item" id="step-nav-2">
+            <div class="step-node">2</div>
+            <div class="step-label">System Pre-Flight</div>
+          </div>
+          <div class="step-item" id="step-nav-3">
+            <div class="step-node">3</div>
+            <div class="step-label">Path & Components</div>
+          </div>
+          <div class="step-item" id="step-nav-4">
+            <div class="step-node">4</div>
+            <div class="step-label">Admin Security & Keys</div>
+          </div>
+          <div class="step-item" id="step-nav-5">
+            <div class="step-node">5</div>
+            <div class="step-label">Camera Fleet Discovery</div>
+          </div>
+          <div class="step-item" id="step-nav-6">
+            <div class="step-node">6</div>
+            <div class="step-label">Runtime Assembly</div>
+          </div>
+          <div class="step-item" id="step-nav-7">
+            <div class="step-node">7</div>
+            <div class="step-label">Deployment Ready</div>
+          </div>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <div style="color:var(--accent-green); font-weight:600;">● Defense-Grade Secure</div>
+        <div>IEEE 2030 / CJIS Compliant</div>
+      </div>
+    </aside>
+
+    <!-- Right Main Interactive Content -->
+    <main class="setup-content">
+
+      <!-- Step 1: EULA & Enterprise Compliance -->
+      <section class="step-view active" id="view-step-1">
+        <h1 class="view-title">Enterprise License & Regulatory Compliance</h1>
+        <p class="view-desc">Review the End User License Agreement and smart city data governance privacy standards.</p>
+
+        <div class="eula-container">
+          <p><strong>ARGUSTRAFFIC AI - AUTONOMOUS TRAFFIC INCIDENT & OPTICAL TELEMETRY SOFTWARE</strong></p>
+          <p>IMPORTANT — READ CAREFULLY: This Enterprise Software License Agreement is a legal contract between your organization (Municipal Traffic Authority, Smart City Operator, or Defense Contractor) and ArgusTraffic Systems.</p>
+          <br>
+          <p>1. <strong>CJIS & PRIVACY GOVERNANCE</strong>: Vehicle license plate captures and incident dossiers are protected under AES-256 / SHA-256 tamper-evident digital signatures. Unauthorized export is strictly logged in audit vaults.</p>
+          <br>
+          <p>2. <strong>REAL-TIME TELEMETRY</strong>: The software processes video streams locally on edge hardware with zero unencrypted external data leakage.</p>
+          <br>
+          <p>3. <strong>HIGH-AVAILABILITY DEPLOYMENT</strong>: Designed for uninterrupted operation across arterial corridors, highway intersections, and municipal camera networks.</p>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; align-items: center; gap: 12px;">
+          <input type="checkbox" id="chk-accept-license" checked style="width: 18px; height: 18px; accent-color: var(--accent-green); cursor: pointer;">
+          <label for="chk-accept-license" style="font-size: 0.88rem; cursor: pointer; color: var(--text-main);">
+            I accept the Enterprise Software Agreement and Municipal Privacy Standards
+          </label>
+        </div>
+      </section>
+
+      <!-- Step 2: System Pre-Flight & Permissions Check -->
+      <section class="step-view" id="view-step-2">
+        <h1 class="view-title">System Pre-Flight & Permission Diagnostics</h1>
+        <p class="view-desc">Verifying administrator execution privileges, disk capacity, and neural compute acceleration.</p>
+
+        <div class="diag-grid">
+          <div class="diag-card">
+            <div class="diag-header">Security Privilege Tier</div>
+            <div class="diag-value" style="color:var(--accent-green);">Elevated (Administrator)</div>
+            <div class="diag-badge" style="border-color:var(--accent-green); color:var(--accent-green);">UAC Verified</div>
+          </div>
+          <div class="diag-card">
+            <div class="diag-header">Storage Volume Capacity</div>
+            <div class="diag-value" id="diag-disk">128.4 GB Available</div>
+            <div class="diag-badge">Min 5.0 GB Required</div>
+          </div>
+          <div class="diag-card">
+            <div class="diag-header">Network Ports (8080 & 554)</div>
+            <div class="diag-value" style="color:var(--accent-green);">Available & Unrestricted</div>
+            <div class="diag-badge">Inbound RTSP/WS</div>
+          </div>
+          <div class="diag-card">
+            <div class="diag-header">Primary Compute Engine</div>
+            <div class="diag-value" id="diag-gpu">NVIDIA / DirectML Accelerated</div>
+            <div class="diag-badge" id="diag-gpu-badge">Hardware Neural Core</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 3: Installation Destination Path & Component Selection -->
+      <section class="step-view" id="view-step-3">
+        <h1 class="view-title">Installation Path & Subsystem Selection</h1>
+        <p class="view-desc">Select the local target directory and choose modular intelligence packages to activate.</p>
+
+        <div style="margin-bottom: 24px;">
+          <label style="font-size:0.82rem; font-weight:600; color:var(--text-muted); display:block; margin-bottom:8px;">
+            INSTALLATION DIRECTORY
+          </label>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="input-install-path" class="text-input" value="C:\Program Files\ArgusTraffic AI" style="flex:1;">
+            <button class="btn btn-sm" id="btn-browse-path">Browse...</button>
+          </div>
+        </div>
+
+        <div class="component-list">
+          <div class="component-row">
+            <input type="checkbox" checked disabled class="comp-chk">
+            <div class="comp-info">
+              <strong>Core Neural Vision Engine (YOLOv8 & Spatial Tracker)</strong>
+              <small>Real-time vehicle detection, lane-boundary tracking, collision & wrong-way rules</small>
+            </div>
+            <span class="comp-size">145 MB</span>
+          </div>
+
+          <div class="component-row">
+            <input type="checkbox" id="chk-comp-anpr" checked class="comp-chk">
+            <div class="comp-info">
+              <strong>Automatic Number Plate Recognition (ANPR / ALPR)</strong>
+              <small>OCR character transcription, plate extraction, and stolen vehicle watch-list audit</small>
+            </div>
+            <span class="comp-size">62 MB</span>
+          </div>
+
+          <div class="component-row">
+            <input type="checkbox" id="chk-comp-radar" checked class="comp-chk">
+            <div class="comp-info">
+              <strong>Optical Speed Radar & Trajectory Anomaly Intelligence</strong>
+              <small>Pixel-to-meter homography speed calculation, erratic swerving & illegal U-turn detection</small>
+            </div>
+            <span class="comp-size">28 MB</span>
+          </div>
+
+          <div class="component-row">
+            <input type="checkbox" id="chk-comp-daemon" checked class="comp-chk">
+            <div class="comp-info">
+              <strong>Background Windows Service Daemon (Auto-Start on Boot)</strong>
+              <small>Continuously supervises camera feeds and records forensic incidents in background</small>
+            </div>
+            <span class="comp-size">12 MB</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: Administrator Credentials & Cryptographic Master Key -->
+      <section class="step-view" id="view-step-4">
+        <h1 class="view-title">Initial SuperAdmin & Cryptographic Key</h1>
+        <p class="view-desc">Provision the primary administrator account and configure the HMAC-SHA256 signature key.</p>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">ADMINISTRATOR USERNAME</label>
+            <input type="text" id="admin-user" class="text-input" value="admin">
+          </div>
+          <div class="form-group">
+            <label class="form-label">OFFICIAL EMAIL ADDRESS</label>
+            <input type="email" id="admin-email" class="text-input" value="supervisor@city-traffic.gov">
+          </div>
+          <div class="form-group">
+            <label class="form-label">SUPERADMIN MASTER PASSWORD</label>
+            <input type="password" id="admin-pass" class="text-input" value="ArgusAdmin2026!">
+          </div>
+          <div class="form-group">
+            <label class="form-label">ORGANIZATION / MUNICIPAL AUTHORITY</label>
+            <input type="text" id="admin-org" class="text-input" value="Metropolitan Traffic Control Division">
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; padding: 14px 18px; background: rgba(0, 176, 255, 0.08); border: 1px solid rgba(0, 176, 255, 0.3); border-radius: 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-size:0.8rem; font-weight:700; color:var(--accent-cyan);">AUTOMATIC 256-BIT HMAC DISPATCH MASTER KEY</div>
+              <div style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); margin-top:4px;" id="disp-master-key">
+                e8f9a1b42c673d09e511bc840a234f981dc21184a56be019ac331904bf762e81
+              </div>
+            </div>
+            <button class="btn btn-sm" id="btn-regen-key">🔄 Regenerate</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 5: Camera Feed & Subnet Auto-Discovery -->
+      <section class="step-view" id="view-step-5">
+        <h1 class="view-title">Camera Fleet & Network Subnet Discovery</h1>
+        <p class="view-desc">Select active IP cameras, local USB webcams, or zero-config traffic simulation feed.</p>
+
+        <div class="scan-box">
+          <div class="scan-header">
+            <div>
+              <strong style="font-size:0.9rem;">Wi-Fi & ONVIF Camera Auto-Discovery</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Scans subnet (192.168.1.0/24) for iCSee, Hikvision, Dahua on port 554/8899</div>
+            </div>
+            <button id="btn-scan-cams" class="btn btn-sm">🔍 Auto-Scan Subnet</button>
+          </div>
+
+          <div class="discovered-list" id="discovered-cams-list">
+            <div class="cam-item selected" data-source="synthetic">
+              <div>
+                <strong style="color:var(--accent-green)">Camera 01: Highway Traffic Simulator (Built-in)</strong>
+                <div style="font-size:0.7rem; color:var(--text-dim)">Zero setup required | Multi-lane vehicle animation</div>
+              </div>
+              <span style="color:var(--accent-cyan); font-size:0.75rem; font-family:var(--font-mono)">DEFAULT</span>
+            </div>
+            <div class="cam-item" data-source="rtsp://admin:password@192.168.1.4:554/onvif1">
+              <div>
+                <strong>iCSee / ONVIF Cam (192.168.1.4)</strong>
+                <div style="font-size:0.7rem; color:var(--text-dim)">Source: rtsp://admin:password@192.168.1.4:554/onvif1</div>
+              </div>
+              <span style="color:var(--accent-green); font-size:0.75rem; font-family:var(--font-mono)">ONLINE</span>
+            </div>
+            <div class="cam-item" data-source="0">
+              <div>
+                <strong>Camera 03: Primary USB Webcam (Device 0)</strong>
+                <div style="font-size:0.7rem; color:var(--text-dim)">Direct onboard camera</div>
+              </div>
+              <span style="color:var(--text-dim); font-size:0.75rem; font-family:var(--font-mono)">DIRECT</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 6: Runtime Assembly & Pipeline Verification -->
+      <section class="step-view" id="view-step-6">
+        <h1 class="view-title">Assembling & Verifying Runtime Services</h1>
+        <p class="view-desc">Configuring neural weights, ANPR OCR checkpoints, cryptographic vault, and Windows service.</p>
+
+        <div class="progress-container">
+          <div style="font-size:0.95rem; font-weight:700;" id="progress-status-text">Initializing components...</div>
+          <div class="progress-bar-wrap">
+            <div class="progress-fill" id="progress-bar-fill"></div>
+          </div>
+          <div class="terminal-box" id="installer-terminal">
+            [+] System pre-flight checks verified...<br>
+            [+] Writing configuration to configs/default_config.yaml...<br>
+            [+] Provisioning initial SuperAdmin account with PBKDF2-SHA256...<br>
+            [+] Initializing ANPR OCR engine & speed radar homography...<br>
+            [+] Registering background surveillance daemon on port 8080...<br>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 7: Installation Complete -->
+      <section class="step-view" id="view-step-7">
+        <div style="text-align:center; padding: 30px 0;">
+          <div style="width:74px; height:74px; background:rgba(0,230,118,0.15); border:2px solid var(--accent-green); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 18px; box-shadow:0 0 35px rgba(0,230,118,0.4);">
+            <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#00e676" stroke-width="3">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <h1 class="view-title">ArgusTraffic AI Successfully Installed!</h1>
+          <p class="view-desc" style="max-width:540px; margin:0 auto 24px;">
+            The enterprise surveillance engine, ANPR number plate transcription, optical speed radar, and role-based security kernel are active and ready.
+          </p>
+
+          <div style="max-width:440px; margin:0 auto 28px; text-align:left; background:rgba(22,27,38,0.8); border:1px solid var(--border-color); border-radius:8px; padding:14px 18px;">
+            <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:6px;">PROVISIONED CREDENTIALS</div>
+            <div style="font-size:0.88rem; display:flex; justify-content:space-between;">
+              <span>Username: <strong style="color:#fff;" id="sum-user">admin</strong></span>
+              <span>Role: <strong style="color:var(--accent-cyan);">SUPER_ADMIN</strong></span>
+            </div>
+            <div style="font-size:0.8rem; color:var(--text-dim); margin-top:6px;">
+              Direct Port: <code style="font-family:var(--font-mono); color:var(--accent-green);">127.0.0.1:8080</code>
+            </div>
+          </div>
+
+          <button id="btn-finish-launch" class="btn btn-primary" style="margin: 0 auto; padding:14px 38px; font-size:1.02rem;">
+            🚀 Launch Standalone Command Center
+          </button>
+        </div>
+      </section>
+
+      <!-- Bottom Navigation Controls -->
+      <footer class="setup-actions">
+        <button id="btn-back" class="btn" style="visibility:hidden;">← Back</button>
+        <button id="btn-next" class="btn btn-primary">Next Step →</button>
+      </footer>
+
+    </main>
+
+  </div>
+
+  <script src="installer.js"></script>
+</body>
+</html>
