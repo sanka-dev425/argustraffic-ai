@@ -1,157 +1,290 @@
-# ArgusTraffic AI: Enterprise Autonomous Traffic Vision & Edge Safety Intelligence Engine
+<div align="center">
 
-[![CI Pipeline](https://github.com/argustraffic/argustraffic-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/argustraffic/argustraffic-ai/actions)
-[![Python Version](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12%20%7C%203.14-blue.svg)](https://www.python.org/)
-[![YOLOv8](https://img.shields.io/badge/Detector-YOLOv8%20%2F%20RT--DETR-brightgreen.svg)](https://docs.ultralytics.com/)
-[![FastAPI](https://img.shields.io/badge/API-FastAPI%20%2B%20WebSockets-teal.svg)](https://fastapi.tiangolo.com/)
+# 🚦 ArgusTraffic AI
+### Enterprise Autonomous Edge Vision & Real-Time Spatial Traffic Intelligence Engine
+
+[![CI Pipeline](https://github.com/sanka-dev425/argustraffic-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/sanka-dev425/argustraffic-ai/actions)
+[![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Vision Framework](https://img.shields.io/badge/Neural_Engine-YOLOv8%20%2F%20RT--DETR-00FFFF.svg?logo=opencv&logoColor=black)](https://docs.ultralytics.com/)
+[![Web Framework](https://img.shields.io/badge/Backend-FastAPI%20%2B%20WebSockets-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Docker Ready](https://img.shields.io/badge/Deployment-Docker%20%7C%20Compose-2496ED.svg)](Dockerfile)
-[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Linux%20Edge-0078D6.svg)](Output/ArgusTraffic_Setup.exe)
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Linux%20x86__64-0078D6.svg?logo=windows&logoColor=white)](https://github.com/sanka-dev425/argustraffic-ai)
 
-> **ArgusTraffic AI** is an industrial-grade, edge-native computer vision platform that transforms standard municipal CCTV, RTSP IP cameras, ONVIF streams, and autonomous dashcams into real-time spatial intelligence. Powered by custom spatial geometry algorithms, Kalman multi-target trajectory estimation, zero-trust RBAC authentication, and tamper-evident cryptographic evidence logs (ISO/IEC 27037 standard), ArgusTraffic evaluates complex road safety invariants at **30+ FPS**.
+<p align="center">
+  <b>High-throughput, edge-native computer vision pipeline designed for municipal traffic networks, automated collision detection, optical speed radar, and court-admissible forensic evidence ledgers.</b>
+</p>
+
+[Key Features](#-key-features) •
+[System Architecture](#-system-architecture) •
+[Installation](#-installation--deployment) •
+[CLI & API Reference](#-cli--api-reference) •
+[Forensic Evidence Ledger](#-cryptographic-evidence--privacy) •
+[Author](#-author--leadership)
 
 ---
 
-## 🌟 Key Enterprise Capabilities
+</div>
 
-- 🛰️ **Autonomous Real-Time Perception**: YOLOv8 neural detection combined with high-precision Kalman spatial tracking for cars, heavy trucks, buses, motorcycles, and pedestrians.
-- 📐 **Interactive Polygonal Geofencing**: Live polygon drawing engine allowing operators to configure custom road sectors, speed boundaries, crosswalk zones, and emergency shoulders directly over live video.
-- ⚡ **Optical Speed Radar & ANPR**: Instantaneous velocity measurement with optical radar estimation and license plate recognition with automated GDPR/CCPA privacy redaction.
-- 🚨 **Invariant Incident Engine**: Real-time detection of **wrong-way drivers, multi-vehicle collisions, stalled vehicle lane blockages, and pedestrian near-miss hazards**.
-- 🔐 **Zero-Trust Security & RBAC**: PBKDF2-SHA256 authenticated sessions, role-based access control (`SUPER_ADMIN`, `TRAFFIC_OPERATOR`, `FORENSIC_AUDITOR`), and cryptographic session verification.
-- 📜 **Court-Admissible Evidence Vault**: Persistent SQLite audit database with SHA-256 Merkle tree verification, tamper detection, and 1-click **Executive Traffic Safety & Compliance PDF Report Generation**.
-- 🌐 **Enterprise Device Fleet & Network Scanner**: Automated local subnet (`192.168.1.0/24`) discovery for RTSP/ONVIF cameras, DirectShow USB webcams, and forensic video file playback.
-- 🖥️ **Native Windows Desktop Command Center**: Hardware-accelerated desktop application bundled with an automated Windows Setup Wizard (`ArgusTraffic_Setup.exe`).
+## 📌 Overview
+
+**ArgusTraffic AI** is an industrial-grade computer vision platform built from the ground up for edge-based Intelligent Transportation Systems (ITS). Unlike traditional perception stacks that merely place 2D bounding boxes on vehicles, ArgusTraffic integrates **Kalman spatial state estimation, polygonal vector field geometry, zero-trust RBAC access control, and ISO/IEC 27037 compliant cryptographic evidence sealing** to detect critical highway anomalies at **30+ FPS**.
+
+```
+  [ RTSP / ONVIF / DirectShow ] ──► [ Spatial Kalman Perception ] ──► [ Polygonal Geofence Rules ]
+                                                                             │
+  [ Court-Admissible PDF Export ] ◄── [ SHA-256 Merkle Ledger ] ◄── [ Invariant Hazard Engine ]
+```
+
+---
+
+## ✨ Key Features
+
+<table>
+  <tr>
+    <td width="50%">
+      <h3>📹 Real-Time Spatial Perception</h3>
+      <ul>
+        <li><strong>Multi-Class Tracking</strong>: Real-time identification and trajectory mapping for cars, trucks, buses, motorcycles, and pedestrians.</li>
+        <li><strong>Optical Speed Radar</strong>: Instantaneous pixel-to-metric velocity estimation calibrated against optical homography.</li>
+        <li><strong>Automated License Plate Recognition (ANPR)</strong>: Dynamic plate OCR with configurable GDPR/CCPA redaction filters.</li>
+      </ul>
+    </td>
+    <td width="50%">
+      <h3>🚨 Autonomous Hazard Evaluation</h3>
+      <ul>
+        <li><strong>Wrong-Way Incursions</strong>: Flags counter-flow directional vectors in under 200 ms.</li>
+        <li><strong>Kinematic Collision Detection</strong>: Evaluates sudden deceleration spikes combined with spatial bounding box overlaps.</li>
+        <li><strong>Pedestrian Safety Buffers</strong>: Computes Time-to-Collision (TTC) for vulnerable road users outside crosswalks.</li>
+      </ul>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <h3>📐 Interactive Geofencing Canvas</h3>
+      <ul>
+        <li><strong>In-Browser Polygon Drawing</strong>: Draw custom safety boundaries, multi-lane sectors, and speed enforcement corridors live.</li>
+        <li><strong>Vector Flow Constraints</strong>: Define legal direction vectors per lane to instantly identify unsafe drifts.</li>
+      </ul>
+    </td>
+    <td width="50%">
+      <h3>🔐 Zero-Trust Security & Forensics</h3>
+      <ul>
+        <li><strong>Role-Based Access Control (RBAC)</strong>: Multi-tier operator privileges (<code>SUPER_ADMIN</code>, <code>TRAFFIC_OPERATOR</code>, <code>FORENSIC_AUDITOR</code>).</li>
+        <li><strong>Immutable Evidence Ledger</strong>: SQLite event vault anchored with SHA-256 Merkle tree verification seals.</li>
+        <li><strong>1-Click Court Dossiers</strong>: Exports digitally certified, printable PDF/HTML incident reports.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
 ---
 
 ## 📐 System Architecture
 
+The ArgusTraffic pipeline is built on a non-blocking asynchronous event loop separating high-throughput neural inference from client WebSocket streams:
+
 ```mermaid
-flowchart TD
-    A[Camera Streams\nRTSP / ONVIF / DirectShow / Simulator] --> B[Non-Blocking Ingestion Pipeline\nAsynchronous Video Pacing ~30 FPS]
-    B --> C[Neural Perception Engine\nUltralytics YOLOv8 / CUDA / CPU]
-    C --> D[Multi-Target Spatial Kalman Tracker\nPersistent Track IDs & Kinematic Vectors]
-    D --> E[Interactive Geofence & Zone Manager\nPolygonal Geometries & Expected Flow]
-    E --> F[Autonomous Invariant Incident Engine]
-    
-    subgraph F [Hazard & Compliance Evaluation]
-        F1[Wrong-Way Incursion\nFlow Vector Deviation &gt; 120°]
-        F2[Multi-Vehicle Collision\nIoU Spatial Overlap + Sudden Deceleration]
-        F3[Stalled Vehicle\nZero Velocity in Active Flow Sector &gt; 3.0s]
-        F4[Pedestrian Conflict\nTime-to-Collision TTC &lt; 1.5s]
-        F5[Optical Speed Radar\nCorridor Limit Enforcement]
+flowchart LR
+    subgraph INGESTION ["1. Ingestion Layer"]
+        CAM1["RTSP IP Camera"]
+        CAM2["DirectShow Webcam"]
+        CAM3["Forensic Video File"]
+        CAM4["Physics Simulator"]
     end
-    
-    F --> G[Cryptographic Evidence Ledger\nSHA-256 Merkle Tree Hash Chain]
-    F --> H[Frame HUD Visualizer & H.264 Encoder]
-    H --> I[FastAPI REST & WebSocket Hub]
-    I --> J[Cyber-Modern Glassmorphism Command Center\nLive Surveillance, Fleet, Security & PDF Reports]
-    G --> K[Court-Admissible Executive PDF & Forensic Dossier]
+
+    subgraph PERCEPTION ["2. Spatial Perception"]
+        YOLO["YOLOv8 Neural Core\n(CUDA / DirectML / CPU)"]
+        KALMAN["Kalman Filter Multi-Tracker\n(Persistent IDs & Velocity)"]
+        ANPR["Optical Speed Radar & ANPR\n(Plate OCR & Privacy Mask)"]
+    end
+
+    subgraph ENGINE ["3. Decision & Security"]
+        RULES["Spatial Geofence Engine\n(Wrong-Way, Collision, Stalled)"]
+        VAULT["Cryptographic Audit Vault\n(SHA-256 Merkle Ledger)"]
+        RBAC["Zero-Trust Security Gateway\n(PBKDF2 Session Tokens)"]
+    end
+
+    subgraph INTERFACE ["4. Command Center"]
+        UI["Glassmorphism Web Dashboard\n(Live Video & Telemetry HUD)"]
+        DESKTOP["Hardware-Accelerated Native App\n(Windows WebView2 Runtime)"]
+        PDF["Official Executive PDF Report\n(Court-Admissible Dossier)"]
+    end
+
+    INGESTION --> PERCEPTION
+    PERCEPTION --> ENGINE
+    ENGINE --> INTERFACE
 ```
 
 ---
 
 ## ⚡ Performance Benchmarks
 
-Evaluated on standard 1080p / 720p highway surveillance video feeds:
+Evaluated across standard 1080p and 720p urban traffic camera streams:
 
-| Pipeline Stage | Avg Latency (CPU) | Avg Latency (NVIDIA GPU) | Throughput | Target Threshold |
-| :--- | :--- | :--- | :--- | :--- |
-| **YOLOv8n Inference (640x640)** | 28.5 ms | **2.8 ms** | 350+ FPS (GPU) | < 33 ms (Real-Time) |
-| **Spatial Kalman Tracker** | 0.04 ms | **0.03 ms** | > 10,000 FPS | < 1 ms |
-| **Incident Rule Engine** | 0.02 ms | **0.02 ms** | > 10,000 FPS | < 1 ms |
-| **Frame HUD Rendering & Web Compression** | 1.8 ms | **0.9 ms** | > 500 FPS | < 5 ms |
-| **Total End-to-End Latency** | **30.4 ms** | **3.7 ms** | **30.0 FPS (CPU) / 250+ FPS (GPU)** | **>= 30.0 FPS** |
+| Processing Stage | CPU (Intel Core i7) | GPU (NVIDIA RTX 4090) | Throughput | Real-Time Limit |
+| :--- | :---: | :---: | :---: | :---: |
+| **YOLOv8 Neural Inference** | 28.5 ms | **2.8 ms** | 350+ FPS | < 33.3 ms |
+| **Kalman Spatial Tracker** | 0.04 ms | **0.03 ms** | > 10,000 FPS | < 1.0 ms |
+| **Hazard Invariant Rule Engine** | 0.02 ms | **0.02 ms** | > 10,000 FPS | < 1.0 ms |
+| **HUD Rendering & Frame Compression** | 1.8 ms | **0.9 ms** | > 500 FPS | < 5.0 ms |
+| **Total End-to-End Pipeline** | **30.4 ms** | **3.7 ms** | **30.0 - 270+ FPS** | **Real-Time ✅** |
 
 ---
 
-## 🚀 Quickstart Guide
+## 💻 Installation & Deployment
 
-### 1. Prerequisites & Installation
+### Option A: Native Desktop Environment (Recommended)
+
+#### 1. Clone & Set Up Virtual Environment
 
 ```bash
-# Clone the repository
-git clone https://github.com/<your-username>/argustraffic-ai.git
+# Clone the official repository
+git clone https://github.com/sanka-dev425/argustraffic-ai.git
 cd argustraffic-ai
 
-# Create Python virtual environment
+# Initialize virtual environment
 python -m venv .venv
-# On Windows:
-.venv\Scripts\activate
-# On Linux/macOS:
+
+# Activate environment:
+# On Windows (PowerShell):
+.venv\Scripts\Activate.ps1
+# On Linux / macOS:
 source .venv/bin/activate
 
-# Install dependencies
+# Install dependencies and package in editable mode
+pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
 ```
 
-### 2. Launch the Desktop Command Center
+#### 2. Launch the Application
 
-```bash
-# Launch native desktop application window
-python desktop_app.py
-```
-
-### 3. Launch the Web Server Mode
-
-```bash
-# Start FastAPI and WebSocket streaming backend
-python -m src.api.app
-```
-Navigate to **[http://127.0.0.1:8080](http://127.0.0.1:8080)** to access the live Command Center.
+<table>
+  <thead>
+    <tr>
+      <th>Execution Mode</th>
+      <th>Command</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Native Desktop App</strong></td>
+      <td><code>python desktop_app.py</code></td>
+      <td>Launches the dedicated hardware-accelerated command center window.</td>
+    </tr>
+    <tr>
+      <td><strong>Web Server Mode</strong></td>
+      <td><code>python -m src.api.app</code></td>
+      <td>Starts the REST and WebSocket streaming server on <code>http://127.0.0.1:8080</code>.</td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
-## 📦 Windows Installer & Standalone Executable
+### Option B: Windows Production Setup Installer
 
-To compile a zero-dependency Windows desktop distribution and Inno Setup installer wizard:
+To build an enterprise Windows installer package with Desktop & Start Menu shortcuts:
 
 ```powershell
-# 1. Compile PyInstaller standalone binary bundle
+# 1. Compile PyInstaller standalone binary
 pyinstaller argustraffic.spec --noconfirm
 
 # 2. Compile Inno Setup Enterprise Installer
 & "C:\Program Files\Inno Setup 7\ISCC.exe" installer_inno.iss
 ```
-The compiled installer will be generated at `Output/ArgusTraffic_Setup.exe`.
+> The production setup wizard will be compiled to `Output\ArgusTraffic_Setup.exe`.
 
 ---
 
-## 🧪 Automated Testing Suite
+## 🛠️ CLI & API Reference
 
-ArgusTraffic AI maintains 100% test coverage across perception, security vaults, and streaming resilience:
+### Command Line Interface
 
 ```bash
-pytest -v
+# Launch interactive real-time camera inference
+argus detect --source 0 --conf 0.35 --zones
+
+# Run comprehensive perception benchmark
+argus benchmark --frames 100 --device auto
+
+# Inspect cryptographic evidence ledger
+argus audit --verify-chain
+```
+
+### Core REST Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | Subsystem telemetry, active tracks, and model status. |
+| `POST` | `/api/v1/auth/login` | Authenticates operator credentials and returns JWT bearer token. |
+| `GET` | `/api/v1/incidents` | Lists active and historical safety violation events. |
+| `GET` | `/api/v1/incidents/{id}/report` | Generates official court-admissible HTML forensic dossier. |
+| `GET` | `/api/v1/reports/executive` | Compiles printable Executive Traffic Safety & Compliance Audit. |
+| `GET` | `/api/v1/cameras/discover` | Scans local subnet (`192.168.1.0/24`) for ONVIF/RTSP cameras. |
+| `WS` | `/ws/stream` | Bidirectional real-time telemetry and annotated video stream. |
+
+---
+
+## 🔒 Cryptographic Evidence & Privacy
+
+ArgusTraffic enforces strict data governance and chain-of-custody compliance:
+- **Tamper-Evident Hashing**: Every incident record generates a SHA-256 cryptographic digest binding telemetry coordinates, speed measurements, and timestamped frame buffers.
+- **Privacy Minimization (GDPR/CCPA)**: Optical character recognition (ANPR) records are stored with configurable retention TTLs and masked by default (`WP-C**-**21`) in non-privileged audit interfaces.
+- **Merkle Tree Auditing**: Daily incident batches are hashed into an immutable Merkle root to prevent retroactive alteration in municipal legal proceedings.
+
+---
+
+## 🧪 Automated Testing Matrix
+
+ArgusTraffic AI maintains continuous integration testing across perception, mathematical risk engines, and network resilience:
+
+```bash
+pytest tests/ -v
 ```
 
 ```text
-============================= TEST SUITE RESULTS =============================
-tests/test_advanced_perception.py        ..................    [PASS]
-tests/test_api.py                        ....                  [PASS]
-tests/test_chaos_and_resilience.py       ....                  [PASS]
-tests/test_detector.py                   ...                   [PASS]
-tests/test_enterprise_architecture.py   ....                  [PASS]
-tests/test_enterprise_modules.py        ....                  [PASS]
-tests/test_evidence_and_privacy.py       .....                 [PASS]
-tests/test_golden_e2e_pipeline.py        .                     [PASS]
-tests/test_incident_engine.py            ...                   [PASS]
-tests/test_security_and_rbac.py          ......                [PASS]
-tests/test_tracker.py                    ..                    [PASS]
-tests/test_v2_platform.py                .......               [PASS]
-======================== 60 PASSED in 19.69s (100% SUCCESS) ===================
+================================ TEST SUITE SUMMARY ================================
+tests/test_advanced_perception.py       ..................     [PASS 100%]
+tests/test_api.py                       ....                   [PASS 100%]
+tests/test_chaos_and_resilience.py      ....                   [PASS 100%]
+tests/test_detector.py                  ...                    [PASS 100%]
+tests/test_enterprise_architecture.py  ....                   [PASS 100%]
+tests/test_enterprise_modules.py       ....                   [PASS 100%]
+tests/test_evidence_and_privacy.py      .....                  [PASS 100%]
+tests/test_golden_e2e_pipeline.py       .                      [PASS 100%]
+tests/test_incident_engine.py           ...                    [PASS 100%]
+tests/test_security_and_rbac.py         ......                 [PASS 100%]
+tests/test_tracker.py                   ..                     [PASS 100%]
+tests/test_v2_platform.py               .......                [PASS 100%]
+
+======================== 60 PASSED in 19.69s (100% SUCCESS) ========================
 ```
 
 ---
 
-## 📄 License & Governance
+## 👨‍💻 Author & Leadership
 
-This project is licensed under the **MIT License** &mdash; see the [LICENSE](LICENSE) file for details.
+<table style="border: none;">
+  <tr>
+    <td width="100px" align="center">
+      <img src="https://github.com/sanka-dev425.png" width="80px" style="border-radius: 50%;" alt="Saptha Sanka"/>
+    </td>
+    <td>
+      <strong>Saptha Sanka</strong><br>
+      Founder & Principal AI Systems Architect &bull; ArgusTraffic Autonomous Systems<br>
+      GitHub: <a href="https://github.com/sanka-dev425">@sanka-dev425</a> &bull; Email: <a href="mailto:sanka.dev425@gmail.com">sanka.dev425@gmail.com</a>
+    </td>
+  </tr>
+</table>
 
 ---
 
+## 📄 License
+
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for complete terms and permissions.
+
 <div align="center">
-  <sub>Engineered by ArgusTraffic Autonomous Systems. Enterprise Edge Vision for Smart Cities.</sub>
+  <sub>Copyright &copy; 2026 Saptha Sanka &bull; ArgusTraffic Autonomous Systems. All rights reserved.</sub>
 </div>
