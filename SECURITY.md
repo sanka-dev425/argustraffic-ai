@@ -18,7 +18,7 @@ ArgusTraffic AI adheres to Zero-Trust and privacy-first engineering practices.
 
 If you discover a security vulnerability within ArgusTraffic AI (e.g. JWT privilege escalation, unauthenticated RTSP stream leaks, or tamper flaws in evidence generation), please **do not open a public GitHub issue**.
 
-Please report security vulnerabilities responsibly via email to **security@argustraffic.io** or through GitHub Security Advisories.
+Please report security vulnerabilities responsibly via email to **sapthasanka@gmail.com** or through GitHub Security Advisories.
 
 ---
 

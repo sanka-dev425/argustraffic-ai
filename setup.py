@@ -2,9 +2,11 @@ from setuptools import setup, find_packages
 
 setup(
     name="argustraffic",
-    version="1.0.0",
-    description="ArgusTraffic AI: Real-Time Autonomous Incident & Traffic Hazard Vision Intelligence Engine",
-    author="ArgusTraffic AI Contributors",
+    version="2.0.0",
+    description="ArgusTraffic AI: Enterprise Autonomous Incident & Traffic Hazard Vision Intelligence Engine",
+    author="Saptha Sanka",
+    author_email="sapthasanka@gmail.com",
+    url="https://github.com/sanka-dev425/argustraffic-ai",
     packages=find_packages(),
     python_requires=">=3.9",
     install_requires=[

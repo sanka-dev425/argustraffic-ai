@@ -274,7 +274,7 @@ tests/test_v2_platform.py               .......                [PASS 100%]
     <td>
       <strong>Saptha Sanka</strong><br>
       Founder & Principal AI Systems Architect &bull; ArgusTraffic Autonomous Systems<br>
-      GitHub: <a href="https://github.com/sanka-dev425">@sanka-dev425</a> &bull; Email: <a href="mailto:sanka.dev425@gmail.com">sanka.dev425@gmail.com</a>
+      GitHub: <a href="https://github.com/sanka-dev425">@sanka-dev425</a> &bull; Email: <a href="mailto:sapthasanka@gmail.com">sapthasanka@gmail.com</a>
     </td>
   </tr>
 </table>
