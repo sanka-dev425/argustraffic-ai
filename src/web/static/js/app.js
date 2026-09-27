@@ -1,5 +1,5 @@
 /**
- * ArgusTraffic AI - Enterprise Client Engine & Autonomous Vision Hub
+ * ARGUS TRAFFIC AI - Enterprise Client Engine & Autonomous Vision Hub
  * Handles real-time WebSocket telemetry, interactive spatial geofencing,
  * Zero-Trust RBAC authentication, device fleet switching, and executive reporting.
  * Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
@@ -20,6 +20,21 @@ let currentUser = {
   token: "argus_sec_tok_admin",
 };
 
+const viewBreadcrumbMap = {
+  "view-command-center": { root: "Operations", page: "Command Center" },
+  "view-live-operations": { root: "Operations", page: "Live Operations" },
+  "view-incidents": { root: "Intelligence", page: "Incidents & Emergency Dispatch" },
+  "view-analytics": { root: "Intelligence", page: "Traffic Analytics" },
+  "view-ai-intelligence": { root: "Intelligence", page: "AI Neural Intelligence" },
+  "view-reports": { root: "Evidence", page: "Report Center & Builder" },
+  "view-evidence-center": { root: "Evidence", page: "Evidence Center & Forensics" },
+  "view-devices": { root: "Infrastructure", page: "Device Fleet Management" },
+  "view-system-health": { root: "Infrastructure", page: "System Health & NOC" },
+  "view-security": { root: "Administration", page: "Security & Zero-Trust IAM" },
+  "view-audits": { root: "Administration", page: "Audit Logs & Ledger" },
+  "view-settings": { root: "Administration", page: "Platform Settings" },
+};
+
 // Initialize Application on DOM Ready
 document.addEventListener("DOMContentLoaded", () => {
   runBootSequence();
@@ -28,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupControls();
   setupDrawingCanvas();
   setupIncidentModal();
-  setupNavigationTabs();
+  setupSidebarNavigation();
   setupExecutiveReports();
   setupDeviceFleet();
   setupSecurityAccess();
@@ -94,7 +109,6 @@ function initAuthSession() {
     }
   }
 
-  // Quick Login Buttons
   document.getElementById("btn-quick-admin")?.addEventListener("click", () => {
     document.getElementById("login-username").value = "admin";
     document.getElementById("login-password").value = "ArgusAdmin2026!";
@@ -113,7 +127,6 @@ function initAuthSession() {
     document.getElementById("login-error")?.classList.add("hidden");
   });
 
-  // Login Form Submission
   const loginForm = document.getElementById("login-form");
   loginForm?.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -141,7 +154,6 @@ function initAuthSession() {
         errEl.innerText = "Invalid credentials. Please verify username and password.";
       }
     } catch (err) {
-      // Fallback local auth for testing
       currentUser = {
         username: u,
         full_name: u === "admin" ? "Saptha Sanka" : (u === "auditor_lead" ? "Legal Forensic Examiner" : "Arterial Patrol Officer"),
@@ -155,15 +167,14 @@ function initAuthSession() {
     }
   });
 
-  // Logout button
   document.getElementById("btn-logout")?.addEventListener("click", () => {
     document.getElementById("login-modal").classList.remove("hidden");
   });
 }
 
 function updateUserUI() {
-  const roleEl = document.getElementById("current-user-role");
-  const nameEl = document.getElementById("current-user-name");
+  const roleEl = document.getElementById("sidebar-user-role");
+  const nameEl = document.getElementById("sidebar-user-name");
   const tokPreview = document.getElementById("sec-token-preview");
 
   if (roleEl) roleEl.innerText = currentUser.role || "SUPER_ADMIN";
@@ -179,7 +190,6 @@ function initWebSocket() {
   const wsUrl = `${protocol}//${window.location.host}/ws/stream`;
   const statusEl = document.getElementById("connection-status");
   const streamImg = document.getElementById("stream-img");
-  const placeholder = document.getElementById("video-placeholder");
 
   console.log(`[ArgusTraffic] Connecting WebSocket to: ${wsUrl}`);
   try {
@@ -191,8 +201,7 @@ function initWebSocket() {
 
   ws.onopen = () => {
     console.log("[ArgusTraffic] WebSocket stream online.");
-    statusEl.innerHTML = `<span class="pulse-dot"></span><span>SYSTEM ONLINE</span>`;
-    if (placeholder) placeholder.style.display = "none";
+    statusEl.innerHTML = `<span class="pulse-dot"></span><span>SYSTEM ONLINE (320ms)</span>`;
   };
 
   ws.onmessage = (event) => {
@@ -205,14 +214,12 @@ function initWebSocket() {
   };
 
   ws.onclose = () => {
-    console.warn("[ArgusTraffic] WebSocket closed. Auto-reconnecting in 2s...");
     statusEl.innerHTML = `<span class="pulse-dot" style="background:#ff3d71;box-shadow:0 0 8px #ff3d71"></span><span>RECONNECTING</span>`;
     fallbackToMjpegStream();
     setTimeout(initWebSocket, 2000);
   };
 
   ws.onerror = (err) => {
-    console.warn("WebSocket error:", err);
     fallbackToMjpegStream();
   };
 }
@@ -229,7 +236,6 @@ function fallbackToMjpegStream() {
 }
 
 function handleFrameData(data) {
-  // 1. Update Video Frame
   const streamImg = document.getElementById("stream-img");
   if (data.image && streamImg) {
     streamImg.src = data.image;
@@ -239,35 +245,25 @@ function handleFrameData(data) {
     wall1.src = data.image;
   }
   const wall2 = document.getElementById("wall-stream-2");
-  if (data.image && wall2 && !wall2.src) {
-    wall2.src = data.image;
-  }
+  if (data.image && wall2 && !wall2.src) wall2.src = data.image;
   const wall3 = document.getElementById("wall-stream-3");
-  if (data.image && wall3 && !wall3.src) {
-    wall3.src = data.image;
-  }
+  if (data.image && wall3 && !wall3.src) wall3.src = data.image;
   const wall4 = document.getElementById("wall-stream-4");
-  if (data.image && wall4 && !wall4.src) {
-    wall4.src = data.image;
-  }
+  if (data.image && wall4 && !wall4.src) wall4.src = data.image;
 
-  // 2. Update Telemetry HUD
   if (data.fps !== undefined) {
     const fpsEl = document.getElementById("stat-fps");
     if (fpsEl) fpsEl.innerHTML = `${data.fps} <span class="metric-unit">FPS</span>`;
   }
   if (data.inference_ms !== undefined) {
     const latEl = document.getElementById("stat-latency");
-    const kpiLat = document.getElementById("kpi-latency");
     if (latEl) latEl.innerHTML = `${data.inference_ms} <span class="metric-unit">ms</span>`;
-    if (kpiLat) kpiLat.innerHTML = `${data.inference_ms} <span class="kpi-unit">ms</span>`;
   }
   if (data.active_tracks_count !== undefined) {
     const trEl = document.getElementById("stat-tracks");
     if (trEl) trEl.innerHTML = `${data.active_tracks_count} <span class="metric-unit">vehicles</span>`;
   }
 
-  // 3. Process New Incidents
   if (data.new_alerts && data.new_alerts.length > 0) {
     data.new_alerts.forEach((alert) => {
       recentIncidents.push(alert);
@@ -303,13 +299,11 @@ function addIncidentItem(alert) {
   `;
 
   item.addEventListener("click", () => {
-    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Corridor Alpha", alert.severity, "64.2 km/h", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
+    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Canal St / 8th Ave", alert.severity, "48 mph", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
   });
 
   feed.prepend(item);
-  if (feed.children.length > 50) {
-    feed.lastElementChild.remove();
-  }
+  if (feed.children.length > 50) feed.lastElementChild.remove();
 }
 
 function openForensicModal(id, title, location, severity, speed, plate) {
@@ -320,7 +314,7 @@ function openForensicModal(id, title, location, severity, speed, plate) {
   document.getElementById("m-time").innerText = new Date().toUTCString();
   document.getElementById("m-zone").innerText = location;
   document.getElementById("m-tracks").innerText = `${plate} (${speed})`;
-  document.getElementById("m-desc").innerText = `${title} flagged with verified spatial vector flow invariant. Certified court-admissible record.`;
+  document.getElementById("m-desc").innerText = `${title} detected with verified vector flow invariant. Sealed under ISO/IEC 27037 Court Evidence Standard.`;
 
   document.getElementById("btn-export-log").onclick = () => {
     const payload = {
@@ -378,9 +372,7 @@ function showToast(alert) {
 function triggerAudioAlert() {
   if (!audioEnabled) return;
   try {
-    if (!audioContext) {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    }
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = "sawtooth";
@@ -393,33 +385,46 @@ function triggerAudioAlert() {
     osc.start();
     osc.stop(audioContext.currentTime + 0.26);
   } catch (e) {
-    console.error("Audio playback error:", e);
+    console.error("Audio error:", e);
   }
 }
 
 /* ==========================================================================
-   4. NAVIGATION TABS & VIEW SWITCHER
+   4. SIDEBAR NAVIGATION & BREADCRUMB ROUTER
    ========================================================================== */
-function setupNavigationTabs() {
-  const navTabs = document.querySelectorAll(".nav-tab");
-  navTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const targetViewId = tab.dataset.view;
+function setupSidebarNavigation() {
+  const navItems = document.querySelectorAll(".nav-item");
+  const rootBc = document.querySelector(".bc-root");
+  const pageBc = document.getElementById("breadcrumb-title");
+
+  navItems.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const targetViewId = btn.dataset.view;
       if (!targetViewId) return;
 
-      navTabs.forEach((t) => t.classList.remove("active"));
-      tab.classList.add("active");
+      navItems.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
 
-      document.querySelectorAll("main.main-container").forEach((m) => m.classList.add("hidden"));
-      const targetEl = document.getElementById(targetViewId);
-      if (targetEl) targetEl.classList.remove("hidden");
+      document.querySelectorAll(".content-view").forEach((view) => view.classList.add("hidden"));
+      const targetView = document.getElementById(targetViewId);
+      if (targetView) targetView.classList.remove("hidden");
+
+      if (viewBreadcrumbMap[targetViewId]) {
+        if (rootBc) rootBc.innerText = viewBreadcrumbMap[targetViewId].root;
+        if (pageBc) pageBc.innerText = viewBreadcrumbMap[targetViewId].page;
+      }
     });
   });
 }
 
 function switchToLiveOps() {
-  const liveTab = document.getElementById("tab-live-operations");
-  if (liveTab) liveTab.click();
+  const btn = document.querySelector('[data-view="view-live-operations"]');
+  if (btn) btn.click();
+}
+
+function switchToIncidents() {
+  const btn = document.querySelector('[data-view="view-incidents"]');
+  if (btn) btn.click();
 }
 
 function ackCurrentAlert() {
@@ -435,7 +440,6 @@ function ackCurrentAlert() {
    5. CONTROLS, PTZ & INSPECTOR
    ========================================================================== */
 function setupControls() {
-  // Confidence Slider
   const confSlider = document.getElementById("conf-slider");
   const confVal = document.getElementById("conf-val");
   confSlider?.addEventListener("input", (e) => {
@@ -445,7 +449,6 @@ function setupControls() {
     }
   });
 
-  // Toggle Zones
   const btnZones = document.getElementById("btn-toggle-zones");
   btnZones?.addEventListener("click", () => {
     btnZones.classList.toggle("active");
@@ -454,7 +457,6 @@ function setupControls() {
     }
   });
 
-  // Toggle Trajectories
   const btnTraj = document.getElementById("btn-toggle-traj");
   btnTraj?.addEventListener("click", () => {
     btnTraj.classList.toggle("active");
@@ -463,7 +465,6 @@ function setupControls() {
     }
   });
 
-  // Toggle Audio Siren
   const btnAudio = document.getElementById("btn-toggle-audio");
   btnAudio?.addEventListener("click", () => {
     audioEnabled = !audioEnabled;
@@ -471,7 +472,6 @@ function setupControls() {
     btnAudio.innerText = audioEnabled ? "🔊 Siren Active" : "🔇 Siren Muted";
   });
 
-  // Snapshot
   const btnSnapshot = document.getElementById("btn-snapshot");
   btnSnapshot?.addEventListener("click", () => {
     const streamImg = document.getElementById("stream-img");
@@ -483,7 +483,6 @@ function setupControls() {
     }
   });
 
-  // Fullscreen
   const btnFullscreen = document.getElementById("btn-fullscreen");
   btnFullscreen?.addEventListener("click", () => {
     const wrapper = document.getElementById("video-wrapper");
@@ -703,15 +702,9 @@ function setupDeviceFleet() {
   });
 
   const modal = document.getElementById("camera-modal");
-  document.getElementById("btn-add-camera-modal")?.addEventListener("click", () => {
-    modal.classList.remove("hidden");
-  });
-  document.getElementById("camera-modal-close")?.addEventListener("click", () => {
-    modal.classList.add("hidden");
-  });
-  document.getElementById("btn-cancel-add-cam")?.addEventListener("click", () => {
-    modal.classList.add("hidden");
-  });
+  document.getElementById("btn-add-camera-modal")?.addEventListener("click", () => modal.classList.remove("hidden"));
+  document.getElementById("camera-modal-close")?.addEventListener("click", () => modal.classList.add("hidden"));
+  document.getElementById("btn-cancel-add-cam")?.addEventListener("click", () => modal.classList.add("hidden"));
 
   document.getElementById("btn-save-new-cam")?.addEventListener("click", () => {
     const name = document.getElementById("new-cam-name").value.trim() || "New IP Camera";
@@ -751,17 +744,6 @@ function setupSecurityAccess() {
 function setupAudits() {
   document.getElementById("btn-refresh-audit")?.addEventListener("click", () => {
     showToast({ incident_type: "AUDIT", description: "Refreshed cryptographic audit ledger." });
-  });
-
-  document.getElementById("btn-export-audit-json")?.addEventListener("click", () => {
-    const dummy = [{ timestamp: Date.now(), actor: currentUser.username, action: "AUDIT_EXPORT", details: "Exported audit ledger" }];
-    const blob = new Blob([JSON.stringify(dummy, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `argus_audit_ledger_${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
   });
 }
 

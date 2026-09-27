@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArgusTraffic AI - Enterprise Autonomous Vision Command Center</title>
+  <title>ARGUS TRAFFIC AI - AI Traffic Intelligence Platform</title>
   <meta name="description" content="Industrial-grade Real-Time Edge Vision Platform for Autonomous Traffic Hazard & Incident Detection.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,8 +24,8 @@
           <line x1="12" y1="22" x2="12" y2="18"></line>
         </svg>
       </div>
-      <div class="boot-title">ARGUSTRAFFIC AI</div>
-      <div class="boot-sub">ENTERPRISE AUTONOMOUS VISION PLATFORM v2.0</div>
+      <div class="boot-title">ARGUS TRAFFIC AI</div>
+      <div class="boot-sub">AI TRAFFIC INTELLIGENCE PLATFORM v2.0</div>
 
       <div class="boot-logs" id="boot-log-box">
         <div class="boot-line active">▶ Initializing PyTorch Neural Perception Engine (YOLOv8 Core)...</div>
@@ -77,1248 +77,965 @@
     </div>
   </div>
 
-  <!-- Top Navigation Header -->
-  <header class="header">
-    <div class="brand">
-      <div class="brand-icon">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"></circle>
-          <line x1="22" y1="12" x2="18" y2="12"></line>
-          <line x1="6" y1="12" x2="2" y2="12"></line>
-          <line x1="12" y1="6" x2="12" y2="2"></line>
-          <line x1="12" y1="22" x2="12" y2="18"></line>
-        </svg>
-      </div>
-      <div>
-        <div class="brand-title">
-          ArgusTraffic AI
-          <span class="brand-badge">ENTERPRISE v2.0</span>
+  <!-- Main App Shell with Left Sidebar & Topbar Layout -->
+  <div class="app-layout">
+
+    <!-- Left Master Sidebar Navigation -->
+    <aside class="sidebar-master">
+      <div class="sidebar-brand">
+        <div class="brand-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00e5ff" stroke-width="2.5">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="22" y1="12" x2="18" y2="12"></line>
+            <line x1="6" y1="12" x2="2" y2="12"></line>
+            <line x1="12" y1="6" x2="12" y2="2"></line>
+            <line x1="12" y1="22" x2="12" y2="18"></line>
+          </svg>
         </div>
-        <div class="brand-subtitle">Autonomous Edge Spatial Hazard & Device Fleet Intelligence</div>
-      </div>
-    </div>
-
-    <!-- Center Navigation Switcher -->
-    <nav class="header-nav" aria-label="Main Navigation">
-      <button class="nav-tab active" id="tab-command-center" data-view="view-command-center">🎛️ Command Center</button>
-      <button class="nav-tab" id="tab-live-operations" data-view="view-live-operations">📹 Live Operations</button>
-      <button class="nav-tab" id="tab-incidents" data-view="view-incidents">🚨 Incidents <span class="nav-badge" id="nav-incident-badge">3</span></button>
-      <button class="nav-tab" id="tab-analytics" data-view="view-analytics">📊 Analytics</button>
-      <button class="nav-tab" id="tab-ai-intelligence" data-view="view-ai-intelligence">🧠 AI Intelligence</button>
-      <button class="nav-tab" id="tab-reports" data-view="view-reports">⚖️ Report Center</button>
-      <button class="nav-tab" id="tab-devices" data-view="view-devices">🌐 Devices</button>
-      <button class="nav-tab" id="tab-security" data-view="view-security">🔐 Security</button>
-      <button class="nav-tab" id="tab-audits" data-view="view-audits">📜 Audits</button>
-    </nav>
-
-    <!-- User Profile & Heartbeat Status -->
-    <div class="header-right">
-      <div class="clock-display" id="header-clock">14:42:18 UTC</div>
-      <div class="user-badge" id="header-user-badge">
-        <span class="user-role-tag" id="current-user-role">SUPER_ADMIN</span>
-        <span class="user-name" id="current-user-name">Saptha Sanka</span>
-        <button class="btn-logout" id="btn-logout" title="Lock Session / Logout">🔒</button>
-      </div>
-      <div class="status-pill" id="connection-status">
-        <span class="pulse-dot"></span>
-        <span>SYSTEM ONLINE</span>
-      </div>
-    </div>
-  </header>
-
-  <!-- =========================================================================
-       VIEW 1: TRAFFIC COMMAND CENTER (Figma View 1)
-       ========================================================================= -->
-  <main class="main-container" id="view-command-center">
-
-    <!-- Emergency Critical Alert Banner -->
-    <div class="emergency-alert-banner" id="emergency-banner">
-      <div class="alert-banner-left">
-        <span class="alert-pulse-icon">🚨</span>
-        <div class="alert-banner-content">
-          <span class="alert-banner-tag">CRITICAL ALERT</span>
-          <span class="alert-banner-text" id="alert-banner-text">Wrong-way vehicle detected on Southbound Arterial Corridor &bull; Camera 04</span>
-        </div>
-      </div>
-      <div class="alert-banner-right">
-        <div class="alert-sla-badge">
-          <span class="sla-dot"></span>
-          <span>SLA: <strong id="sla-countdown">01:42</strong></span>
-        </div>
-        <button class="btn-alert-action" id="btn-assess-alert" onclick="switchToLiveOps()">Assess Now &rarr;</button>
-        <button class="btn-alert-ack" id="btn-ack-alert" onclick="ackCurrentAlert()">Acknowledge</button>
-      </div>
-    </div>
-
-    <!-- 5 KPI Summary Metric Cards with Sparklines -->
-    <div class="kpi-grid-5">
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <span class="kpi-title">TOTAL VEHICLES MONITORED</span>
-          <span class="kpi-trend up">+12.4% &uarr;</span>
-        </div>
-        <div class="kpi-val" id="kpi-total-vehicles">14,892</div>
-        <div class="kpi-footer">
-          <div class="sparkline-bar"><div style="width: 82%;"></div></div>
-          <span>Active Flow Rate</span>
+        <div class="brand-text">
+          <div class="brand-title">ARGUS TRAFFIC AI</div>
+          <div class="brand-subtitle">Metro City Transportation Authority</div>
         </div>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <span class="kpi-title">ACTIVE HAZARDS</span>
-          <span class="kpi-tag alert" id="kpi-hazard-tag">3 ACTIVE</span>
-        </div>
-        <div class="kpi-val val-red" id="kpi-active-hazards">3</div>
-        <div class="kpi-footer">
-          <span class="kpi-sub-alert">2 Critical &bull; 1 Warning</span>
-        </div>
+      <div class="shift-banner">
+        <span class="shift-indicator">●</span>
+        <span>Shift: Alpha (06:00 - 18:00)</span>
       </div>
 
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <span class="kpi-title">AVG CORRIDOR SPEED</span>
-          <span class="kpi-trend up">Optimal</span>
-        </div>
-        <div class="kpi-val val-cyan" id="kpi-avg-speed">48.2 <span class="kpi-unit">km/h</span></div>
-        <div class="kpi-footer">
-          <div class="sparkline-bar cyan"><div style="width: 76%;"></div></div>
-          <span>Limit: 60 km/h</span>
+      <!-- Navigation Menu Groups -->
+      <nav class="sidebar-nav">
+        
+        <!-- Group 1: OPERATIONS -->
+        <div class="nav-group-title">OPERATIONS</div>
+        <button class="nav-item active" data-view="view-command-center">
+          <span class="nav-icon">🎛️</span>
+          <span>Command Center</span>
+        </button>
+        <button class="nav-item" data-view="view-live-operations">
+          <span class="nav-icon">📹</span>
+          <span>Live Operations</span>
+        </button>
+
+        <!-- Group 2: INTELLIGENCE -->
+        <div class="nav-group-title">INTELLIGENCE</div>
+        <button class="nav-item" data-view="view-incidents">
+          <span class="nav-icon">🚨</span>
+          <span>Incidents</span>
+          <span class="nav-badge alert" id="sidebar-incident-badge">12</span>
+        </button>
+        <button class="nav-item" data-view="view-analytics">
+          <span class="nav-icon">📊</span>
+          <span>Analytics</span>
+        </button>
+        <button class="nav-item" data-view="view-ai-intelligence">
+          <span class="nav-icon">🧠</span>
+          <span>AI Intelligence</span>
+        </button>
+
+        <!-- Group 3: EVIDENCE -->
+        <div class="nav-group-title">EVIDENCE</div>
+        <button class="nav-item" data-view="view-reports">
+          <span class="nav-icon">📄</span>
+          <span>Reports</span>
+          <span class="nav-badge count">284</span>
+        </button>
+        <button class="nav-item" data-view="view-evidence-center">
+          <span class="nav-icon">⚖️</span>
+          <span>Evidence Center</span>
+        </button>
+
+        <!-- Group 4: INFRASTRUCTURE -->
+        <div class="nav-group-title">INFRASTRUCTURE</div>
+        <button class="nav-item" data-view="view-devices">
+          <span class="nav-icon">🌐</span>
+          <span>Device Fleet</span>
+          <span class="nav-badge neutral">1,869</span>
+        </button>
+        <button class="nav-item" data-view="view-system-health">
+          <span class="nav-icon">⚡</span>
+          <span>System Health</span>
+          <span class="nav-badge good">99.98%</span>
+        </button>
+
+        <!-- Group 5: ADMINISTRATION -->
+        <div class="nav-group-title">ADMINISTRATION</div>
+        <button class="nav-item" data-view="view-security">
+          <span class="nav-icon">🔐</span>
+          <span>Security & IAM</span>
+        </button>
+        <button class="nav-item" data-view="view-audits">
+          <span class="nav-icon">📜</span>
+          <span>Audit Logs</span>
+        </button>
+        <button class="nav-item" data-view="view-settings">
+          <span class="nav-icon">⚙️</span>
+          <span>Settings</span>
+        </button>
+
+      </nav>
+
+      <!-- Sidebar Footer User Profile -->
+      <div class="sidebar-footer">
+        <div class="user-profile-box">
+          <div class="user-avatar">SS</div>
+          <div class="user-info">
+            <div class="user-name" id="sidebar-user-name">Saptha Sanka</div>
+            <div class="user-role" id="sidebar-user-role">SUPER_ADMIN</div>
+          </div>
+          <button class="btn-sidebar-lock" id="btn-logout" title="Lock Session">🔒</button>
         </div>
       </div>
+    </aside>
 
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <span class="kpi-title">INFERENCE LATENCY</span>
-          <span class="kpi-trend good">Edge Tensor</span>
-        </div>
-        <div class="kpi-val val-emerald" id="kpi-latency">11.4 <span class="kpi-unit">ms</span></div>
-        <div class="kpi-footer">
-          <span class="kpi-sub-text">Zero-Copy GPU Core</span>
-        </div>
-      </div>
+    <!-- Main Content Area -->
+    <div class="main-content-wrapper">
 
-      <div class="kpi-card">
-        <div class="kpi-top">
-          <span class="kpi-title">SYSTEM UPTIME</span>
-          <span class="kpi-trend good">99.98%</span>
-        </div>
-        <div class="kpi-val val-emerald">99.98<span class="kpi-unit">%</span></div>
-        <div class="kpi-footer">
-          <span class="kpi-sub-text">4/4 Nodes Healthy</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Command Center Workspace (2/3 Left Matrix & 1/3 Right Priority Feeds) -->
-    <div class="cmd-layout">
-
-      <!-- Left 2/3: Live Camera Viewport & GIS Map -->
-      <section class="cmd-main-col">
-
-        <!-- 4-Up Live Video Wall Matrix -->
-        <div class="wall-card">
-          <div class="wall-header">
-            <div class="wall-title-box">
-              <span class="feed-live-dot"></span>
-              <span class="wall-title">PRIMARY SURVEILLANCE MATRIX</span>
-              <span class="wall-codec">H.264 / WEBSOCKET 30 FPS</span>
-            </div>
-            <div class="wall-actions">
-              <button class="btn btn-sm btn-outline" onclick="switchToLiveOps()">Open Live Operations &rarr;</button>
-            </div>
+      <!-- Top Header Bar -->
+      <header class="top-header">
+        <div class="header-left">
+          <div class="breadcrumb" id="current-breadcrumb">
+            <span class="bc-root">Operations</span>
+            <span class="bc-sep">/</span>
+            <span class="bc-active" id="breadcrumb-title">Command Center</span>
           </div>
-
-          <!-- 4-Up Matrix Grid -->
-          <div class="camera-wall-grid" id="camera-wall-grid">
-            <!-- Node 1: Main Stream -->
-            <div class="wall-node active" id="wall-node-1" onclick="switchStreamSource('synthetic')">
-              <div class="wall-node-header">
-                <span class="node-tag">CAM-01: HIGHWAY JUNCTION</span>
-                <span class="node-status live">LIVE</span>
-              </div>
-              <div class="wall-node-feed">
-                <img id="wall-stream-1" class="wall-stream-img" alt="Cam 01 Feed" />
-                <div class="stream-overlay-tag">30 FPS &bull; 11.4 ms</div>
-              </div>
-            </div>
-
-            <!-- Node 2: Downtown Intersection -->
-            <div class="wall-node" id="wall-node-2" onclick="switchStreamSource('0')">
-              <div class="wall-node-header">
-                <span class="node-tag">CAM-02: DOWNTOWN INTERSECTION</span>
-                <span class="node-status live">LIVE</span>
-              </div>
-              <div class="wall-node-feed">
-                <img id="wall-stream-2" class="wall-stream-img" alt="Cam 02 Feed" />
-                <div class="stream-overlay-tag">USB UVC &bull; 30 FPS</div>
-              </div>
-            </div>
-
-            <!-- Node 3: Pedestrian Crosswalk -->
-            <div class="wall-node" id="wall-node-3" onclick="switchStreamSource('demo_traffic.mp4')">
-              <div class="wall-node-header">
-                <span class="node-tag">CAM-03: PEDESTRIAN CROSSWALK</span>
-                <span class="node-status playback">PLAYBACK</span>
-              </div>
-              <div class="wall-node-feed">
-                <img id="wall-stream-3" class="wall-stream-img" alt="Cam 03 Feed" />
-                <div class="stream-overlay-tag">MP4 &bull; 30 FPS</div>
-              </div>
-            </div>
-
-            <!-- Node 4: Northbound Expressway -->
-            <div class="wall-node alert" id="wall-node-4" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
-              <div class="wall-node-header">
-                <span class="node-tag">CAM-04: NORTHBOUND EXPRESSWAY</span>
-                <span class="node-status alert">INCIDENT</span>
-              </div>
-              <div class="wall-node-feed">
-                <img id="wall-stream-4" class="wall-stream-img" alt="Cam 04 Feed" />
-                <div class="stream-overlay-tag alert">WRONG-WAY &bull; 78.5 km/h</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Live ANPR & Optical Speed Radar Telemetry Strip -->
-          <div class="anpr-radar-ribbon">
-            <div class="ribbon-title">
-              <span class="pulse-dot-cyan"></span>
-              <span>LIVE ANPR & OPTICAL SPEED RADAR</span>
-            </div>
-            <div class="anpr-chips-container" id="anpr-chips-list">
-              <div class="anpr-chip">
-                <span class="chip-plate">WP-CAR-7821</span>
-                <span class="chip-speed normal">54.2 km/h</span>
-                <span class="chip-status">TRACK #1</span>
-              </div>
-              <div class="anpr-chip">
-                <span class="chip-plate">CP-HVY-3012</span>
-                <span class="chip-speed speeding">78.5 km/h ⚠️</span>
-                <span class="chip-status">SPEEDING</span>
-              </div>
-              <div class="anpr-chip">
-                <span class="chip-plate">SP-BUS-4491</span>
-                <span class="chip-speed normal">42.0 km/h</span>
-                <span class="chip-status">TRACK #3</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- GIS City Spatial Map & Traffic Density Radar -->
-        <div class="panel-card gis-card">
-          <div class="panel-header">
-            <div class="panel-title">GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY</div>
-            <div class="panel-sub">Real-Time Municipal Sensor Nodes & Congestion Vectors</div>
-          </div>
-          <div class="gis-map-viewport" id="gis-map-viewport">
-            <svg class="gis-svg" viewBox="0 0 800 260" preserveAspectRatio="none">
-              <!-- Grid Lines -->
-              <defs>
-                <pattern id="gis-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(30, 41, 59, 0.4)" stroke-width="1"/>
-                </pattern>
-              </defs>
-              <rect width="800" height="260" fill="url(#gis-grid)" />
-              
-              <!-- Arterial Highway Roads -->
-              <path d="M 50 130 Q 250 80 400 130 T 750 130" fill="none" stroke="#1e293b" stroke-width="18" stroke-linecap="round"/>
-              <path d="M 50 130 Q 250 80 400 130 T 750 130" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="6,6"/>
-              
-              <path d="M 400 20 L 400 240" fill="none" stroke="#1e293b" stroke-width="14" stroke-linecap="round"/>
-              <path d="M 400 20 L 400 240" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="4,4"/>
-
-              <!-- Camera Sensor Markers -->
-              <!-- CAM-01 -->
-              <g transform="translate(180, 105)" class="gis-marker" onclick="switchStreamSource('synthetic')">
-                <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
-                <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-01 (Highway Alpha)</text>
-              </g>
-
-              <!-- CAM-02 -->
-              <g transform="translate(400, 130)" class="gis-marker" onclick="switchStreamSource('0')">
-                <circle cx="0" cy="0" r="14" fill="rgba(0, 230, 118, 0.2)" stroke="#00e676" stroke-width="2"/>
-                <circle cx="0" cy="0" r="5" fill="#00e676"/>
-                <text x="18" y="4" fill="#00e676" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-02 (Central Junction)</text>
-              </g>
-
-              <!-- CAM-03 -->
-              <g transform="translate(400, 60)" class="gis-marker" onclick="switchStreamSource('demo_traffic.mp4')">
-                <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
-                <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-03 (Crosswalk North)</text>
-              </g>
-
-              <!-- CAM-04 Critical Incident Marker -->
-              <g transform="translate(620, 130)" class="gis-marker alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
-                <circle cx="0" cy="0" r="18" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" stroke-width="2" class="pulse-marker"/>
-                <circle cx="0" cy="0" r="6" fill="#ef4444"/>
-                <text x="22" y="4" fill="#ef4444" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-04 ⚠️ INCIDENT</text>
-              </g>
-            </svg>
+          <div class="jurisdiction-pill">
+            <span class="pill-dot"></span>
+            <span>Metro City Transportation Authority</span>
           </div>
         </div>
 
-      </section>
-
-      <!-- Right 1/3: Priority Incidents & Live Events -->
-      <aside class="cmd-side-col">
-
-        <!-- Priority Incidents Queue -->
-        <div class="panel-card priority-panel">
-          <div class="panel-header">
-            <div class="panel-title">PRIORITY INCIDENTS QUEUE</div>
-            <span class="badge-critical" id="side-incident-count">3 ACTIVE</span>
-          </div>
-
-          <div class="priority-incident-list" id="priority-incident-list">
-            <!-- Item 1 -->
-            <div class="priority-item critical" onclick="openForensicModal('INC-8492', 'Wrong-Way Vehicle', 'CAM-04: Northbound Expressway', 'CRITICAL', '78.5 km/h', 'CP-HVY-3012')">
-              <div class="pri-top">
-                <span class="pri-badge critical">CRITICAL</span>
-                <span class="pri-time">14:41:02</span>
-              </div>
-              <div class="pri-title">Wrong-Way Vehicle Detected</div>
-              <div class="pri-meta">Cam 04 &bull; Plate: <code>CP-HVY-3012</code> &bull; Speed: <strong>78.5 km/h</strong></div>
-              <div class="pri-actions">
-                <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                <button class="btn btn-xs btn-outline">Acknowledge</button>
-              </div>
-            </div>
-
-            <!-- Item 2 -->
-            <div class="priority-item warning" onclick="openForensicModal('INC-8491', 'Pedestrian Crosswalk Conflict', 'CAM-03: Pedestrian Crosswalk', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">
-              <div class="pri-top">
-                <span class="pri-badge warning">HIGH</span>
-                <span class="pri-time">14:38:45</span>
-              </div>
-              <div class="pri-title">Crosswalk Hazard Risk</div>
-              <div class="pri-meta">Cam 03 &bull; Person in Zone &bull; TTC: <strong>1.4s</strong></div>
-              <div class="pri-actions">
-                <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                <button class="btn btn-xs btn-outline">Acknowledge</button>
-              </div>
-            </div>
-
-            <!-- Item 3 -->
-            <div class="priority-item info" onclick="openForensicModal('INC-8490', 'Optical Speed Violation', 'CAM-01: Highway Corridor', 'MEDIUM', '82.4 km/h', 'SP-BUS-4491')">
-              <div class="pri-top">
-                <span class="pri-badge info">MEDIUM</span>
-                <span class="pri-time">14:35:19</span>
-              </div>
-              <div class="pri-title">Optical Radar Speed Violation</div>
-              <div class="pri-meta">Cam 01 &bull; 82.4 km/h in 60 km/h Zone</div>
-              <div class="pri-actions">
-                <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                <button class="btn btn-xs btn-outline">Acknowledge</button>
-              </div>
-            </div>
+        <div class="header-center">
+          <div class="global-search-bar">
+            <span class="search-icon">🔍</span>
+            <input type="text" placeholder="Search cameras, incidents, license plates, or nodes..." class="search-input" />
           </div>
         </div>
 
-        <!-- Live Real-Time Event Stream -->
-        <div class="panel-card event-panel">
-          <div class="panel-header">
-            <div class="panel-title">LIVE EVENT STREAM</div>
-            <div class="panel-sub">Autonomous Invariant Engine</div>
+        <div class="header-right">
+          <div class="clock-display" id="header-clock">14:42:18 UTC</div>
+          <div class="status-pill" id="connection-status">
+            <span class="pulse-dot"></span>
+            <span>SYSTEM ONLINE (320ms)</span>
           </div>
-
-          <div class="incident-feed-list" id="incident-feed">
-            <div class="empty-feed" id="empty-feed-placeholder">
-              <div class="empty-icon">🛡️</div>
-              <div class="empty-text">Awaiting traffic anomalies...</div>
-              <div class="empty-sub">Monitoring lane flow vectors, speed thresholds, and wrong-way trajectories.</div>
-            </div>
-          </div>
-        </div>
-
-      </aside>
-
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 2: REAL-TIME LIVE OPERATIONS (Figma View 2)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-live-operations">
-
-    <div class="live-ops-layout">
-
-      <!-- Left Video Viewport Area -->
-      <section class="live-ops-main">
-
-        <!-- Stream Grid Switcher & Toolbar -->
-        <div class="ops-toolbar">
-          <div class="ops-stream-selector">
-            <span class="ops-label">Active Node:</span>
-            <select id="source-select" class="ops-select" onchange="handleSourceChange(this.value)">
-              <option value="synthetic">Cam 01: Highway Corridor (Simulator)</option>
-              <option value="0">Cam 02: Primary USB Webcam 0</option>
-              <option value="demo_traffic.mp4">Cam 03: Forensic MP4 Playback</option>
-              <option value="rtsp://admin:password@192.168.1.100:554/live">Cam 04: IP Network RTSP Stream</option>
-            </select>
-          </div>
-
-          <div class="ops-grid-switchers">
-            <button class="grid-btn active" data-grid="1x1" title="Single Feed Focus">1&times;1</button>
-            <button class="grid-btn" data-grid="2x2" title="2x2 Quad Grid">2&times;2</button>
-            <button class="grid-btn" data-grid="3x3" title="3x3 Multi-Grid">3&times;3</button>
-            <button class="grid-btn" data-grid="4x4" title="4x4 Video Wall">4&times;4</button>
-            <button class="grid-btn" data-grid="pip" title="Picture-in-Picture">PIP</button>
-          </div>
-
-          <div class="ops-actions">
-            <button id="btn-draw-mode" class="header-btn" title="Click to draw polygonal danger zones directly on the video">
-              ✏️ Draw Custom Zone
-            </button>
-            <button id="btn-fullscreen" class="header-btn" title="Toggle Fullscreen">
-              ⛶ Fullscreen
-            </button>
-          </div>
-        </div>
-
-        <!-- Interactive Stream Canvas & Overlays -->
-        <div class="feed-card ops-feed-card">
-          <div class="video-wrapper" id="video-wrapper">
-            <div class="video-placeholder" id="video-placeholder" style="display: none;">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                <line x1="7" y1="2" x2="7" y2="22"></line>
-                <line x1="17" y1="2" x2="17" y2="22"></line>
-                <line x1="2" y1="12" x2="22" y2="12"></line>
-                <line x1="2" y1="7" x2="7" y2="7"></line>
-                <line x1="2" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="22" y2="17"></line>
-                <line x1="17" y1="7" x2="22" y2="7"></line>
-              </svg>
-              <span>Connecting to ArgusTraffic Vision Engine...</span>
-            </div>
-
-            <!-- Video Stream Image Element -->
-            <img id="stream-img" alt="Live Camera Feed" />
-
-            <!-- Interactive Geometric Zone Drawing Overlay Canvas -->
-            <canvas id="drawing-canvas"></canvas>
-
-            <!-- Zone Drawing Instructions Ribbon -->
-            <div id="drawing-toolbar" class="draw-banner hidden">
-              <span>DRAWING ZONE: Click to place polygon vertices. Click <strong>Finish Zone</strong> to save.</span>
-              <div class="draw-actions">
-                <input type="text" id="zone-name-input" placeholder="Zone Name (e.g. South Lane)" class="zone-input" />
-                <select id="zone-type-select" class="zone-input">
-                  <option value="lane">Traffic Lane</option>
-                  <option value="crosswalk">Pedestrian Crosswalk</option>
-                  <option value="shoulder">Emergency Shoulder</option>
-                  <option value="intersection">Critical Intersection</option>
-                </select>
-                <button id="btn-save-zone" class="btn btn-sm btn-primary">Finish Zone</button>
-                <button id="btn-cancel-zone" class="btn btn-sm">Cancel</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Real-Time Telemetry Bar -->
-        <div class="telemetry-bar">
-          <div class="metric-card">
-            <div class="metric-label">INFERENCE FRAME RATE</div>
-            <div class="metric-value" id="stat-fps">30.0 <span class="metric-unit">FPS</span></div>
-            <div class="metric-sub">Target: &ge; 30 FPS</div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-label">END-TO-END LATENCY</div>
-            <div class="metric-value val-cyan" id="stat-latency">11.4 <span class="metric-unit">ms</span></div>
-            <div class="metric-sub">Zero-Copy Pipeline</div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-label">ACTIVE TRACKED TARGETS</div>
-            <div class="metric-value val-amber" id="stat-tracks">4 <span class="metric-unit">vehicles</span></div>
-            <div class="metric-sub">Kalman Spatial Tracker</div>
-          </div>
-
-          <div class="metric-card">
-            <div class="metric-label">INCIDENTS DETECTED</div>
-            <div class="metric-value val-red" id="stat-incidents">0 <span class="metric-unit">events</span></div>
-            <div class="metric-sub">Autonomous Invariant Engine</div>
-          </div>
-        </div>
-
-      </section>
-
-      <!-- Right Inspector Panel Drawer (Camera, PTZ, Events, Health) -->
-      <aside class="ops-inspector">
-
-        <div class="inspector-tabs">
-          <button class="insp-tab active" data-insp="insp-camera">Camera</button>
-          <button class="insp-tab" data-insp="insp-ptz">PTZ</button>
-          <button class="insp-tab" data-insp="insp-events">Events</button>
-          <button class="insp-tab" data-insp="insp-health">Health</button>
-        </div>
-
-        <!-- Inspector Tab 1: Camera Controls & Overlays -->
-        <div class="insp-content" id="insp-camera">
-          <div class="insp-section-title">AI DETECTION OVERLAYS</div>
-          <div class="overlay-toggle-grid">
-            <label class="toggle-item"><input type="checkbox" id="chk-objects" checked /> <span>Objects</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-boxes" checked /> <span>Boxes</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-trajectories" checked /> <span>Trajectories</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-speed" checked /> <span>Speed Radar</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-anpr" checked /> <span>ANPR Plates</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-zones" checked /> <span>Danger Zones</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-confidence" checked /> <span>Confidence</span></label>
-            <label class="toggle-item"><input type="checkbox" id="chk-debug" /> <span>Debug Grid</span></label>
-          </div>
-
-          <div class="control-group" style="margin-top: 16px;">
-            <div class="slider-header">
-              <label for="conf-slider">Confidence Threshold</label>
-              <span id="conf-val" class="slider-val">0.35</span>
-            </div>
-            <input type="range" id="conf-slider" min="0.10" max="0.90" step="0.05" value="0.35" class="range-slider" />
-          </div>
-
-          <div class="btn-grid" style="margin-top: 16px;">
-            <button id="btn-toggle-zones" class="btn btn-outline active">🗺️ Zones</button>
-            <button id="btn-toggle-traj" class="btn btn-outline active">⚡ Trails</button>
-            <button id="btn-toggle-audio" class="btn btn-outline">🔊 Siren Active</button>
-            <button id="btn-snapshot" class="btn btn-outline">📸 Snapshot</button>
-          </div>
-        </div>
-
-        <!-- Inspector Tab 2: PTZ Directional Controls -->
-        <div class="insp-content hidden" id="insp-ptz">
-          <div class="insp-section-title">OPTICAL PTZ PAN/TILT/ZOOM CONTROLS</div>
-          <div class="ptz-control-pad">
-            <div class="ptz-row">
-              <button class="ptz-btn" title="Tilt Up" onclick="triggerPtz('UP')">▲</button>
-            </div>
-            <div class="ptz-row">
-              <button class="ptz-btn" title="Pan Left" onclick="triggerPtz('LEFT')">◀</button>
-              <button class="ptz-btn center" title="Home Center" onclick="triggerPtz('HOME')">●</button>
-              <button class="ptz-btn" title="Pan Right" onclick="triggerPtz('RIGHT')">▶</button>
-            </div>
-            <div class="ptz-row">
-              <button class="ptz-btn" title="Tilt Down" onclick="triggerPtz('DOWN')">▼</button>
-            </div>
-          </div>
-
-          <div class="control-group" style="margin-top: 16px;">
-            <label>Optical Zoom Level: <strong id="ptz-zoom-val">1.0x</strong></label>
-            <input type="range" id="ptz-zoom-slider" min="1" max="10" step="0.5" value="1" class="range-slider" oninput="document.getElementById('ptz-zoom-val').innerText = this.value + 'x'" />
-          </div>
-
-          <div class="insp-section-title" style="margin-top: 16px;">PRESET POSITIONS</div>
-          <div class="preset-btn-grid">
-            <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_NORTH')">North Corridor</button>
-            <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_JUNCTION')">Junction Center</button>
-            <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_CROSSWALK')">Crosswalk West</button>
-            <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_TOLL')">Toll Gate South</button>
-          </div>
-        </div>
-
-        <!-- Inspector Tab 3: Events Timeline -->
-        <div class="insp-content hidden" id="insp-events">
-          <div class="insp-section-title">CAMERA TELEMETRY & EVENT LOG</div>
-          <div class="timeline-feed" id="insp-event-feed">
-            <div class="timeline-item"><span class="tl-time">14:41:02</span> <span class="tl-text">Wrong-way vector flagged on track #2</span></div>
-            <div class="timeline-item"><span class="tl-time">14:40:15</span> <span class="tl-text">ANPR decoded plate <code>WP-CAR-7821</code></span></div>
-            <div class="timeline-item"><span class="tl-time">14:39:48</span> <span class="tl-text">Kalman track initialized (Vehicle)</span></div>
-          </div>
-        </div>
-
-        <!-- Inspector Tab 4: Health Metrics -->
-        <div class="insp-content hidden" id="insp-health">
-          <div class="insp-section-title">EDGE NODE HARDWARE METRICS</div>
-          <div class="health-metric-row"><span>GPU Core Temp:</span> <strong>48&deg;C (Normal)</strong></div>
-          <div class="health-metric-row"><span>VRAM Allocation:</span> <strong>2.4 GB / 8.0 GB</strong></div>
-          <div class="health-metric-row"><span>Dropped Frames:</span> <strong>0.00% (Zero-loss)</strong></div>
-          <div class="health-metric-row"><span>Bitrate:</span> <strong>38.4 Mbps</strong></div>
-          <div class="health-metric-row"><span>Hardware Codec:</span> <strong>NVENC H.264 Fast</strong></div>
-        </div>
-
-      </aside>
-
-    </div>
-
-  </main>
-
-  <!-- =========================================================================
-       VIEW 3: INCIDENT MANAGEMENT (Figma View 3)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-incidents">
-    <div class="incidents-page-wrap">
-      
-      <div class="incidents-header">
-        <div>
-          <h2 class="view-heading">ENTERPRISE INCIDENT MANAGEMENT & SLA AUDITOR</h2>
-          <p class="view-subheading">Track, assign, verify, and seal cryptographic traffic incidents with automated law enforcement SLA timers.</p>
-        </div>
-        <div class="incidents-actions">
-          <button class="btn btn-outline" id="btn-export-incidents-csv">Export CSV</button>
-          <button class="btn btn-primary" id="btn-generate-full-dossier">📄 Generate Complete Dossier</button>
-        </div>
-      </div>
-
-      <!-- 4 KPI Cards -->
-      <div class="kpi-grid-4">
-        <div class="kpi-card">
-          <div class="kpi-title">CRITICAL ACTIVE</div>
-          <div class="kpi-val val-red">2</div>
-          <div class="kpi-sub-alert">Wrong-Way & Collision Risks</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">UNACKNOWLEDGED</div>
-          <div class="kpi-val val-amber">1</div>
-          <div class="kpi-sub-text">Awaiting Operator Verification</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">ASSIGNED / IN PROGRESS</div>
-          <div class="kpi-val val-cyan">4</div>
-          <div class="kpi-sub-text">Field Units Dispatched</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">RESOLVED TODAY</div>
-          <div class="kpi-val val-emerald">28</div>
-          <div class="kpi-sub-text">100% SLA Adherence</div>
-        </div>
-      </div>
-
-      <!-- Filter and Search Ribbon -->
-      <div class="filter-ribbon">
-        <div class="search-box">
-          <input type="text" id="incident-search" placeholder="Search by Plate, Incident ID, or Camera..." class="form-input" />
-        </div>
-        <div class="filter-controls">
-          <select id="filter-severity" class="form-select">
-            <option value="all">All Severities</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-          </select>
-          <select id="filter-status" class="form-select">
-            <option value="all">All Statuses</option>
-            <option value="OPEN">Open</option>
-            <option value="ACKNOWLEDGED">Acknowledged</option>
-            <option value="RESOLVED">Resolved</option>
-          </select>
-          <button class="btn btn-outline" id="btn-apply-incident-filter">Filter</button>
-        </div>
-      </div>
-
-      <!-- Incidents Data Table -->
-      <div class="panel-card" style="margin-top: 16px;">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Incident ID</th>
-              <th>Severity</th>
-              <th>Hazard Type</th>
-              <th>Camera Node</th>
-              <th>License Plate / Track</th>
-              <th>Timestamp</th>
-              <th>SLA Timer</th>
-              <th>SHA-256 Seal</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="incidents-table-body">
-            <tr>
-              <td><code>INC-8492</code></td>
-              <td><span class="badge-critical">CRITICAL</span></td>
-              <td>Wrong-Way Vehicle Incursion</td>
-              <td>CAM-04 (Northbound Expressway)</td>
-              <td><code>CP-HVY-3012</code></td>
-              <td>14:41:02 UTC</td>
-              <td><span class="sla-timer red">01:42</span></td>
-              <td><span class="badge-status active">SEALED</span></td>
-              <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-8492', 'Wrong-Way Vehicle Incursion', 'CAM-04', 'CRITICAL', '78.5 km/h', 'CP-HVY-3012')">Dossier</button></td>
-            </tr>
-            <tr>
-              <td><code>INC-8491</code></td>
-              <td><span class="badge-warning">HIGH</span></td>
-              <td>Pedestrian Crosswalk Conflict</td>
-              <td>CAM-03 (Pedestrian Crosswalk)</td>
-              <td><code>WP-CAR-7821</code></td>
-              <td>14:38:45 UTC</td>
-              <td><span class="sla-timer green">04:12</span></td>
-              <td><span class="badge-status active">SEALED</span></td>
-              <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-8491', 'Pedestrian Crosswalk Conflict', 'CAM-03', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">Dossier</button></td>
-            </tr>
-            <tr>
-              <td><code>INC-8490</code></td>
-              <td><span class="badge-info">MEDIUM</span></td>
-              <td>Optical Radar Speed Violation</td>
-              <td>CAM-01 (Highway Corridor)</td>
-              <td><code>SP-BUS-4491</code></td>
-              <td>14:35:19 UTC</td>
-              <td><span class="sla-timer green">08:40</span></td>
-              <td><span class="badge-status active">SEALED</span></td>
-              <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-8490', 'Optical Radar Speed Violation', 'CAM-01', 'MEDIUM', '82.4 km/h', 'SP-BUS-4491')">Dossier</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 4: TRAFFIC & SAFETY ANALYTICS (Figma View 4)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-analytics">
-    <div class="analytics-page-wrap">
-      <div class="analytics-header">
-        <div>
-          <h2 class="view-heading">EXECUTIVE TRAFFIC SAFETY & COMPLIANCE ANALYTICS</h2>
-          <p class="view-subheading">High-level statistical safety dashboards, speed compliance index, and 1-click court-admissible PDF dossier export.</p>
-        </div>
-        <div class="analytics-actions">
-          <button class="btn btn-primary" id="btn-export-exec-report">
-            📄 Generate Official Executive PDF Report
+          <button class="btn-top-alert" onclick="switchToIncidents()">
+            <span>🚨</span>
+            <span class="top-alert-badge">3</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      <!-- KPI Overview Grid -->
-      <div class="telemetry-bar" style="margin-bottom: 24px;">
-        <div class="metric-card">
-          <div class="metric-label">CORRIDOR SAFETY SCORE</div>
-          <div class="metric-value val-emerald">96.4 <span class="metric-unit">/ 100</span></div>
-          <div class="metric-sub">Autonomous Invariant Engine</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">TOTAL MONITORED VEHICLES</div>
-          <div class="metric-value val-cyan">14,892 <span class="metric-unit">units</span></div>
-          <div class="metric-sub">Today's Spatial Volume</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">SPEED COMPLIANCE RATE</div>
-          <div class="metric-value val-emerald">94.8 <span class="metric-unit">%</span></div>
-          <div class="metric-sub">Limit: 60 km/h Corridor</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">CRITICAL HAZARDS AVOIDED</div>
-          <div class="metric-value val-amber">18 <span class="metric-unit">alerts</span></div>
-          <div class="metric-sub">Wrong-Way & Crosswalk Risks</div>
-        </div>
-      </div>
+      <!-- VIEW 1: COMMAND CENTER -->
+      <main class="content-view" id="view-command-center">
 
-      <!-- Analytics Chart & Distribution Grid -->
-      <div class="analytics-grid">
-        <!-- Chart: Hourly Volume & Velocity -->
-        <div class="panel-card">
-          <div class="panel-header">
-            <div class="panel-title">HOURLY TRAFFIC VOLUME & FLOW VELOCITY</div>
-            <div class="panel-sub">24-Hour Municipal Sensor Density</div>
+        <!-- Emergency Alert Banner -->
+        <div class="emergency-alert-banner" id="emergency-banner">
+          <div class="alert-banner-left">
+            <span class="alert-pulse-icon">🚨</span>
+            <div class="alert-banner-content">
+              <span class="alert-banner-tag">CRITICAL ALERT</span>
+              <span class="alert-banner-text" id="alert-banner-text">Wrong-way vehicle detected on Canal St / 8th Ave &bull; Camera CAM-042</span>
+            </div>
           </div>
-          <div class="chart-container">
-            <svg class="analytics-chart-svg" viewBox="0 0 600 200">
-              <!-- Grid lines -->
-              <line x1="40" y1="30" x2="580" y2="30" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
-              <line x1="40" y1="80" x2="580" y2="80" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
-              <line x1="40" y1="130" x2="580" y2="130" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
-              <line x1="40" y1="170" x2="580" y2="170" stroke="#334155" />
-              
-              <!-- Gradient Area -->
-              <defs>
-                <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.3"/>
-                  <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0"/>
-                </linearGradient>
-              </defs>
-              <path d="M 50 170 L 50 140 Q 120 120 180 80 T 320 60 T 450 100 T 560 50 L 560 170 Z" fill="url(#volGrad)" />
-              <path d="M 50 140 Q 120 120 180 80 T 320 60 T 450 100 T 560 50" fill="none" stroke="#00e5ff" stroke-width="3" />
-              
-              <!-- Labels -->
-              <text x="50" y="190" fill="#64748b" font-size="10">00:00</text>
-              <text x="180" y="190" fill="#64748b" font-size="10">06:00</text>
-              <text x="320" y="190" fill="#64748b" font-size="10">12:00</text>
-              <text x="450" y="190" fill="#64748b" font-size="10">18:00</text>
-              <text x="540" y="190" fill="#64748b" font-size="10">23:59</text>
-            </svg>
+          <div class="alert-banner-right">
+            <div class="alert-sla-badge">
+              <span class="sla-dot"></span>
+              <span>SLA: <strong id="sla-countdown">01:42</strong></span>
+            </div>
+            <button class="btn-alert-action" id="btn-assess-alert" onclick="switchToLiveOps()">Assess Now &rarr;</button>
+            <button class="btn-alert-ack" id="btn-ack-alert" onclick="ackCurrentAlert()">Acknowledge</button>
           </div>
         </div>
 
-        <!-- Incident Severity Distribution -->
-        <div class="panel-card">
-          <div class="panel-header">
-            <div class="panel-title">INCIDENT SEVERITY & TYPE DISTRIBUTION</div>
-            <div class="panel-sub">Breakdown of active hazard categories</div>
+        <!-- 4 Top KPI Cards with Sparklines -->
+        <div class="kpi-grid-4">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">ACTIVE INCIDENTS</span>
+              <span class="kpi-tag alert">12 ACTIVE</span>
+            </div>
+            <div class="kpi-val val-red">12</div>
+            <div class="kpi-footer">
+              <span class="kpi-sub-alert">3 Critical &bull; 5 Moderate &bull; 4 Minor</span>
+            </div>
           </div>
-          <div class="dist-list">
-            <div class="dist-item">
-              <span class="dist-lbl">Wrong-Way Vehicle Incursions</span>
-              <div class="dist-bar-wrap"><div class="dist-bar val-red" style="width: 25%;"></div></div>
-              <span class="dist-num">25%</span>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">TRAFFIC VOLUME</span>
+              <span class="kpi-trend up">+14% vs avg</span>
             </div>
-            <div class="dist-item">
-              <span class="dist-lbl">Optical Radar Speed Violations</span>
-              <div class="dist-bar-wrap"><div class="dist-bar val-amber" style="width: 45%;"></div></div>
-              <span class="dist-num">45%</span>
+            <div class="kpi-val val-cyan">48.2k <span class="kpi-unit">veh/hr</span></div>
+            <div class="kpi-footer">
+              <div class="sparkline-bar cyan"><div style="width: 78%;"></div></div>
+              <span>Optimal Corridor Flow</span>
             </div>
-            <div class="dist-item">
-              <span class="dist-lbl">Pedestrian Crosswalk Conflicts</span>
-              <div class="dist-bar-wrap"><div class="dist-bar val-cyan" style="width: 20%;"></div></div>
-              <span class="dist-num">20%</span>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">NETWORK UPTIME</span>
+              <span class="kpi-trend good">Nominal</span>
             </div>
-            <div class="dist-item">
-              <span class="dist-lbl">Stalled Vehicle Lane Blockage</span>
-              <div class="dist-bar-wrap"><div class="dist-bar val-emerald" style="width: 10%;"></div></div>
-              <span class="dist-num">10%</span>
+            <div class="kpi-val val-emerald">99.98<span class="kpi-unit">%</span></div>
+            <div class="kpi-footer">
+              <span class="kpi-sub-text">1,842 / 1,869 Nodes Active</span>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <span class="kpi-title">AI DETECTION RATE</span>
+              <span class="kpi-trend good">Confidence Index</span>
+            </div>
+            <div class="kpi-val val-emerald">99.4<span class="kpi-unit">%</span></div>
+            <div class="kpi-footer">
+              <span class="kpi-sub-text">11.4ms Zero-Copy GPU Core</span>
             </div>
           </div>
         </div>
 
-        <!-- Cryptographic Merkle Vault Status -->
-        <div class="panel-card" style="grid-column: 1 / -1;">
-          <div class="panel-header">
-            <div class="panel-title">CRYPTOGRAPHIC MERKLE EVIDENCE VAULT STATUS</div>
-            <div class="panel-sub">Immutable SHA-256 chain-of-custody verification</div>
+        <!-- Command Center Workspace (2/3 Left Video Wall/GIS & 1/3 Right Priority Feed) -->
+        <div class="cmd-layout">
+          <section class="cmd-main-col">
+
+            <!-- 4-Up Live Video Wall Matrix -->
+            <div class="wall-card">
+              <div class="wall-header">
+                <div class="wall-title-box">
+                  <span class="feed-live-dot"></span>
+                  <span class="wall-title">PRIMARY SURVEILLANCE MATRIX</span>
+                  <span class="wall-codec">H.264 / WEBSOCKET 30 FPS</span>
+                </div>
+                <div class="wall-actions">
+                  <button class="btn btn-sm btn-outline" onclick="switchToLiveOps()">Open Live Operations &rarr;</button>
+                </div>
+              </div>
+
+              <div class="camera-wall-grid" id="camera-wall-grid">
+                <div class="wall-node active" onclick="switchStreamSource('synthetic')">
+                  <div class="wall-node-header">
+                    <span class="node-tag">CAM-042: CANAL ST / 8TH AVE</span>
+                    <span class="node-status live">LIVE</span>
+                  </div>
+                  <div class="wall-node-feed">
+                    <img id="wall-stream-1" class="wall-stream-img" alt="Cam 01 Feed" />
+                    <div class="stream-overlay-tag">30 FPS &bull; 11.4 ms</div>
+                  </div>
+                </div>
+
+                <div class="wall-node" onclick="switchStreamSource('0')">
+                  <div class="wall-node-header">
+                    <span class="node-tag">CAM-118: BROADWAY / 42ND ST</span>
+                    <span class="node-status live">LIVE</span>
+                  </div>
+                  <div class="wall-node-feed">
+                    <img id="wall-stream-2" class="wall-stream-img" alt="Cam 02 Feed" />
+                    <div class="stream-overlay-tag">USB UVC &bull; 30 FPS</div>
+                  </div>
+                </div>
+
+                <div class="wall-node" onclick="switchStreamSource('demo_traffic.mp4')">
+                  <div class="wall-node-header">
+                    <span class="node-tag">CAM-027: FDR DRIVE SOUTH</span>
+                    <span class="node-status playback">PLAYBACK</span>
+                  </div>
+                  <div class="wall-node-feed">
+                    <img id="wall-stream-3" class="wall-stream-img" alt="Cam 03 Feed" />
+                    <div class="stream-overlay-tag">MP4 &bull; 30 FPS</div>
+                  </div>
+                </div>
+
+                <div class="wall-node alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
+                  <div class="wall-node-header">
+                    <span class="node-tag">CAM-089: LINCOLN TUNNEL APPROACH</span>
+                    <span class="node-status alert">INCIDENT</span>
+                  </div>
+                  <div class="wall-node-feed">
+                    <img id="wall-stream-4" class="wall-stream-img" alt="Cam 04 Feed" />
+                    <div class="stream-overlay-tag alert">WRONG-WAY &bull; 48 mph</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Live ANPR & Optical Speed Radar Ribbon -->
+              <div class="anpr-radar-ribbon">
+                <div class="ribbon-title">
+                  <span class="pulse-dot-cyan"></span>
+                  <span>LIVE ANPR & OPTICAL SPEED RADAR</span>
+                </div>
+                <div class="anpr-chips-container" id="anpr-chips-list">
+                  <div class="anpr-chip">
+                    <span class="chip-plate">WP-CAR-7821</span>
+                    <span class="chip-speed normal">54.2 km/h</span>
+                    <span class="chip-status">TRACK #1</span>
+                  </div>
+                  <div class="anpr-chip">
+                    <span class="chip-plate">CP-HVY-3012</span>
+                    <span class="chip-speed speeding">78.5 km/h ⚠️</span>
+                    <span class="chip-status">SPEEDING</span>
+                  </div>
+                  <div class="anpr-chip">
+                    <span class="chip-plate">SP-BUS-4491</span>
+                    <span class="chip-speed normal">42.0 km/h</span>
+                    <span class="chip-status">TRACK #3</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- GIS Spatial City Map -->
+            <div class="panel-card gis-card">
+              <div class="panel-header">
+                <div class="panel-title">GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY</div>
+                <div class="panel-sub">Metro City Municipal Nodes & Live Congestion Vectors</div>
+              </div>
+              <div class="gis-map-viewport" id="gis-map-viewport">
+                <svg class="gis-svg" viewBox="0 0 800 240" preserveAspectRatio="none">
+                  <defs>
+                    <pattern id="gis-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(30, 41, 59, 0.4)" stroke-width="1"/>
+                    </pattern>
+                  </defs>
+                  <rect width="800" height="240" fill="url(#gis-grid)" />
+                  <path d="M 50 120 Q 250 70 400 120 T 750 120" fill="none" stroke="#1e293b" stroke-width="18" stroke-linecap="round"/>
+                  <path d="M 50 120 Q 250 70 400 120 T 750 120" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="6,6"/>
+                  <path d="M 400 20 L 400 220" fill="none" stroke="#1e293b" stroke-width="14" stroke-linecap="round"/>
+                  <path d="M 400 20 L 400 220" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="4,4"/>
+
+                  <!-- Camera Markers -->
+                  <g transform="translate(180, 95)" class="gis-marker" onclick="switchStreamSource('synthetic')">
+                    <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
+                    <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
+                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-042 (Canal St)</text>
+                  </g>
+                  <g transform="translate(400, 120)" class="gis-marker" onclick="switchStreamSource('0')">
+                    <circle cx="0" cy="0" r="14" fill="rgba(0, 230, 118, 0.2)" stroke="#00e676" stroke-width="2"/>
+                    <circle cx="0" cy="0" r="5" fill="#00e676"/>
+                    <text x="18" y="4" fill="#00e676" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-118 (Broadway)</text>
+                  </g>
+                  <g transform="translate(400, 50)" class="gis-marker" onclick="switchStreamSource('demo_traffic.mp4')">
+                    <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
+                    <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
+                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-027 (FDR Drive)</text>
+                  </g>
+                  <g transform="translate(620, 120)" class="gis-marker alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
+                    <circle cx="0" cy="0" r="18" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" stroke-width="2" class="pulse-marker"/>
+                    <circle cx="0" cy="0" r="6" fill="#ef4444"/>
+                    <text x="22" y="4" fill="#ef4444" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-089 ⚠️ INCIDENT</text>
+                  </g>
+                </svg>
+              </div>
+            </div>
+
+          </section>
+
+          <!-- Right 1/3: Priority Incidents & Live Events -->
+          <aside class="cmd-side-col">
+            <div class="panel-card priority-panel">
+              <div class="panel-header">
+                <div class="panel-title">PRIORITY INCIDENTS QUEUE</div>
+                <span class="badge-critical" id="side-incident-count">3 CRITICAL</span>
+              </div>
+
+              <div class="priority-incident-list" id="priority-incident-list">
+                <div class="priority-item critical" onclick="openForensicModal('INC-2025-0847', 'Wrong-Way Vehicle', 'CAM-042: Canal St / 8th Ave', 'CRITICAL', '48 mph', 'CP-HVY-3012')">
+                  <div class="pri-top">
+                    <span class="pri-badge critical">CRITICAL &bull; 9.4/10</span>
+                    <span class="pri-time">14:42:18</span>
+                  </div>
+                  <div class="pri-title">Wrong-Way Vehicle Incursion</div>
+                  <div class="pri-meta">CAM-042 &bull; Plate: <code>CP-HVY-3012</code> &bull; Speed: <strong>48 mph</strong></div>
+                  <div class="pri-actions">
+                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
+                    <button class="btn btn-xs btn-outline">Dispatch Police</button>
+                  </div>
+                </div>
+
+                <div class="priority-item warning" onclick="openForensicModal('INC-2025-0846', 'Pedestrian Crosswalk Conflict', 'CAM-027: FDR Drive', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">
+                  <div class="pri-top">
+                    <span class="pri-badge warning">HIGH &bull; 8.1/10</span>
+                    <span class="pri-time">14:38:45</span>
+                  </div>
+                  <div class="pri-title">Pedestrian Crosswalk Hazard</div>
+                  <div class="pri-meta">CAM-027 &bull; Person in Lane &bull; TTC: <strong>1.4s</strong></div>
+                  <div class="pri-actions">
+                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
+                    <button class="btn btn-xs btn-outline">Acknowledge</button>
+                  </div>
+                </div>
+
+                <div class="priority-item info" onclick="openForensicModal('INC-2025-0845', 'Optical Speed Violation', 'CAM-118: Broadway', 'MEDIUM', '62 mph', 'SP-BUS-4491')">
+                  <div class="pri-top">
+                    <span class="pri-badge info">MEDIUM &bull; 5.2/10</span>
+                    <span class="pri-time">14:35:19</span>
+                  </div>
+                  <div class="pri-title">Optical Radar Speed Violation</div>
+                  <div class="pri-meta">CAM-118 &bull; 62 mph in 40 mph Corridor</div>
+                  <div class="pri-actions">
+                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
+                    <button class="btn btn-xs btn-outline">Acknowledge</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Event Feed -->
+            <div class="panel-card event-panel">
+              <div class="panel-header">
+                <div class="panel-title">LIVE EVENT STREAM</div>
+                <div class="panel-sub">Autonomous Invariant Engine</div>
+              </div>
+              <div class="incident-feed-list" id="incident-feed">
+                <div class="empty-feed" id="empty-feed-placeholder">
+                  <div class="empty-icon">🛡️</div>
+                  <div class="empty-text">Awaiting traffic anomalies...</div>
+                  <div class="empty-sub">Monitoring lane flow vectors, speed thresholds, and wrong-way trajectories.</div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+      </main>
+
+      <!-- VIEW 2: LIVE OPERATIONS -->
+      <main class="content-view hidden" id="view-live-operations">
+        <div class="live-ops-layout">
+          <section class="live-ops-main">
+            <div class="ops-toolbar">
+              <div class="ops-stream-selector">
+                <span class="ops-label">Active Node:</span>
+                <select id="source-select" class="ops-select" onchange="handleSourceChange(this.value)">
+                  <option value="synthetic">CAM-042: Canal St / 8th Ave (Simulator)</option>
+                  <option value="0">CAM-118: Broadway / 42nd St (USB UVC)</option>
+                  <option value="demo_traffic.mp4">CAM-027: FDR Drive South (MP4)</option>
+                  <option value="rtsp://admin:password@192.168.1.100:554/live">CAM-089: Lincoln Tunnel (RTSP)</option>
+                </select>
+              </div>
+
+              <div class="ops-grid-switchers">
+                <button class="grid-btn active" data-grid="1x1">1&times;1</button>
+                <button class="grid-btn" data-grid="2x2">2&times;2</button>
+                <button class="grid-btn" data-grid="3x3">3&times;3</button>
+                <button class="grid-btn" data-grid="4x4">4&times;4</button>
+                <button class="grid-btn" data-grid="pip">PIP</button>
+              </div>
+
+              <div class="ops-actions">
+                <button id="btn-draw-mode" class="header-btn">✏️ Draw Custom Zone</button>
+                <button id="btn-fullscreen" class="header-btn">⛶ Fullscreen</button>
+              </div>
+            </div>
+
+            <!-- Video Viewport -->
+            <div class="feed-card ops-feed-card">
+              <div class="video-wrapper" id="video-wrapper">
+                <img id="stream-img" alt="Live Camera Feed" />
+                <canvas id="drawing-canvas"></canvas>
+
+                <div id="drawing-toolbar" class="draw-banner hidden">
+                  <span>DRAWING ZONE: Click to place polygon vertices. Click <strong>Finish Zone</strong> to save.</span>
+                  <div class="draw-actions">
+                    <input type="text" id="zone-name-input" placeholder="Zone Name" class="zone-input" />
+                    <select id="zone-type-select" class="zone-input">
+                      <option value="lane">Traffic Lane</option>
+                      <option value="crosswalk">Pedestrian Crosswalk</option>
+                      <option value="shoulder">Emergency Shoulder</option>
+                      <option value="intersection">Critical Intersection</option>
+                    </select>
+                    <button id="btn-save-zone" class="btn btn-sm btn-primary">Finish Zone</button>
+                    <button id="btn-cancel-zone" class="btn btn-sm">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Live Telemetry Bar -->
+            <div class="telemetry-bar">
+              <div class="metric-card">
+                <div class="metric-label">INFERENCE FRAME RATE</div>
+                <div class="metric-value" id="stat-fps">30.0 <span class="metric-unit">FPS</span></div>
+                <div class="metric-sub">Target: &ge; 30 FPS</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">END-TO-END LATENCY</div>
+                <div class="metric-value val-cyan" id="stat-latency">11.4 <span class="metric-unit">ms</span></div>
+                <div class="metric-sub">Zero-Copy GPU Core</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">ACTIVE TRACKED TARGETS</div>
+                <div class="metric-value val-amber" id="stat-tracks">4 <span class="metric-unit">vehicles</span></div>
+                <div class="metric-sub">Kalman Spatial Tracker</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">INCIDENTS DETECTED</div>
+                <div class="metric-value val-red" id="stat-incidents">0 <span class="metric-unit">events</span></div>
+                <div class="metric-sub">Autonomous Invariants</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Right Inspector Drawer -->
+          <aside class="ops-inspector">
+            <div class="inspector-tabs">
+              <button class="insp-tab active" data-insp="insp-camera">Camera</button>
+              <button class="insp-tab" data-insp="insp-ptz">PTZ</button>
+              <button class="insp-tab" data-insp="insp-events">Events</button>
+              <button class="insp-tab" data-insp="insp-health">Health</button>
+            </div>
+
+            <div class="insp-content" id="insp-camera">
+              <div class="insp-section-title">AI DETECTION OVERLAYS</div>
+              <div class="overlay-toggle-grid">
+                <label class="toggle-item"><input type="checkbox" id="chk-objects" checked /> <span>Objects</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-boxes" checked /> <span>Boxes</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-trajectories" checked /> <span>Trajectories</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-speed" checked /> <span>Speed Radar</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-anpr" checked /> <span>ANPR Plates</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-zones" checked /> <span>Danger Zones</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-confidence" checked /> <span>Confidence</span></label>
+                <label class="toggle-item"><input type="checkbox" id="chk-debug" /> <span>Debug Grid</span></label>
+              </div>
+
+              <div class="control-group" style="margin-top: 16px;">
+                <div class="slider-header">
+                  <label for="conf-slider">Confidence Threshold</label>
+                  <span id="conf-val" class="slider-val">0.35</span>
+                </div>
+                <input type="range" id="conf-slider" min="0.10" max="0.90" step="0.05" value="0.35" class="range-slider" />
+              </div>
+
+              <div class="btn-grid" style="margin-top: 16px;">
+                <button id="btn-toggle-zones" class="btn btn-outline active">🗺️ Zones</button>
+                <button id="btn-toggle-traj" class="btn btn-outline active">⚡ Trails</button>
+                <button id="btn-toggle-audio" class="btn btn-outline">🔊 Siren Active</button>
+                <button id="btn-snapshot" class="btn btn-outline">📸 Snapshot</button>
+              </div>
+            </div>
+
+            <div class="insp-content hidden" id="insp-ptz">
+              <div class="insp-section-title">OPTICAL PTZ DIRECTIONAL CONTROLS</div>
+              <div class="ptz-control-pad">
+                <div class="ptz-row"><button class="ptz-btn" onclick="triggerPtz('UP')">▲</button></div>
+                <div class="ptz-row">
+                  <button class="ptz-btn" onclick="triggerPtz('LEFT')">◀</button>
+                  <button class="ptz-btn center" onclick="triggerPtz('HOME')">●</button>
+                  <button class="ptz-btn" onclick="triggerPtz('RIGHT')">▶</button>
+                </div>
+                <div class="ptz-row"><button class="ptz-btn" onclick="triggerPtz('DOWN')">▼</button></div>
+              </div>
+              <div class="control-group" style="margin-top: 16px;">
+                <label>Optical Zoom Level: <strong id="ptz-zoom-val">1.0x</strong></label>
+                <input type="range" id="ptz-zoom-slider" min="1" max="10" step="0.5" value="1" class="range-slider" oninput="document.getElementById('ptz-zoom-val').innerText = this.value + 'x'" />
+              </div>
+              <div class="insp-section-title" style="margin-top: 16px;">PRESET POSITIONS</div>
+              <div class="preset-btn-grid">
+                <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_NORTH')">North Corridor</button>
+                <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_JUNCTION')">Junction Center</button>
+                <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_CROSSWALK')">Crosswalk West</button>
+                <button class="btn btn-sm btn-outline" onclick="triggerPtz('PRESET_TOLL')">Toll Gate South</button>
+              </div>
+            </div>
+
+            <div class="insp-content hidden" id="insp-events">
+              <div class="insp-section-title">CAMERA TELEMETRY & EVENT LOG</div>
+              <div class="timeline-feed" id="insp-event-feed">
+                <div class="timeline-item"><span class="tl-time">14:42:18</span> <span class="tl-text">Wrong-way vector flagged on track #2</span></div>
+                <div class="timeline-item"><span class="tl-time">14:40:15</span> <span class="tl-text">ANPR decoded plate <code>CP-HVY-3012</code></span></div>
+                <div class="timeline-item"><span class="tl-time">14:39:48</span> <span class="tl-text">Kalman track initialized (Vehicle)</span></div>
+              </div>
+            </div>
+
+            <div class="insp-content hidden" id="insp-health">
+              <div class="insp-section-title">EDGE NODE HARDWARE HEALTH</div>
+              <div class="health-metric-row"><span>GPU Core Temp:</span> <strong>48&deg;C (Normal)</strong></div>
+              <div class="health-metric-row"><span>VRAM Allocation:</span> <strong>2.4 GB / 8.0 GB</strong></div>
+              <div class="health-metric-row"><span>Dropped Frames:</span> <strong>0.00% (Zero-loss)</strong></div>
+              <div class="health-metric-row"><span>Bitrate:</span> <strong>38.4 Mbps</strong></div>
+              <div class="health-metric-row"><span>Hardware Codec:</span> <strong>NVENC H.264 Fast</strong></div>
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      <!-- VIEW 3: INCIDENTS & DISPATCH -->
+      <main class="content-view hidden" id="view-incidents">
+        <div class="incidents-page-wrap">
+          <div class="incidents-header">
+            <div>
+              <h2 class="view-heading">INCIDENTS & EMERGENCY DISPATCH CONSOLE</h2>
+              <p class="view-subheading">Track, assign, verify, and seal cryptographic traffic incidents with automated law enforcement SLA timers.</p>
+            </div>
+            <div class="incidents-actions">
+              <button class="btn btn-outline" id="btn-export-incidents-csv">Export CSV</button>
+              <button class="btn btn-primary" onclick="generateExecutiveReport()">📄 Generate Complete Dossier</button>
+            </div>
           </div>
-          <div class="merkle-status-box">
-            <div class="merkle-line"><span>Database Path:</span> <code>%LOCALAPPDATA%\ArgusTraffic\data\incidents.db</code></div>
-            <div class="merkle-line"><span>Integrity Status:</span> <strong style="color: var(--emerald);">VERIFIED & SEALED</strong></div>
-            <div class="merkle-line"><span>Current Merkle Root:</span> <code id="merkle-root-val">9f8a3c2e1b4d5f6a7b8c9d0e1f2a3b4c5d6e7f8a</code></div>
-            <div class="merkle-line"><span>Court Admissibility:</span> <strong>100% Certified ISO/IEC 27037 Standard</strong></div>
+
+          <div class="kpi-grid-4">
+            <div class="kpi-card">
+              <div class="kpi-title">CRITICAL ACTIVE</div>
+              <div class="kpi-val val-red">3</div>
+              <div class="kpi-sub-alert">Wrong-Way & Collision Risks</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">UNACKNOWLEDGED</div>
+              <div class="kpi-val val-amber">2</div>
+              <div class="kpi-sub-text">Awaiting Supervisor Assessment</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">DISPATCHED UNITS</div>
+              <div class="kpi-val val-cyan">5</div>
+              <div class="kpi-sub-text">Police & Highway Patrol</div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-title">RESOLVED TODAY</div>
+              <div class="kpi-val val-emerald">28</div>
+              <div class="kpi-sub-text">100% SLA Adherence</div>
+            </div>
+          </div>
+
+          <div class="filter-ribbon">
+            <div class="search-box">
+              <input type="text" placeholder="Search by Plate, Incident ID, or Camera..." class="form-input" />
+            </div>
+            <div class="filter-controls">
+              <select class="form-select"><option>All Severities</option><option>Critical</option><option>High</option><option>Medium</option></select>
+              <select class="form-select"><option>All Statuses</option><option>Open</option><option>Dispatched</option><option>Resolved</option></select>
+              <button class="btn btn-outline">Filter</button>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Incident ID</th>
+                  <th>Severity</th>
+                  <th>Hazard Type</th>
+                  <th>Camera Node</th>
+                  <th>License Plate / Track</th>
+                  <th>Timestamp</th>
+                  <th>SLA Timer</th>
+                  <th>SHA-256 Seal</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="incidents-table-body">
+                <tr>
+                  <td><code>INC-2025-0847</code></td>
+                  <td><span class="badge-critical">CRITICAL</span></td>
+                  <td>Wrong-Way Vehicle Incursion</td>
+                  <td>CAM-042 (Canal St / 8th Ave)</td>
+                  <td><code>CP-HVY-3012</code></td>
+                  <td>14:42:18 UTC</td>
+                  <td><span class="sla-timer red">01:42</span></td>
+                  <td><span class="badge-status active">SEALED</span></td>
+                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0847', 'Wrong-Way Vehicle Incursion', 'CAM-042', 'CRITICAL', '48 mph', 'CP-HVY-3012')">Dossier</button></td>
+                </tr>
+                <tr>
+                  <td><code>INC-2025-0846</code></td>
+                  <td><span class="badge-warning">HIGH</span></td>
+                  <td>Pedestrian Crosswalk Conflict</td>
+                  <td>CAM-027 (FDR Drive South)</td>
+                  <td><code>WP-CAR-7821</code></td>
+                  <td>14:38:45 UTC</td>
+                  <td><span class="sla-timer green">04:12</span></td>
+                  <td><span class="badge-status active">SEALED</span></td>
+                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0846', 'Pedestrian Crosswalk Conflict', 'CAM-027', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">Dossier</button></td>
+                </tr>
+                <tr>
+                  <td><code>INC-2025-0845</code></td>
+                  <td><span class="badge-info">MEDIUM</span></td>
+                  <td>Optical Radar Speed Violation</td>
+                  <td>CAM-118 (Broadway / 42nd St)</td>
+                  <td><code>SP-BUS-4491</code></td>
+                  <td>14:35:19 UTC</td>
+                  <td><span class="sla-timer green">08:40</span></td>
+                  <td><span class="badge-status active">SEALED</span></td>
+                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0845', 'Optical Radar Speed Violation', 'CAM-118', 'MEDIUM', '62 mph', 'SP-BUS-4491')">Dossier</button></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
+      </main>
+
+      <!-- VIEW 4: ANALYTICS -->
+      <main class="content-view hidden" id="view-analytics">
+        <div class="analytics-page-wrap">
+          <div class="analytics-header">
+            <div>
+              <h2 class="view-heading">TRAFFIC & SAFETY INTELLIGENCE ANALYTICS</h2>
+              <p class="view-subheading">High-level statistical safety dashboards, speed compliance index, and modal split metrics.</p>
+            </div>
+            <div class="analytics-actions">
+              <button class="btn btn-primary" onclick="generateExecutiveReport()">📄 Generate Executive PDF Report</button>
+            </div>
+          </div>
+
+          <div class="telemetry-bar">
+            <div class="metric-card">
+              <div class="metric-label">CORRIDOR SAFETY SCORE</div>
+              <div class="metric-value val-emerald">96.4 <span class="metric-unit">/ 100</span></div>
+              <div class="metric-sub">Autonomous Invariants</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">TOTAL MONITORED VOLUME</div>
+              <div class="metric-value val-cyan">48,200 <span class="metric-unit">veh/hr</span></div>
+              <div class="metric-sub">Across 4 Major Corridors</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">SPEED COMPLIANCE RATE</div>
+              <div class="metric-value val-emerald">94.8 <span class="metric-unit">%</span></div>
+              <div class="metric-sub">Corridor Speed Limit: 45 mph</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-label">CRITICAL HAZARDS AVOIDED</div>
+              <div class="metric-value val-amber">18 <span class="metric-unit">alerts</span></div>
+              <div class="metric-sub">Wrong-Way & Crosswalk Near-Misses</div>
+            </div>
+          </div>
+
+          <div class="analytics-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <div class="panel-title">HOURLY TRAFFIC VOLUME & FLOW VELOCITY</div>
+                <div class="panel-sub">24-Hour Municipal Sensor Density</div>
+              </div>
+              <div class="chart-container">
+                <svg class="analytics-chart-svg" viewBox="0 0 600 200">
+                  <line x1="40" y1="30" x2="580" y2="30" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
+                  <line x1="40" y1="80" x2="580" y2="80" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
+                  <line x1="40" y1="130" x2="580" y2="130" stroke="rgba(51, 65, 85, 0.4)" stroke-dasharray="3,3" />
+                  <line x1="40" y1="170" x2="580" y2="170" stroke="#334155" />
+                  <defs>
+                    <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.3"/>
+                      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.0"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M 50 170 L 50 140 Q 120 120 180 80 T 320 60 T 450 100 T 560 50 L 560 170 Z" fill="url(#volGrad)" />
+                  <path d="M 50 140 Q 120 120 180 80 T 320 60 T 450 100 T 560 50" fill="none" stroke="#00e5ff" stroke-width="3" />
+                  <text x="50" y="190" fill="#64748b" font-size="10">00:00</text>
+                  <text x="180" y="190" fill="#64748b" font-size="10">06:00</text>
+                  <text x="320" y="190" fill="#64748b" font-size="10">12:00</text>
+                  <text x="450" y="190" fill="#64748b" font-size="10">18:00</text>
+                  <text x="540" y="190" fill="#64748b" font-size="10">23:59</text>
+                </svg>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-header">
+                <div class="panel-title">MODAL SPLIT & HAZARD DISTRIBUTION</div>
+                <div class="panel-sub">Breakdown of active vehicle categories</div>
+              </div>
+              <div class="dist-list">
+                <div class="dist-item"><span class="dist-lbl">Passenger Sedans & SUVs</span><div class="dist-bar-wrap"><div class="dist-bar val-cyan" style="width: 68%;"></div></div><span class="dist-num">68%</span></div>
+                <div class="dist-item"><span class="dist-lbl">Commercial Freight Trucks</span><div class="dist-bar-wrap"><div class="dist-bar val-amber" style="width: 14%;"></div></div><span class="dist-num">14%</span></div>
+                <div class="dist-item"><span class="dist-lbl">Public Transit Buses</span><div class="dist-bar-wrap"><div class="dist-bar val-emerald" style="width: 8%;"></div></div><span class="dist-num">8%</span></div>
+                <div class="dist-item"><span class="dist-lbl">Motorcycles & Two-Wheelers</span><div class="dist-bar-wrap"><div class="dist-bar val-red" style="width: 7%;"></div></div><span class="dist-num">7%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 5: AI INTELLIGENCE -->
+      <main class="content-view hidden" id="view-ai-intelligence">
+        <div class="ai-page-wrap">
+          <div class="ai-header">
+            <div>
+              <h2 class="view-heading">AI NEURAL PERCEPTION & INFERENCE ACCELERATOR</h2>
+              <p class="view-subheading">Hardware-accelerated edge inference engine, spatial invariant validators, and neural model telemetry.</p>
+            </div>
+            <div class="ai-actions">
+              <button class="btn btn-outline">⚡ Recalibrate Weights</button>
+              <button class="btn btn-primary">Run Diagnostic Self-Test</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid-4">
+            <div class="kpi-card"><div class="kpi-title">MODEL INFERENCE RATE</div><div class="kpi-val val-cyan">30.0 <span class="kpi-unit">FPS</span></div><div class="kpi-sub-text">Edge Video Pipeline</div></div>
+            <div class="kpi-card"><div class="kpi-title">DETECTION ACCURACY</div><div class="kpi-val val-emerald">99.4<span class="kpi-unit">%</span></div><div class="kpi-sub-text">Vehicle Perception Core</div></div>
+            <div class="kpi-card"><div class="kpi-title">NEURAL LATENCY</div><div class="kpi-val val-emerald">11.4 <span class="kpi-unit">ms</span></div><div class="kpi-sub-text">Direct TensorRT / Torch Pipeline</div></div>
+            <div class="kpi-card"><div class="kpi-title">ANPR OCR CONFIDENCE</div><div class="kpi-val val-amber">98.7<span class="kpi-unit">%</span></div><div class="kpi-sub-text">DeepScan Optical Radar</div></div>
+          </div>
+
+          <div class="camera-grid">
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">YOLOv8 Neural Perception</div><span class="cam-badge online">ACCELERATED</span></div>
+              <div class="cam-meta">Core: <code>yolov8n.pt (640x640)</code></div>
+              <div class="cam-stats"><div><span>Accuracy mAP:</span> <strong>99.4%</strong></div><div><span>Inference:</span> <strong>8.2 ms</strong></div><div><span>Classes:</span> <strong>Car, Bus, Truck, Person</strong></div></div>
+            </div>
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">Kalman Spatial Tracker</div><span class="cam-badge online">ONLINE</span></div>
+              <div class="cam-meta">Matrix: <code>8-State Extended Kalman</code></div>
+              <div class="cam-stats"><div><span>Track Continuity:</span> <strong>99.8%</strong></div><div><span>Update Time:</span> <strong>1.8 ms</strong></div><div><span>Occlusion Tolerance:</span> <strong>30 Frames</strong></div></div>
+            </div>
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">Wrong-Way Invariant Engine</div><span class="cam-badge online">ACTIVE</span></div>
+              <div class="cam-meta">Logic: <code>Vector Dot-Product Invariant</code></div>
+              <div class="cam-stats"><div><span>Detection Rate:</span> <strong>100.0%</strong></div><div><span>Evaluation Time:</span> <strong>0.6 ms</strong></div><div><span>False Positives:</span> <strong>0.00%</strong></div></div>
+            </div>
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">Optical ANPR & Speed Radar</div><span class="cam-badge online">CALIBRATED</span></div>
+              <div class="cam-meta">OCR: <code>Spatial Homography Radar</code></div>
+              <div class="cam-stats"><div><span>OCR Confidence:</span> <strong>98.7%</strong></div><div><span>Speed Precision:</span> <strong>&plusmn;1.2 km/h</strong></div><div><span>Latency:</span> <strong>2.1 ms</strong></div></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 6: REPORTS & REPORT BUILDER -->
+      <main class="content-view hidden" id="view-reports">
+        <div class="report-page-wrap">
+          <div class="report-header">
+            <div>
+              <h2 class="view-heading">REPORT CENTER & OFFICIAL REPORT BUILDER</h2>
+              <p class="view-subheading">Generate, verify, and export court-admissible forensic dossiers and municipal safety reports.</p>
+            </div>
+            <div class="report-actions">
+              <button class="btn btn-outline">Export All Ledgers</button>
+              <button class="btn btn-primary" onclick="generateExecutiveReport()">+ Generate New Report</button>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <table class="data-table">
+              <thead>
+                <tr><th>Report ID</th><th>Title / Description</th><th>Period</th><th>Signer</th><th>Status</th><th>SHA-256 Merkle Seal</th><th>Action</th></tr>
+              </thead>
+              <tbody id="reports-table-body">
+                <tr><td><code>RPT-2025-00984</code></td><td><strong>Canal Street Wrong-Way Incident Dossier</strong></td><td>Today (24 Hours)</td><td>Saptha Sanka (SUPER_ADMIN)</td><td><span class="badge-status active">VERIFIED</span></td><td><code>8f2a1c...99b2</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
+                <tr><td><code>RPT-2025-00983</code></td><td><strong>Weekly Corridor Optical Speed Compliance Audit</strong></td><td>Weekly Scope</td><td>Legal Forensic Examiner</td><td><span class="badge-status active">SEALED</span></td><td><code>7d3e4f...11a0</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
+                <tr><td><code>RPT-2025-00982</code></td><td><strong>AI Model Zero False-Positive Ledger</strong></td><td>Monthly Audit</td><td>Autonomous Core</td><td><span class="badge-status active">VERIFIED</span></td><td><code>5c9b1a...44f2</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 7: EVIDENCE CENTER -->
+      <main class="content-view hidden" id="view-evidence-center">
+        <div class="report-page-wrap">
+          <div class="report-header">
+            <div>
+              <h2 class="view-heading">EVIDENCE CENTER & DIGITAL FORENSICS VAULT</h2>
+              <p class="view-subheading">ISO/IEC 27037 compliant immutable chain-of-custody vault for court proceedings.</p>
+            </div>
+            <button class="btn btn-primary" onclick="generateExecutiveReport()">Export Chain-of-Custody Manifest</button>
+          </div>
+          <div class="kpi-grid-4">
+            <div class="kpi-card"><div class="kpi-title">VERIFIED EVIDENCE ITEMS</div><div class="kpi-val val-emerald">2,408</div><div class="kpi-sub-text">100% SHA-256 Sealed</div></div>
+            <div class="kpi-card"><div class="kpi-title">ACTIVE CASES</div><div class="kpi-val val-cyan">64</div><div class="kpi-sub-text">Municipal Legal Inquiries</div></div>
+            <div class="kpi-card"><div class="kpi-title">LEGAL HOLDS</div><div class="kpi-val val-amber">184</div><div class="kpi-sub-text">Extended Retention Locks</div></div>
+            <div class="kpi-card"><div class="kpi-title">ENCRYPTED STORAGE</div><div class="kpi-val val-emerald">72.4 <span class="kpi-unit">TB</span></div><div class="kpi-sub-text">AES-256-GCM Vault</div></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 8: DEVICE FLEET -->
+      <main class="content-view hidden" id="view-devices">
+        <div class="fleet-page-wrap">
+          <div class="fleet-header-banner">
+            <div>
+              <h2 class="view-heading">ENTERPRISE CAMERA FLEET & NETWORK TOPOLOGY</h2>
+              <p class="view-subheading">Centralized management of ONVIF, RTSP, DirectShow, and Neural Simulation Feeds across municipal network nodes.</p>
+            </div>
+            <div class="fleet-actions">
+              <button class="btn btn-outline" id="btn-scan-network">🔍 Auto-Scan Subnet (192.168.1.0/24)</button>
+              <button class="btn btn-primary" id="btn-add-camera-modal">+ Register New Camera</button>
+            </div>
+          </div>
+          <div class="camera-grid" id="camera-inventory-grid">
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">CAM-042: Canal St / 8th Ave</div><span class="cam-badge online">ONLINE</span></div>
+              <div class="cam-meta">Source: <code>Autonomous Physics Simulator</code></div>
+              <div class="cam-stats"><div><span>Protocol:</span> <strong>Virtual Physics</strong></div><div><span>Resolution:</span> <strong>1280 &times; 720 (30 FPS)</strong></div></div>
+              <div class="cam-actions"><button class="btn btn-sm btn-primary" onclick="switchStreamSource('synthetic')">Stream Live</button></div>
+            </div>
+            <div class="camera-card">
+              <div class="cam-card-top"><div class="cam-card-title">CAM-118: Broadway / 42nd St</div><span class="cam-badge online">ONLINE</span></div>
+              <div class="cam-meta">Source: <code>DirectShow Video Index 0</code></div>
+              <div class="cam-stats"><div><span>Protocol:</span> <strong>UVC DirectShow</strong></div><div><span>Resolution:</span> <strong>1920 &times; 1080 (30 FPS)</strong></div></div>
+              <div class="cam-actions"><button class="btn btn-sm btn-primary" onclick="switchStreamSource('0')">Stream Live</button></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 9: SYSTEM HEALTH -->
+      <main class="content-view hidden" id="view-system-health">
+        <div class="fleet-page-wrap">
+          <div class="fleet-header-banner">
+            <div><h2 class="view-heading">SYSTEM HEALTH & NOC TELEMETRY</h2><p class="view-subheading">30-day rolling SLA metrics, pipeline latency, and hardware resource utilization.</p></div>
+          </div>
+          <div class="telemetry-bar">
+            <div class="metric-card"><div class="metric-label">SERVICE AVAILABILITY</div><div class="metric-value val-emerald">99.98%</div><div class="metric-sub">Rolling 30-Day SLA</div></div>
+            <div class="metric-card"><div class="metric-label">PIPELINE LATENCY</div><div class="metric-value val-cyan">38 ms</div><div class="metric-sub">P95: 52ms</div></div>
+            <div class="metric-card"><div class="metric-label">CPU / GPU LOAD</div><div class="metric-value val-emerald">47% / 63%</div><div class="metric-sub">Nominal Thermals</div></div>
+            <div class="metric-card"><div class="metric-label">STORAGE ALLOCATION</div><div class="metric-value val-cyan">68%</div><div class="metric-sub">Encrypted Local Vault</div></div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 10: SECURITY & IAM -->
+      <main class="content-view hidden" id="view-security">
+        <div class="security-page-wrap">
+          <div class="security-header">
+            <div><h2 class="view-heading">ENTERPRISE ACCESS CONTROL & ZERO-TRUST IAM</h2><p class="view-subheading">Manage multi-tenant operator roles, cryptographic session tokens, and zero-trust permissions.</p></div>
+            <button class="btn btn-primary">+ Add Operator</button>
+          </div>
+          <div class="active-user-card">
+            <div class="active-user-icon">🛡️</div>
+            <div>
+              <div class="active-user-title">Saptha Sanka &bull; <span class="badge-role super">SUPER_ADMIN</span></div>
+              <div class="active-user-sub">Active Session Token: <code id="sec-token-preview">argus_sec_tok_admin... (SHA-256 Validated)</code></div>
+              <div class="perms-chips"><span class="perm-chip">system:manage</span><span class="perm-chip">cameras:manage</span><span class="perm-chip">incidents:export</span><span class="perm-chip">dossier:verify</span></div>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 11: AUDIT LOGS -->
+      <main class="content-view hidden" id="view-audits">
+        <div class="audit-page-wrap">
+          <div class="audit-header">
+            <div><h2 class="view-heading">IMMUTABLE FORENSIC AUDIT LOG & CRYPTOGRAPHIC LEDGER</h2><p class="view-subheading">Tamper-evident system activity records, operator actions, and automated incident logs.</p></div>
+            <button class="btn btn-primary" id="btn-refresh-audit">Refresh Audit Logs</button>
+          </div>
+          <div class="panel-card">
+            <table class="data-table">
+              <thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>IP Address</th><th>Narrative</th></tr></thead>
+              <tbody id="audit-table-body">
+                <tr><td><code>19:30:15 UTC</code></td><td><strong>admin</strong></td><td><span class="badge-action auth">AUTH_SUCCESS</span></td><td>127.0.0.1</td><td>Authenticated SuperAdmin session granted</td></tr>
+                <tr><td><code>19:30:12 UTC</code></td><td><strong>SYSTEM</strong></td><td><span class="badge-action system">STARTUP_INIT</span></td><td>127.0.0.1</td><td>Initialized YOLOv8 Neural Core and Kalman Tracking matrix</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      <!-- VIEW 12: SETTINGS -->
+      <main class="content-view hidden" id="view-settings">
+        <div class="security-page-wrap">
+          <div class="security-header">
+            <div><h2 class="view-heading">PLATFORM SETTINGS & JURISDICTION PREFERENCES</h2><p class="view-subheading">Configure municipal branding, timezones, and interface density.</p></div>
+          </div>
+          <div class="panel-card">
+            <div class="form-group"><label>Jurisdiction Name</label><input type="text" class="form-input" value="Metro City Transportation Authority" /></div>
+            <div class="form-group" style="margin-top:12px;"><label>Timezone</label><input type="text" class="form-input" value="America/New_York (UTC-5)" /></div>
+          </div>
+        </div>
+      </main>
+
     </div>
-  </main>
+  </div>
 
-  <!-- =========================================================================
-       VIEW 5: AI INTELLIGENCE & MODEL ACCELERATION (Figma View 5)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-ai-intelligence">
-    <div class="ai-page-wrap">
-      <div class="ai-header">
-        <div>
-          <h2 class="view-heading">AI NEURAL PERCEPTION & SPATIAL INVARIANT ACCELERATOR</h2>
-          <p class="view-subheading">Hardware-accelerated edge inference engine, spatial invariant validators, and neural model telemetry.</p>
-        </div>
-        <div class="ai-actions">
-          <button class="btn btn-outline" id="btn-recalibrate-models">⚡ Recalibrate Weights</button>
-          <button class="btn btn-primary" id="btn-run-full-diagnostics">Run Self-Test Suite</button>
-        </div>
-      </div>
-
-      <!-- AI Telemetry Grid -->
-      <div class="kpi-grid-4">
-        <div class="kpi-card">
-          <div class="kpi-title">MODEL INFERENCE RATE</div>
-          <div class="kpi-val val-cyan">30.0 <span class="kpi-unit">FPS</span></div>
-          <div class="kpi-sub-text">Synchronized Edge Video Pipeline</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">VERIFICATION ACCURACY</div>
-          <div class="kpi-val val-emerald">99.4<span class="kpi-unit">%</span></div>
-          <div class="kpi-sub-text">Zero False-Positive Invariant</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">NEURAL LATENCY</div>
-          <div class="kpi-val val-emerald">11.4 <span class="kpi-unit">ms</span></div>
-          <div class="kpi-sub-text">Direct TensorRT / Torch Pipeline</div>
-        </div>
-        <div class="kpi-card">
-          <div class="kpi-title">ACTIVE DETECTORS</div>
-          <div class="kpi-val val-amber">4 <span class="kpi-unit">Engines</span></div>
-          <div class="kpi-sub-text">YOLOv8 &bull; Kalman &bull; ANPR &bull; Invariant</div>
-        </div>
-      </div>
-
-      <!-- Model Performance Cards Grid -->
-      <div class="camera-grid" style="margin-top: 24px;">
-        <!-- Card 1: YOLOv8 -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">YOLOv8 Neural Detector</div>
-            <span class="cam-badge online">ACCELERATED</span>
-          </div>
-          <div class="cam-meta">Core: <code>yolov8n.pt (640x640)</code></div>
-          <div class="cam-stats">
-            <div><span>Accuracy mAP:</span> <strong>98.7%</strong></div>
-            <div><span>Inference:</span> <strong>8.2 ms</strong></div>
-            <div><span>Track Classes:</span> <strong>Car, Bus, Truck, Person</strong></div>
-            <div><span>Backend:</span> <strong>PyTorch CUDA / DirectML</strong></div>
-          </div>
-        </div>
-
-        <!-- Card 2: Kalman Spatial Tracker -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Kalman Spatial Tracker</div>
-            <span class="cam-badge online">ONLINE</span>
-          </div>
-          <div class="cam-meta">Matrix: <code>8-State Extended Kalman</code></div>
-          <div class="cam-stats">
-            <div><span>Track Continuity:</span> <strong>99.8%</strong></div>
-            <div><span>Update Time:</span> <strong>1.8 ms</strong></div>
-            <div><span>Occlusion Tolerance:</span> <strong>30 Frames</strong></div>
-            <div><span>Distance Metric:</span> <strong>Mahalanobis / Euclidean</strong></div>
-          </div>
-        </div>
-
-        <!-- Card 3: Wrong-Way Invariant Engine -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Wrong-Way Invariant Engine</div>
-            <span class="cam-badge online">ACTIVE</span>
-          </div>
-          <div class="cam-meta">Logic: <code>Vector Flow & Geofence Invariant</code></div>
-          <div class="cam-stats">
-            <div><span>Detection Rate:</span> <strong>100.0%</strong></div>
-            <div><span>Evaluation Time:</span> <strong>0.6 ms</strong></div>
-            <div><span>False Positive Rate:</span> <strong>0.00%</strong></div>
-            <div><span>Action:</span> <strong>Instant Dispatch Trigger</strong></div>
-          </div>
-        </div>
-
-        <!-- Card 4: Optical ANPR & Speed Radar -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Optical ANPR & Speed Radar</div>
-            <span class="cam-badge online">CALIBRATED</span>
-          </div>
-          <div class="cam-meta">OCR: <code>Synthesized Spatial Optical Radar</code></div>
-          <div class="cam-stats">
-            <div><span>OCR Confidence:</span> <strong>97.9%</strong></div>
-            <div><span>Speed Precision:</span> <strong>&plusmn;1.2 km/h</strong></div>
-            <div><span>Plate Regex:</span> <strong>Global Standard V2X</strong></div>
-            <div><span>Latency:</span> <strong>2.1 ms</strong></div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 6: REPORT CENTER & FORENSIC EVIDENCE VAULT (Figma View 6)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-reports">
-    <div class="report-page-wrap">
-      <div class="report-header">
-        <div>
-          <h2 class="view-heading">ENTERPRISE REPORT CENTER & CRYPTOGRAPHIC EVIDENCE VAULT</h2>
-          <p class="view-subheading">Generate, verify, and export court-admissible forensic dossiers and municipal safety reports.</p>
-        </div>
-        <div class="report-actions">
-          <button class="btn btn-outline" id="btn-export-reports-all">Export All Ledgers</button>
-          <button class="btn btn-primary" id="btn-generate-report-modal">+ Generate New Report</button>
-        </div>
-      </div>
-
-      <!-- Report Table -->
-      <div class="panel-card" style="margin-top: 16px;">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Report ID</th>
-              <th>Title / Description</th>
-              <th>Period</th>
-              <th>Author / Signer</th>
-              <th>Status</th>
-              <th>SHA-256 Merkle Seal</th>
-              <th>Format</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="reports-table-body">
-            <tr>
-              <td><code>REP-2026-0927-01</code></td>
-              <td><strong>Municipal Traffic Safety & Hazard Dossier</strong></td>
-              <td>Today (24 Hours)</td>
-              <td>Saptha Sanka (SUPER_ADMIN)</td>
-              <td><span class="badge-status active">VERIFIED</span></td>
-              <td><code>8f2a1c...99b2</code></td>
-              <td>PDF / HTML</td>
-              <td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download Dossier</button></td>
-            </tr>
-            <tr>
-              <td><code>REP-2026-0926-04</code></td>
-              <td><strong>Highway Corridor Optical Speed Compliance Audit</strong></td>
-              <td>Weekly Scope</td>
-              <td>Legal Forensic Examiner</td>
-              <td><span class="badge-status active">SEALED</span></td>
-              <td><code>7d3e4f...11a0</code></td>
-              <td>PDF / JSON</td>
-              <td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download Dossier</button></td>
-            </tr>
-            <tr>
-              <td><code>REP-2026-0925-02</code></td>
-              <td><strong>Autonomous Invariant & AI Zero False-Positive Ledger</strong></td>
-              <td>Monthly Audit</td>
-              <td>System Autonomous Core</td>
-              <td><span class="badge-status active">VERIFIED</span></td>
-              <td><code>5c9b1a...44f2</code></td>
-              <td>PDF / CSV</td>
-              <td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download Dossier</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 7: DEVICE FLEET (Preserved & Enhanced)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-devices">
-    <div class="fleet-page-wrap">
-      <div class="fleet-header-banner">
-        <div>
-          <h2 class="view-heading">ENTERPRISE CAMERA FLEET & NETWORK TOPOLOGY</h2>
-          <p class="view-subheading">Centralized management of ONVIF, RTSP, DirectShow, and Neural Simulation Feeds across municipal network nodes.</p>
-        </div>
-        <div class="fleet-actions">
-          <button class="btn btn-outline" id="btn-scan-network">🔍 Auto-Scan Subnet (192.168.1.0/24)</button>
-          <button class="btn btn-primary" id="btn-add-camera-modal">+ Register New Camera</button>
-        </div>
-      </div>
-
-      <!-- Quick Metrics Bar -->
-      <div class="telemetry-bar" style="margin-bottom: 24px;">
-        <div class="metric-card">
-          <div class="metric-label">TOTAL FLEET NODES</div>
-          <div class="metric-value">4 <span class="metric-unit">cameras</span></div>
-          <div class="metric-sub">Connected & Healthy</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">ONLINE STREAMING FEEDS</div>
-          <div class="metric-value val-emerald">4 <span class="metric-unit">active</span></div>
-          <div class="metric-sub">Zero Packet Loss</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">AGGREGATED BANDWIDTH</div>
-          <div class="metric-value val-cyan">38.4 <span class="metric-unit">Mbps</span></div>
-          <div class="metric-sub">H.264 Hardware Accelerated</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">NETWORK SUBNET SCOPE</div>
-          <div class="metric-value val-amber">192.168.1.0/24</div>
-          <div class="metric-sub">Ports 554, 80, 8080, 37777</div>
-        </div>
-      </div>
-
-      <!-- Camera Inventory Grid -->
-      <div class="camera-grid" id="camera-inventory-grid">
-        <!-- Card 1 -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Cam 01: Highway Corridor Alpha</div>
-            <span class="cam-badge online">ONLINE</span>
-          </div>
-          <div class="cam-meta">Source: <code>Autonomous Physics Simulator</code></div>
-          <div class="cam-stats">
-            <div><span>Protocol:</span> <strong>Virtual Physics</strong></div>
-            <div><span>Resolution:</span> <strong>1280 &times; 720</strong></div>
-            <div><span>Target FPS:</span> <strong>30 FPS</strong></div>
-            <div><span>Ping:</span> <strong>0 ms</strong></div>
-          </div>
-          <div class="cam-actions">
-            <button class="btn btn-sm btn-primary" onclick="switchStreamSource('synthetic')">Stream Live</button>
-            <button class="btn btn-sm btn-outline">Diagnostics</button>
-          </div>
-        </div>
-
-        <!-- Card 2 -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Cam 02: Primary USB Webcam</div>
-            <span class="cam-badge online">ONLINE</span>
-          </div>
-          <div class="cam-meta">Source: <code>DirectShow Video Index 0</code></div>
-          <div class="cam-stats">
-            <div><span>Protocol:</span> <strong>UVC / DirectShow</strong></div>
-            <div><span>Resolution:</span> <strong>1920 &times; 1080</strong></div>
-            <div><span>Target FPS:</span> <strong>30 FPS</strong></div>
-            <div><span>Ping:</span> <strong>1 ms</strong></div>
-          </div>
-          <div class="cam-actions">
-            <button class="btn btn-sm btn-primary" onclick="switchStreamSource('0')">Stream Live</button>
-            <button class="btn btn-sm btn-outline">Diagnostics</button>
-          </div>
-        </div>
-
-        <!-- Card 3 -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Cam 03: Forensic MP4 Playback</div>
-            <span class="cam-badge online">ONLINE</span>
-          </div>
-          <div class="cam-meta">Source: <code>demo_traffic.mp4</code></div>
-          <div class="cam-stats">
-            <div><span>Protocol:</span> <strong>Local File Playback</strong></div>
-            <div><span>Resolution:</span> <strong>1280 &times; 720</strong></div>
-            <div><span>Target FPS:</span> <strong>30 FPS</strong></div>
-            <div><span>Ping:</span> <strong>0 ms</strong></div>
-          </div>
-          <div class="cam-actions">
-            <button class="btn btn-sm btn-primary" onclick="switchStreamSource('demo_traffic.mp4')">Stream Live</button>
-            <button class="btn btn-sm btn-outline">Diagnostics</button>
-          </div>
-        </div>
-
-        <!-- Card 4 -->
-        <div class="camera-card">
-          <div class="cam-card-top">
-            <div class="cam-card-title">Cam 04: IP Network RTSP Node</div>
-            <span class="cam-badge online">STANDBY</span>
-          </div>
-          <div class="cam-meta">Source: <code>rtsp://192.168.1.100:554/live</code></div>
-          <div class="cam-stats">
-            <div><span>Protocol:</span> <strong>RTSP / ONVIF Profile S</strong></div>
-            <div><span>Resolution:</span> <strong>1920 &times; 1080</strong></div>
-            <div><span>Target FPS:</span> <strong>25 FPS</strong></div>
-            <div><span>Ping:</span> <strong>14 ms</strong></div>
-          </div>
-          <div class="cam-actions">
-            <button class="btn btn-sm btn-primary" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">Stream Live</button>
-            <button class="btn btn-sm btn-outline">Diagnostics</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 8: ACCESS & SECURITY (Preserved & Enhanced)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-security">
-    <div class="security-page-wrap">
-      <div class="security-header">
-        <div>
-          <h2 class="view-heading">ENTERPRISE ACCESS CONTROL & RBAC SECURITY VAULT</h2>
-          <p class="view-subheading">Manage multi-tenant operator roles, cryptographic session tokens, and zero-trust permissions.</p>
-        </div>
-        <button class="btn btn-primary" id="btn-add-user-modal">+ Add New Operator</button>
-      </div>
-
-      <!-- Current Active Operator Banner -->
-      <div class="active-user-card">
-        <div class="active-user-icon">🛡️</div>
-        <div>
-          <div class="active-user-title">Saptha Sanka &bull; <span class="badge-role">SUPER_ADMIN</span></div>
-          <div class="active-user-sub">Active Session Token: <code id="sec-token-preview">argus_sec_tok_admin... (SHA-256 Validated)</code></div>
-          <div class="perms-chips">
-            <span class="perm-chip">system:manage</span>
-            <span class="perm-chip">cameras:manage</span>
-            <span class="perm-chip">zones:write</span>
-            <span class="perm-chip">alerts:acknowledge</span>
-            <span class="perm-chip">incidents:export</span>
-            <span class="perm-chip">dossier:verify</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- User Directory Table -->
-      <div class="panel-card" style="margin-top: 24px;">
-        <div class="panel-header">
-          <div class="panel-title">REGISTERED OPERATORS & SECURITY ROLES</div>
-        </div>
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Full Name</th>
-              <th>Assigned Role</th>
-              <th>Email</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="users-table-body">
-            <tr>
-              <td><code>admin</code></td>
-              <td>Saptha Sanka</td>
-              <td><span class="badge-role super">SUPER_ADMIN</span></td>
-              <td>sapthasanka@gmail.com</td>
-              <td><span class="badge-status active">ACTIVE</span></td>
-              <td><button class="btn btn-sm btn-outline">Edit</button></td>
-            </tr>
-            <tr>
-              <td><code>operator_01</code></td>
-              <td>Arterial Patrol Officer</td>
-              <td><span class="badge-role operator">TRAFFIC_OPERATOR</span></td>
-              <td>patrol01@argustraffic.internal</td>
-              <td><span class="badge-status active">ACTIVE</span></td>
-              <td><button class="btn btn-sm btn-outline">Edit</button></td>
-            </tr>
-            <tr>
-              <td><code>auditor_lead</code></td>
-              <td>Legal Forensic Examiner</td>
-              <td><span class="badge-role auditor">FORENSIC_AUDITOR</span></td>
-              <td>forensics@legal-audit.gov</td>
-              <td><span class="badge-status active">ACTIVE</span></td>
-              <td><button class="btn btn-sm btn-outline">Edit</button></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <!-- =========================================================================
-       VIEW 9: IMMUTABLE AUDITS & LOGS (Preserved & Enhanced)
-       ========================================================================= -->
-  <main class="main-container hidden" id="view-audits">
-    <div class="audit-page-wrap">
-      <div class="audit-header">
-        <div>
-          <h2 class="view-heading">IMMUTABLE FORENSIC AUDIT LOG & CRYPTOGRAPHIC LEDGER</h2>
-          <p class="view-subheading">Tamper-evident system activity records, operator actions, and automated incident logs.</p>
-        </div>
-        <div class="audit-actions">
-          <button class="btn btn-outline" id="btn-export-audit-json">Export JSON Ledger</button>
-          <button class="btn btn-primary" id="btn-refresh-audit">Refresh Audit Logs</button>
-        </div>
-      </div>
-
-      <div class="panel-card">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Timestamp</th>
-              <th>Actor</th>
-              <th>Action</th>
-              <th>IP Address</th>
-              <th>Audit Narrative</th>
-            </tr>
-          </thead>
-          <tbody id="audit-table-body">
-            <tr>
-              <td><code>19:30:15 UTC</code></td>
-              <td><strong>admin</strong></td>
-              <td><span class="badge-action auth">AUTH_SUCCESS</span></td>
-              <td>127.0.0.1</td>
-              <td>Authenticated SuperAdmin session granted with PBKDF2-SHA256 signature</td>
-            </tr>
-            <tr>
-              <td><code>19:30:12 UTC</code></td>
-              <td><strong>SYSTEM</strong></td>
-              <td><span class="badge-action system">STARTUP_INIT</span></td>
-              <td>127.0.0.1</td>
-              <td>Initialized YOLOv8 Neural Core and Kalman Spatial Tracking matrix</td>
-            </tr>
-            <tr>
-              <td><code>19:30:10 UTC</code></td>
-              <td><strong>SYSTEM</strong></td>
-              <td><span class="badge-action db">DB_SEALED</span></td>
-              <td>127.0.0.1</td>
-              <td>Mounted persistent incidents.db and security_vault.db in %LOCALAPPDATA%</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </main>
-
-  <!-- Forensic Incident Investigation Modal -->
+  <!-- Incident Investigation Modal -->
   <div id="incident-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="modal-header">
@@ -1350,12 +1067,8 @@
         <button id="camera-modal-close" class="modal-close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label>Camera Name</label>
-          <input type="text" id="new-cam-name" class="form-input" placeholder="e.g. North Arterial PTZ Cam" />
-        </div>
-        <div class="form-group">
-          <label>Stream Protocol / Type</label>
+        <div class="form-group"><label>Camera Name</label><input type="text" id="new-cam-name" class="form-input" placeholder="e.g. North Arterial PTZ Cam" /></div>
+        <div class="form-group"><label>Stream Protocol / Type</label>
           <select id="new-cam-proto" class="form-input">
             <option value="rtsp">RTSP IP Camera (H.264/H.265)</option>
             <option value="onvif">ONVIF Network Camera</option>
@@ -1363,10 +1076,7 @@
             <option value="file">Forensic Video File (MP4/AVI)</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Stream Connection URL / Device ID</label>
-          <input type="text" id="new-cam-url" class="form-input" placeholder="rtsp://admin:pass@192.168.1.150:554/stream1" />
-        </div>
+        <div class="form-group"><label>Stream Connection URL / Device ID</label><input type="text" id="new-cam-url" class="form-input" placeholder="rtsp://admin:pass@192.168.1.150:554/stream1" /></div>
       </div>
       <div class="modal-footer">
         <button id="btn-cancel-add-cam" class="btn btn-outline">Cancel</button>
@@ -1375,10 +1085,7 @@
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
-
-  <!-- Main JavaScript Application Engine -->
   <script src="/static/js/app.js"></script>
 </body>
 </html>
