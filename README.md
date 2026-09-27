@@ -156,11 +156,9 @@ Evaluated across standard 1080p and 720p urban traffic camera streams:
 
 ---
 
-## 💻 Installation & Deployment
+## 💻 Developer & Source Setup
 
-### Option A: Developer & Source Setup
-
-#### 1. Clone & Set Up Virtual Environment
+### 1. Clone & Set Up Virtual Environment
 
 ```bash
 # Clone the official repository
@@ -182,7 +180,7 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-#### 2. Launch the Application
+### 2. Launch the Application
 
 <table>
   <thead>
@@ -205,21 +203,6 @@ pip install -e .
     </tr>
   </tbody>
 </table>
-
----
-
-### Option B: Compiling the Windows Installer Locally
-
-To compile your own zero-dependency Windows executable and installer:
-
-```powershell
-# 1. Compile PyInstaller standalone binary
-pyinstaller argustraffic.spec --noconfirm
-
-# 2. Compile Inno Setup Enterprise Installer
-& "C:\Program Files\Inno Setup 7\ISCC.exe" installer_inno.iss
-```
-> The compiled installer wizard will be generated at `Output\ArgusTraffic_Setup.exe`.
 
 ---
 
