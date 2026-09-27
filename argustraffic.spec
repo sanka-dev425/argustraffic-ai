@@ -7,6 +7,7 @@ block_cipher = None
 datas = [
     ('configs', 'configs'),
     ('src', 'src'),
+    ('assets', 'assets'),
     ('yolov8n.pt', '.'),
     ('demo_traffic.mp4', '.'),
 ]
@@ -89,6 +90,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='assets/app_icon.ico',
 )
 
 coll = COLLECT(

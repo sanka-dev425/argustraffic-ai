@@ -18,6 +18,13 @@ import urllib.request
 BASE_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(BASE_DIR))
 
+# Register Windows AppUserModelID for taskbar icon
+if sys.platform == "win32":
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("ArgusTraffic.AutonomousSystems.CommandCenter.2.0")
+    except Exception:
+        pass
+
 # In GUI mode (console=False on Windows), sys.stdout and sys.stderr are None.
 class SafeStream:
     def write(self, s):

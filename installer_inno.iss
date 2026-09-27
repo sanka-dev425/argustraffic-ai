@@ -8,14 +8,17 @@ AppId={{8B1A2C3D-4E5F-6A7B-8C9D-0E1F2A3B4C5D}
 AppName=ArgusTraffic AI
 AppVersion=2.0.0
 AppPublisher=ArgusTraffic Autonomous Systems
-AppPublisherURL=https://github.com/argustraffic
-AppSupportURL=https://github.com/argustraffic
-AppUpdatesURL=https://github.com/argustraffic
+AppPublisherURL=https://github.com/sanka-dev425/argustraffic-ai
+AppSupportURL=https://github.com/sanka-dev425/argustraffic-ai
+AppUpdatesURL=https://github.com/sanka-dev425/argustraffic-ai
 DefaultDirName={autopf}\ArgusTraffic AI
 DefaultGroupName=ArgusTraffic AI
 AllowNoIcons=yes
 OutputDir=Output
 OutputBaseFilename=ArgusTraffic_Setup
+SetupIconFile=assets\app_icon.ico
+WizardSmallImageFile=assets\wizard_small.bmp
+WizardImageFile=assets\wizard_large.bmp
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -35,9 +38,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Source: "dist\ArgusTraffic\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"
+Name: "{group}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; IconFilename: "{app}\assets\app_icon.ico"
 Name: "{group}\{cm:UninstallProgram,ArgusTraffic AI}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; Tasks: desktopicon
+Name: "{autodesktop}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; Tasks: desktopicon; IconFilename: "{app}\assets\app_icon.ico"
 
 [Run]
 Filename: "{app}\ArgusTraffic.exe"; Description: "{cm:LaunchProgram,ArgusTraffic AI}"; Flags: nowait postinstall skipifsilent
