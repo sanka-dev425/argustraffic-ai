@@ -39,33 +39,38 @@
     <div class="login-card">
       <div class="login-header">
         <div class="login-icon">
-          <img src="/static/img/logo.png" width="56" height="56" class="login-logo-img" alt="ArgusTraffic Logo" />
+          <img src="/static/img/logo.png" width="64" height="64" class="login-logo-img" alt="ArgusTraffic AI" />
         </div>
-        <div class="login-title">Enterprise Security Gateway</div>
+        <div class="login-title">ArgusTraffic Enterprise Portal</div>
         <div class="login-sub">Zero-Trust Authentication & RBAC Session Token Provisioning</div>
       </div>
 
       <form id="login-form" class="login-form">
         <div class="form-group">
           <label for="login-username">Operator / Supervisor ID</label>
-          <input type="text" id="login-username" class="form-input" value="admin" required autocomplete="username" />
+          <input type="text" id="login-username" class="form-input" value="admin" placeholder="e.g. admin" required autocomplete="username" />
         </div>
         <div class="form-group">
           <label for="login-password">Cryptographic Password</label>
-          <input type="password" id="login-password" class="form-input" value="ArgusAdmin2026!" required autocomplete="current-password" />
+          <input type="password" id="login-password" class="form-input" value="ArgusAdmin2026!" placeholder="••••••••••••" required autocomplete="current-password" />
         </div>
 
-        <div class="login-quick-roles">
-          <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">QUICK ROLE LOGIN:</span>
-          <button type="button" class="btn-role-quick" id="btn-quick-admin">👑 SuperAdmin</button>
-          <button type="button" class="btn-role-quick" id="btn-quick-operator">👮 Operator</button>
-          <button type="button" class="btn-role-quick" id="btn-quick-auditor">⚖️ Auditor</button>
+        <div class="login-meta-row" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 20px 0; font-size: 11px; color: var(--text-muted);">
+          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
+            <input type="checkbox" id="remember-session" checked style="accent-color: var(--cyan-neon);" /> Keep terminal session active
+          </label>
+          <span style="color: var(--cyan-neon); font-family: var(--font-mono); font-size: 10px;">SHA-256 AES-GCM</span>
         </div>
 
-        <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit">
-          <span>Authorize Secure Session</span> &rarr;
+        <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit" style="padding: 12px; font-weight: 700; letter-spacing: 0.5px;">
+          <span>AUTHORIZE SECURE SESSION</span> &rarr;
         </button>
-        <div id="login-error" class="login-error hidden">Invalid credentials. Please verify credentials.</div>
+        
+        <div id="login-error" class="login-error hidden">Invalid credentials. Please verify username and password.</div>
+
+        <div class="login-footer-badge" style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center; font-size: 10.5px; color: var(--text-muted);">
+          Protected under CJIS & Municipal Digital Evidence Governance Standards
+        </div>
       </form>
     </div>
   </div>
