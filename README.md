@@ -11,9 +11,10 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Linux%20x86__64-0078D6.svg?logo=windows&logoColor=white)](https://github.com/sanka-dev425/argustraffic-ai)
 
 <p align="center">
-  <b>High-throughput, edge-native computer vision pipeline designed for municipal traffic networks, automated collision detection, optical speed radar, and court-admissible forensic evidence ledgers.</b>
+  <b>Industrial-grade, edge-native computer vision platform designed for municipal traffic networks, automated collision detection, optical speed radar, and court-admissible forensic evidence ledgers.</b>
 </p>
 
+[Download Windows .EXE](#-download-windows-installer--standalone-exe) •
 [Key Features](#-key-features) •
 [System Architecture](#-system-architecture) •
 [Installation](#-installation--deployment) •
@@ -24,6 +25,30 @@
 ---
 
 </div>
+
+## 📦 Download Windows Installer & Standalone (.exe)
+
+For municipal operators, traffic engineers, and law enforcement supervisors who want a ready-to-run desktop distribution without installing Python or compilers:
+
+<div align="center">
+
+| Distribution Package | Type | Target OS | Direct Download / Access |
+| :--- | :--- | :--- | :--- |
+| **ArgusTraffic Enterprise Setup Wizard** | `ArgusTraffic_Setup.exe` (Installer) | Windows 10 / 11 (64-bit) | [⬇️ **Download Setup Wizard (.exe)**](https://github.com/sanka-dev425/argustraffic-ai/releases/latest) |
+| **ArgusTraffic Portable Standalone** | `ArgusTraffic.exe` (Zero-Dependency) | Windows 10 / 11 (64-bit) | [⬇️ **Download Portable Bundle (.zip)**](https://github.com/sanka-dev425/argustraffic-ai/releases/latest) |
+
+</div>
+
+### 🚀 1-Click Installation Steps (Windows)
+
+1. **Download** the official installer: [`ArgusTraffic_Setup.exe`](https://github.com/sanka-dev425/argustraffic-ai/releases/latest).
+2. **Run the Setup Wizard**: Follow the guided on-screen prompts.
+   * *Prerequisites Automated*: Automatically bootstraps Visual C++ 2015-2022 Redistributable and Microsoft Edge WebView2 Runtime if missing.
+3. **Launch ArgusTraffic AI**:
+   * Double-click the **ArgusTraffic AI Command Center** shortcut on your Desktop or Start Menu.
+   * Log in with the default supervisor role (`admin` / `ArgusAdmin2026!`).
+
+---
 
 ## 📌 Overview
 
@@ -105,7 +130,7 @@ flowchart LR
     end
 
     subgraph INTERFACE ["4. Command Center"]
-        UI["Glassmorphism Web Dashboard\n(Live Video & Telemetry HUD)"]
+        UI["Cyber-Tactical Command Center\n(Live 4-Up Wall & GIS Map)"]
         DESKTOP["Hardware-Accelerated Native App\n(Windows WebView2 Runtime)"]
         PDF["Official Executive PDF Report\n(Court-Admissible Dossier)"]
     end
@@ -133,7 +158,7 @@ Evaluated across standard 1080p and 720p urban traffic camera streams:
 
 ## 💻 Installation & Deployment
 
-### Option A: Native Desktop Environment (Recommended)
+### Option A: Developer & Source Setup
 
 #### 1. Clone & Set Up Virtual Environment
 
@@ -183,9 +208,9 @@ pip install -e .
 
 ---
 
-### Option B: Windows Production Setup Installer
+### Option B: Compiling the Windows Installer Locally
 
-To build an enterprise Windows installer package with Desktop & Start Menu shortcuts:
+To compile your own zero-dependency Windows executable and installer:
 
 ```powershell
 # 1. Compile PyInstaller standalone binary
@@ -194,7 +219,7 @@ pyinstaller argustraffic.spec --noconfirm
 # 2. Compile Inno Setup Enterprise Installer
 & "C:\Program Files\Inno Setup 7\ISCC.exe" installer_inno.iss
 ```
-> The production setup wizard will be compiled to `Output\ArgusTraffic_Setup.exe`.
+> The compiled installer wizard will be generated at `Output\ArgusTraffic_Setup.exe`.
 
 ---
 
@@ -218,7 +243,7 @@ argus audit --verify-chain
 | Method | Endpoint | Description |
 | :--- | :--- | :--- |
 | `GET` | `/api/v1/health` | Subsystem telemetry, active tracks, and model status. |
-| `POST` | `/api/v1/auth/login` | Authenticates operator credentials and returns JWT bearer token. |
+| `POST` | `/api/v1/auth/login` | Authenticates operator credentials and returns session tokens. |
 | `GET` | `/api/v1/incidents` | Lists active and historical safety violation events. |
 | `GET` | `/api/v1/incidents/{id}/report` | Generates official court-admissible HTML forensic dossier. |
 | `GET` | `/api/v1/reports/executive` | Compiles printable Executive Traffic Safety & Compliance Audit. |
@@ -232,7 +257,7 @@ argus audit --verify-chain
 ArgusTraffic enforces strict data governance and chain-of-custody compliance:
 - **Tamper-Evident Hashing**: Every incident record generates a SHA-256 cryptographic digest binding telemetry coordinates, speed measurements, and timestamped frame buffers.
 - **Privacy Minimization (GDPR/CCPA)**: Optical character recognition (ANPR) records are stored with configurable retention TTLs and masked by default (`WP-C**-**21`) in non-privileged audit interfaces.
-- **Merkle Tree Auditing**: Daily incident batches are hashed into an immutable Merkle root to prevent retroactive alteration in municipal legal proceedings.
+- **Merkle Tree Auditing**: Daily incident batches are hashed into an immutable Merkle root to prevent retroactive alteration in municipal legal proceedings (**ISO/IEC 27037 Standard**).
 
 ---
 
