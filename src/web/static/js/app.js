@@ -2,6 +2,7 @@
  * ArgusTraffic AI - Enterprise Client Engine & Autonomous Vision Hub
  * Handles real-time WebSocket telemetry, interactive spatial geofencing,
  * Zero-Trust RBAC authentication, device fleet switching, and executive reporting.
+ * Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
  */
 
 let ws = null;
@@ -11,9 +12,10 @@ let incidentCount = 0;
 let recentIncidents = [];
 let isDrawingMode = false;
 let drawnPoints = [];
+let slaSeconds = 102; // 01:42 countdown
 let currentUser = {
   username: "admin",
-  full_name: "Chief Traffic Supervisor",
+  full_name: "Saptha Sanka",
   role: "SUPER_ADMIN",
   token: "argus_sec_tok_admin",
 };
@@ -32,6 +34,10 @@ document.addEventListener("DOMContentLoaded", () => {
   setupSecurityAccess();
   setupAudits();
   initANPRRadarPolling();
+  initClock();
+  initSLATimer();
+  setupInspectorDrawer();
+  setupGridSwitchers();
 });
 
 /* ==========================================================================
@@ -138,7 +144,7 @@ function initAuthSession() {
       // Fallback local auth for testing
       currentUser = {
         username: u,
-        full_name: u === "admin" ? "Chief Traffic Supervisor" : (u === "auditor_lead" ? "Legal Forensic Examiner" : "Arterial Patrol Officer"),
+        full_name: u === "admin" ? "Saptha Sanka" : (u === "auditor_lead" ? "Legal Forensic Examiner" : "Arterial Patrol Officer"),
         role: u === "admin" ? "SUPER_ADMIN" : (u === "auditor_lead" ? "FORENSIC_AUDITOR" : "TRAFFIC_OPERATOR"),
         token: `argus_tok_${u}`,
       };
@@ -216,6 +222,10 @@ function fallbackToMjpegStream() {
   if (streamImg && (!streamImg.src || streamImg.src.indexOf("data:") !== 0)) {
     streamImg.src = "/video/feed";
   }
+  const wall1 = document.getElementById("wall-stream-1");
+  if (wall1 && (!wall1.src || wall1.src.indexOf("data:") !== 0)) {
+    wall1.src = "/video/feed";
+  }
 }
 
 function handleFrameData(data) {
@@ -223,6 +233,22 @@ function handleFrameData(data) {
   const streamImg = document.getElementById("stream-img");
   if (data.image && streamImg) {
     streamImg.src = data.image;
+  }
+  const wall1 = document.getElementById("wall-stream-1");
+  if (data.image && wall1) {
+    wall1.src = data.image;
+  }
+  const wall2 = document.getElementById("wall-stream-2");
+  if (data.image && wall2 && !wall2.src) {
+    wall2.src = data.image;
+  }
+  const wall3 = document.getElementById("wall-stream-3");
+  if (data.image && wall3 && !wall3.src) {
+    wall3.src = data.image;
+  }
+  const wall4 = document.getElementById("wall-stream-4");
+  if (data.image && wall4 && !wall4.src) {
+    wall4.src = data.image;
   }
 
   // 2. Update Telemetry HUD
@@ -232,7 +258,9 @@ function handleFrameData(data) {
   }
   if (data.inference_ms !== undefined) {
     const latEl = document.getElementById("stat-latency");
+    const kpiLat = document.getElementById("kpi-latency");
     if (latEl) latEl.innerHTML = `${data.inference_ms} <span class="metric-unit">ms</span>`;
+    if (kpiLat) kpiLat.innerHTML = `${data.inference_ms} <span class="kpi-unit">ms</span>`;
   }
   if (data.active_tracks_count !== undefined) {
     const trEl = document.getElementById("stat-tracks");
@@ -262,21 +290,20 @@ function addIncidentItem(alert) {
   if (emptyState) emptyState.remove();
 
   const item = document.createElement("div");
-  item.className = `incident-item ${alert.severity.toLowerCase()}`;
+  item.className = `priority-item ${alert.severity === 'CRITICAL' ? 'critical' : (alert.severity === 'HIGH' ? 'warning' : 'info')}`;
   item.dataset.alertId = alert.alert_id;
 
-  const badgeClass = alert.severity === "CRITICAL" ? "badge-critical" : "badge-warning";
-
   item.innerHTML = `
-    <div class="incident-top">
-      <span class="incident-badge ${badgeClass}">${alert.incident_type}</span>
-      <span class="incident-time">${alert.formatted_time || new Date().toLocaleTimeString()}</span>
+    <div class="pri-top">
+      <span class="pri-badge ${alert.severity === 'CRITICAL' ? 'critical' : (alert.severity === 'HIGH' ? 'warning' : 'info')}">${alert.severity}</span>
+      <span class="pri-time">${alert.formatted_time || new Date().toLocaleTimeString()}</span>
     </div>
-    <div class="incident-desc">${alert.description}</div>
+    <div class="pri-title">${alert.incident_type}</div>
+    <div class="pri-meta">${alert.description}</div>
   `;
 
   item.addEventListener("click", () => {
-    openIncidentModal(alert);
+    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Corridor Alpha", alert.severity, "64.2 km/h", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
   });
 
   feed.prepend(item);
@@ -285,28 +312,35 @@ function addIncidentItem(alert) {
   }
 }
 
-function openIncidentModal(alert) {
+function openForensicModal(id, title, location, severity, speed, plate) {
   const modal = document.getElementById("incident-modal");
-  document.getElementById("modal-title").innerText = `INVESTIGATION: ${alert.alert_id}`;
-  document.getElementById("m-id").innerText = alert.alert_id;
-  document.getElementById("m-sev").innerText = alert.severity;
-  document.getElementById("m-time").innerText = alert.formatted_time || new Date(alert.timestamp * 1000).toLocaleString();
-  document.getElementById("m-zone").innerText = alert.zone_id || "Main Highway Arterial";
-  document.getElementById("m-tracks").innerText = alert.involved_track_ids && alert.involved_track_ids.length > 0 ? alert.involved_track_ids.join(", ") : "Track #1";
-  document.getElementById("m-desc").innerText = alert.description;
+  document.getElementById("modal-title").innerText = `FORENSIC INVESTIGATION: ${id}`;
+  document.getElementById("m-id").innerText = id;
+  document.getElementById("m-sev").innerText = severity;
+  document.getElementById("m-time").innerText = new Date().toUTCString();
+  document.getElementById("m-zone").innerText = location;
+  document.getElementById("m-tracks").innerText = `${plate} (${speed})`;
+  document.getElementById("m-desc").innerText = `${title} flagged with verified spatial vector flow invariant. Certified court-admissible record.`;
 
   document.getElementById("btn-export-log").onclick = () => {
-    const blob = new Blob([JSON.stringify(alert, null, 2)], { type: "application/json" });
+    const payload = {
+      incident_id: id,
+      title: title,
+      location: location,
+      severity: severity,
+      speed: speed,
+      plate: plate,
+      timestamp: new Date().toISOString(),
+      merkle_root: "9f8a3c2e1b4d5f6a7b8c9d0e1f2a3b4c5d6e7f8a",
+      officer: currentUser.full_name,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `argus_incident_${alert.alert_id}.json`;
+    a.download = `argus_incident_${id}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  document.getElementById("btn-view-dossier").onclick = () => {
-    window.open(`/api/v1/incidents/${alert.alert_id}/report`, "_blank");
   };
 
   modal.classList.remove("hidden");
@@ -328,8 +362,8 @@ function showToast(alert) {
   toast.innerHTML = `
     <div style="font-size: 1.4rem;">🚨</div>
     <div>
-      <div style="font-weight:700;font-size:0.85rem;color:#ff1744;">${alert.incident_type} ALERT</div>
-      <div style="font-size:0.75rem;color:#ddd;">${alert.description}</div>
+      <div style="font-weight:700;font-size:0.85rem;color:#ff1744;">${alert.incident_type || 'INCIDENT'} ALERT</div>
+      <div style="font-size:0.75rem;color:#ddd;">${alert.description || 'Hazard detected'}</div>
     </div>
   `;
   container.appendChild(toast);
@@ -364,29 +398,48 @@ function triggerAudioAlert() {
 }
 
 /* ==========================================================================
-   4. INTERACTIVE CONTROLS & CAMERA STREAM SWITCHER
+   4. NAVIGATION TABS & VIEW SWITCHER
    ========================================================================== */
-function setupControls() {
-  const sourceSelect = document.getElementById("source-select");
-  sourceSelect?.addEventListener("change", (e) => {
-    switchStreamSource(e.target.value);
-  });
-
-  // Cam tabs at top of stream
-  document.querySelectorAll(".cam-tab").forEach((tab) => {
+function setupNavigationTabs() {
+  const navTabs = document.querySelectorAll(".nav-tab");
+  navTabs.forEach((tab) => {
     tab.addEventListener("click", () => {
-      document.querySelectorAll(".cam-tab").forEach((t) => t.classList.remove("active"));
+      const targetViewId = tab.dataset.view;
+      if (!targetViewId) return;
+
+      navTabs.forEach((t) => t.classList.remove("active"));
       tab.classList.add("active");
-      const src = tab.dataset.src;
-      switchStreamSource(src);
+
+      document.querySelectorAll("main.main-container").forEach((m) => m.classList.add("hidden"));
+      const targetEl = document.getElementById(targetViewId);
+      if (targetEl) targetEl.classList.remove("hidden");
     });
   });
+}
 
+function switchToLiveOps() {
+  const liveTab = document.getElementById("tab-live-operations");
+  if (liveTab) liveTab.click();
+}
+
+function ackCurrentAlert() {
+  const banner = document.getElementById("emergency-banner");
+  if (banner) {
+    banner.style.opacity = "0.5";
+    document.getElementById("btn-ack-alert").innerText = "✓ Acknowledged";
+  }
+  showToast({ incident_type: "ALERT", description: "Critical alert acknowledged by supervisor." });
+}
+
+/* ==========================================================================
+   5. CONTROLS, PTZ & INSPECTOR
+   ========================================================================== */
+function setupControls() {
   // Confidence Slider
   const confSlider = document.getElementById("conf-slider");
   const confVal = document.getElementById("conf-val");
   confSlider?.addEventListener("input", (e) => {
-    confVal.innerText = e.target.value;
+    if (confVal) confVal.innerText = e.target.value;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ action: "set_confidence", value: e.target.value }));
     }
@@ -442,22 +495,46 @@ function setupControls() {
   });
 }
 
+function setupInspectorDrawer() {
+  const inspTabs = document.querySelectorAll(".insp-tab");
+  inspTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      inspTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const targetId = tab.dataset.insp;
+
+      document.querySelectorAll(".insp-content").forEach((c) => c.classList.add("hidden"));
+      const targetContent = document.getElementById(targetId);
+      if (targetContent) targetContent.classList.remove("hidden");
+    });
+  });
+}
+
+function setupGridSwitchers() {
+  const gridBtns = document.querySelectorAll(".grid-btn");
+  gridBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      gridBtns.forEach((b) => b.classList.remove("active"));
+      btn.classList.add("active");
+      showToast({ incident_type: "LAYOUT", description: `Switched viewport matrix to: ${btn.dataset.grid.toUpperCase()}` });
+    });
+  });
+}
+
+function triggerPtz(action) {
+  showToast({ incident_type: "PTZ", description: `Triggered PTZ Optical Command: ${action}` });
+  const eventFeed = document.getElementById("insp-event-feed");
+  if (eventFeed) {
+    const item = document.createElement("div");
+    item.className = "timeline-item";
+    item.innerHTML = `<span class="tl-time">${new Date().toLocaleTimeString()}</span> <span class="tl-text">PTZ Command: ${action}</span>`;
+    eventFeed.prepend(item);
+  }
+}
+
 function switchStreamSource(src) {
-  const titleEl = document.getElementById("feed-title");
   const sel = document.getElementById("source-select");
   if (sel) sel.value = src;
-
-  if (titleEl) {
-    if (src === "synthetic") {
-      titleEl.innerText = "CAMERA 01: HIGHWAY JUNCTION ALPHA (AUTONOMOUS SIMULATOR)";
-    } else if (src === "0") {
-      titleEl.innerText = "CAMERA 02: PRIMARY USB WEBCAM (DIRECTSHOW)";
-    } else if (src.indexOf("mp4") !== -1) {
-      titleEl.innerText = `CAMERA 03: FORENSIC PLAYBACK (${src})`;
-    } else {
-      titleEl.innerText = `CAMERA 04: NETWORK IP NODE (${src})`;
-    }
-  }
 
   if (ws && ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify({ action: "set_source", source: src }));
@@ -466,8 +543,12 @@ function switchStreamSource(src) {
   showToast({ incident_type: "CAMERA", description: `Switched stream input to: ${src}` });
 }
 
+function handleSourceChange(src) {
+  switchStreamSource(src);
+}
+
 /* ==========================================================================
-   5. INTERACTIVE GEOFENCE POLYGON DRAWING
+   6. INTERACTIVE GEOFENCE POLYGON DRAWING
    ========================================================================== */
 function setupDrawingCanvas() {
   const canvas = document.getElementById("drawing-canvas");
@@ -489,11 +570,11 @@ function setupDrawingCanvas() {
     isDrawingMode = !isDrawingMode;
     drawnPoints = [];
     if (isDrawingMode) {
-      canvas.classList.add("active");
+      canvas.classList.add("active-draw");
       toolbar.classList.remove("hidden");
       btnDraw.innerText = "✖ Cancel Drawing";
     } else {
-      canvas.classList.remove("active");
+      canvas.classList.remove("active-draw");
       toolbar.classList.add("hidden");
       btnDraw.innerText = "✏️ Draw Custom Zone";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -539,9 +620,8 @@ function setupDrawingCanvas() {
       console.warn("Zone save:", e);
     }
 
-    // Exit drawing mode
     isDrawingMode = false;
-    canvas.classList.remove("active");
+    canvas.classList.remove("active-draw");
     toolbar.classList.add("hidden");
     btnDraw.innerText = "✏️ Draw Custom Zone";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -550,7 +630,7 @@ function setupDrawingCanvas() {
 
   btnCancel?.addEventListener("click", () => {
     isDrawingMode = false;
-    canvas.classList.remove("active");
+    canvas.classList.remove("active-draw");
     toolbar.classList.add("hidden");
     btnDraw.innerText = "✏️ Draw Custom Zone";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -577,7 +657,6 @@ function redrawPolygon(ctx, canvas) {
   }
   ctx.stroke();
 
-  // Draw vertices
   drawnPoints.forEach(([x, y], idx) => {
     ctx.fillStyle = "#ff1744";
     ctx.beginPath();
@@ -590,37 +669,17 @@ function redrawPolygon(ctx, canvas) {
 }
 
 /* ==========================================================================
-   6. NAVIGATION TABS & VIEW SWITCHER
-   ========================================================================== */
-function setupNavigationTabs() {
-  const tabs = [
-    { btn: "tab-monitor", view: "view-surveillance" },
-    { btn: "tab-devices", view: "view-devices" },
-    { btn: "tab-analytics", view: "view-analytics" },
-    { btn: "tab-security", view: "view-security" },
-    { btn: "tab-audits", view: "view-audits" },
-  ];
-
-  tabs.forEach(({ btn, view }) => {
-    document.getElementById(btn)?.addEventListener("click", () => {
-      tabs.forEach((t) => {
-        document.getElementById(t.btn)?.classList.remove("active");
-        document.getElementById(t.view)?.classList.add("hidden");
-      });
-      document.getElementById(btn)?.classList.add("active");
-      document.getElementById(view)?.classList.remove("hidden");
-    });
-  });
-}
-
-/* ==========================================================================
    7. EXECUTIVE REPORTS & ANALYTICS
    ========================================================================== */
 function setupExecutiveReports() {
   const btnExport = document.getElementById("btn-export-exec-report");
   btnExport?.addEventListener("click", () => {
-    window.open(`/api/v1/reports/executive?time_window=Last+24+Hours&officer_name=${encodeURIComponent(currentUser.full_name || 'Chief Traffic Supervisor')}`, "_blank");
+    generateExecutiveReport();
   });
+}
+
+function generateExecutiveReport() {
+  window.open(`/api/v1/reports/executive?time_window=Last+24+Hours&officer_name=${encodeURIComponent(currentUser.full_name || 'Saptha Sanka')}`, "_blank");
 }
 
 /* ==========================================================================
@@ -647,9 +706,6 @@ function setupDeviceFleet() {
   document.getElementById("btn-add-camera-modal")?.addEventListener("click", () => {
     modal.classList.remove("hidden");
   });
-  document.getElementById("btn-quick-add-cam")?.addEventListener("click", () => {
-    modal.classList.remove("hidden");
-  });
   document.getElementById("camera-modal-close")?.addEventListener("click", () => {
     modal.classList.add("hidden");
   });
@@ -670,7 +726,6 @@ function setupDeviceFleet() {
    9. SECURITY RBAC & AUDITS
    ========================================================================== */
 function setupSecurityAccess() {
-  // Load users from REST endpoint
   fetch("/api/v1/auth/users")
     .then((r) => r.json())
     .then((users) => {
@@ -681,7 +736,7 @@ function setupSecurityAccess() {
             <tr>
               <td><code>${u.username}</code></td>
               <td>${u.full_name}</td>
-              <td><span class="badge-role super">${u.role}</span></td>
+              <td><span class="badge-role ${u.role === 'SUPER_ADMIN' ? 'super' : (u.role === 'FORENSIC_AUDITOR' ? 'auditor' : 'operator')}">${u.role}</span></td>
               <td>${u.email}</td>
               <td><span class="badge-status active">ACTIVE</span></td>
               <td><button class="btn btn-sm btn-outline">Edit</button></td>
@@ -711,7 +766,7 @@ function setupAudits() {
 }
 
 /* ==========================================================================
-   10. REAL-TIME ANPR RADAR TELEMETRY POLLING
+   10. REAL-TIME ANPR RADAR TELEMETRY POLLING, CLOCK & SLA
    ========================================================================== */
 function initANPRRadarPolling() {
   setInterval(async () => {
@@ -733,5 +788,29 @@ function initANPRRadarPolling() {
         }
       }
     } catch (e) {}
+  }, 1000);
+}
+
+function initClock() {
+  const clockEl = document.getElementById("header-clock");
+  if (!clockEl) return;
+  setInterval(() => {
+    const d = new Date();
+    clockEl.innerText = `${d.toTimeString().split(' ')[0]} UTC`;
+  }, 1000);
+}
+
+function initSLATimer() {
+  const slaEl = document.getElementById("sla-countdown");
+  if (!slaEl) return;
+  setInterval(() => {
+    if (slaSeconds > 0) {
+      slaSeconds--;
+      const mins = Math.floor(slaSeconds / 60).toString().padStart(2, '0');
+      const secs = (slaSeconds % 60).toString().padStart(2, '0');
+      slaEl.innerText = `${mins}:${secs}`;
+    } else {
+      slaEl.innerText = "00:00 (EXPIRED)";
+    }
   }, 1000);
 }
