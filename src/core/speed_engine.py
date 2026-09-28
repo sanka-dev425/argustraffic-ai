@@ -4,9 +4,11 @@ temporal trajectory differentiation, and exponential smoothing.
 """
 
 from collections import deque
+from dataclasses import dataclass, field
+import datetime
 import math
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 class SpeedRadarEngine:
@@ -135,3 +137,110 @@ class SpeedRadarEngine:
         for tid in stale:
             self._trajectories.pop(tid, None)
             self._current_speeds.pop(tid, None)
+
+
+@dataclass
+class SectionPassage:
+    plate: str
+    camera_id: str
+    checkpoint_id: str
+    timestamp: float
+    snapshot_path: Optional[str] = None
+    vehicle_class: str = "car"
+
+
+class PointToPointAverageSpeedEngine:
+    """
+    Enterprise Point-to-Point (P2P) Section Control Speed Enforcement Engine.
+    Computes true average corridor velocity between highway checkpoints (Gantry A -> Gantry B),
+    eliminating the 'brake right in front of radar' blindspot.
+    """
+
+    def __init__(
+        self,
+        corridor_id: str = "EXPRESSWAY_SECTION_01",
+        section_distance_km: float = 5.0,
+        speed_limit_kmh: float = 100.0,
+        tolerance_kmh: float = 3.0,
+    ):
+        self.corridor_id = corridor_id
+        self.section_distance_km = section_distance_km
+        self.speed_limit_kmh = speed_limit_kmh
+        self.tolerance_kmh = tolerance_kmh
+        self.entry_passages: Dict[str, SectionPassage] = {}
+        self.violations: List[Dict[str, Any]] = []
+
+    def record_passage(
+        self,
+        plate: str,
+        camera_id: str,
+        checkpoint_role: str,  # 'ENTRY' or 'EXIT'
+        timestamp: Optional[float] = None,
+        vehicle_class: str = "car",
+        snapshot_path: Optional[str] = None,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Records an ANPR passage at an entry or exit checkpoint gantry.
+        If an EXIT passage matches an earlier ENTRY, computes average speed and logs violation if speeding.
+        """
+        clean_plate = plate.replace(" ", "").replace("-", "").upper()
+        ts = timestamp or time.time()
+        role = checkpoint_role.upper()
+
+        if role == "ENTRY":
+            passage = SectionPassage(
+                plate=clean_plate,
+                camera_id=camera_id,
+                checkpoint_id=camera_id,
+                timestamp=ts,
+                snapshot_path=snapshot_path,
+                vehicle_class=vehicle_class,
+            )
+            self.entry_passages[clean_plate] = passage
+            return None
+
+        elif role == "EXIT":
+            entry = self.entry_passages.pop(clean_plate, None)
+            if not entry:
+                return None
+
+            elapsed_seconds = ts - entry.timestamp
+            if elapsed_seconds <= 1.0:
+                return None  # Ignore duplicate or unrealistic timing
+
+            # Average speed: km / hours
+            hours = elapsed_seconds / 3600.0
+            average_speed_kmh = round(self.section_distance_km / hours, 1)
+
+            # Determine violation
+            effective_threshold = self.speed_limit_kmh + self.tolerance_kmh
+            is_violation = average_speed_kmh > effective_threshold
+
+            dossier = {
+                "dossier_id": f"P2P-{clean_plate}-{int(ts)}",
+                "plate": clean_plate,
+                "corridor_id": self.corridor_id,
+                "section_distance_km": self.section_distance_km,
+                "entry_camera": entry.camera_id,
+                "entry_time": datetime.datetime.fromtimestamp(entry.timestamp, datetime.timezone.utc).isoformat(),
+                "exit_camera": camera_id,
+                "exit_time": datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).isoformat(),
+                "elapsed_seconds": round(elapsed_seconds, 1),
+                "speed_limit_kmh": self.speed_limit_kmh,
+                "average_speed_kmh": average_speed_kmh,
+                "excess_kmh": round(max(0.0, average_speed_kmh - self.speed_limit_kmh), 1),
+                "is_violation": is_violation,
+                "vehicle_class": vehicle_class,
+                "evidence_snapshots": [entry.snapshot_path, snapshot_path],
+            }
+
+            if is_violation:
+                self.violations.append(dossier)
+
+            return dossier
+
+        return None
+
+    def get_violations(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Returns historical point-to-point section speed violations."""
+        return self.violations[-limit:]

@@ -34,6 +34,7 @@ from src.core.hotlist_engine import WantedVehicleHotlistEngine
 from src.core.sla_escalation import SLAEscalationManager
 from src.core.station_mesh import NationalStationMeshAggregator
 from src.core.camera_watchdog import CameraSelfHealingWatchdog
+from src.core.speed_engine import PointToPointAverageSpeedEngine
 from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
@@ -135,6 +136,7 @@ def init_app_state():
     app_state["camera_watchdog"] = CameraSelfHealingWatchdog()
     app_state["camera_watchdog"].register_camera("CAM-042", "192.168.1.100", "192.168.1.2", 1)
     app_state["camera_watchdog"].register_camera("CAM-118", "192.168.1.101", "192.168.1.2", 2)
+    app_state["section_speed_engine"] = PointToPointAverageSpeedEngine()
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 

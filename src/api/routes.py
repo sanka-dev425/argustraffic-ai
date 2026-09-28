@@ -758,4 +758,122 @@ async def trigger_camera_reboot(payload: Dict[str, Any]):
     return res
 
 
+# ==============================================================================
+# 7. GIS Spatial City Network & Topology
+# ==============================================================================
+@router.get("/gis/corridor-network", tags=["GIS Spatial Network"])
+async def get_corridor_network():
+    """Returns spatial network nodes, camera GPS anchors, corridor digital twin lines, and section radars."""
+    return {
+        "network_id": "METRO_HIGHWAY_GRID_01",
+        "city": "Colombo & Western Province Transport Grid",
+        "center_coordinates": {"lat": 6.9271, "lng": 79.8612},
+        "camera_nodes": [
+            {
+                "camera_id": "CAM-042",
+                "name": "Canal St / Expressway Ingress",
+                "lat": 6.9319,
+                "lng": 79.8478,
+                "status": "ONLINE",
+                "type": "FIXED_ANPR_RADAR",
+                "speed_limit_kmh": 60.0,
+                "division": "DIV_COLOMBO_CENTRAL",
+            },
+            {
+                "camera_id": "CAM-118",
+                "name": "Broadway / Main Artery Gantry",
+                "lat": 6.9147,
+                "lng": 79.8653,
+                "status": "ONLINE",
+                "type": "PTZ_DOME_MONITOR",
+                "speed_limit_kmh": 50.0,
+                "division": "DIV_COLOMBO_CENTRAL",
+            },
+            {
+                "camera_id": "CAM-089",
+                "name": "Southern Expressway E01 Interchange Gantry A",
+                "lat": 6.8400,
+                "lng": 79.9400,
+                "status": "ONLINE",
+                "type": "SECTION_CONTROL_ENTRY",
+                "speed_limit_kmh": 100.0,
+                "division": "DIV_GALLE",
+            },
+            {
+                "camera_id": "CAM-090",
+                "name": "Southern Expressway E01 Exit Gantry B",
+                "lat": 6.7900,
+                "lng": 79.9700,
+                "status": "ONLINE",
+                "type": "SECTION_CONTROL_EXIT",
+                "speed_limit_kmh": 100.0,
+                "division": "DIV_GALLE",
+            },
+        ],
+        "corridors": [
+            {
+                "corridor_id": "CORRIDOR_E01_SOUTHERN",
+                "name": "Southern Expressway Express Corridor",
+                "length_km": 5.8,
+                "speed_limit_kmh": 100.0,
+                "congestion_level": "FREE_FLOW",
+                "polyline": [[6.8400, 79.9400], [6.8150, 79.9550], [6.7900, 79.9700]],
+            },
+            {
+                "corridor_id": "CORRIDOR_GALLE_ROAD",
+                "name": "Marine Drive / Galle Road Corridor",
+                "length_km": 4.2,
+                "speed_limit_kmh": 60.0,
+                "congestion_level": "MODERATE",
+                "polyline": [[6.9319, 79.8478], [6.9200, 79.8520], [6.9147, 79.8653]],
+            },
+        ],
+    }
+
+
+# ==============================================================================
+# 8. Point-to-Point Section Control Speed Radar Enforcement
+# ==============================================================================
+@router.post("/speed/section-control/record", tags=["Speed Radar & Enforcement"])
+async def record_section_control_passage(payload: Dict[str, Any]):
+    """
+    Ingests an optical ANPR passage at an Expressway Section Control checkpoint (Gantry A / Gantry B).
+    Computes true average corridor velocity and generates a court-admissible violation dossier if overspeeding.
+    """
+    state = get_components()
+    engine = state.get("section_speed_engine")
+    if not engine:
+        raise HTTPException(status_code=503, detail="Section Speed Engine offline")
+
+    plate = payload.get("plate")
+    camera_id = payload.get("camera_id")
+    role = payload.get("checkpoint_role", "ENTRY")
+    if not plate or not camera_id:
+        raise HTTPException(status_code=400, detail="plate and camera_id required")
+
+    dossier = engine.record_passage(
+        plate=sanitize_identifier(str(plate)),
+        camera_id=sanitize_identifier(str(camera_id)),
+        checkpoint_role=role,
+        timestamp=payload.get("timestamp"),
+        vehicle_class=payload.get("vehicle_class", "car"),
+        snapshot_path=payload.get("snapshot_path"),
+    )
+
+    if dossier is None:
+        return {"status": "RECORDED", "checkpoint_role": role.upper(), "plate": plate}
+
+    return {"status": "SECTION_EVALUATED", "dossier": dossier}
+
+
+@router.get("/speed/section-control/violations", tags=["Speed Radar & Enforcement"])
+async def get_section_control_violations(limit: int = Query(50, description="Max violations to return")):
+    """Returns historical point-to-point section speed violations."""
+    state = get_components()
+    engine = state.get("section_speed_engine")
+    if not engine:
+        return {"violations": []}
+    return {"violations": engine.get_violations(limit=limit)}
+
+
 

@@ -407,3 +407,63 @@ def test_data_engineering_analytics_and_geojson_export(tmp_path):
     r_geo = client.get("/api/v1/incidents/geojson")
     assert r_geo.status_code == 200
     assert r_geo.json()["type"] == "FeatureCollection"
+
+
+def test_point_to_point_section_speed_enforcement():
+    """Verify Section Control Point-to-Point average speed computation across checkpoints."""
+    from src.core.speed_engine import PointToPointAverageSpeedEngine
+
+    p2p = PointToPointAverageSpeedEngine(
+        corridor_id="CORRIDOR_E01_SOUTHERN",
+        section_distance_km=10.0,  # 10 km segment
+        speed_limit_kmh=100.0,
+        tolerance_kmh=3.0,
+    )
+
+    t0 = 10000.0
+    plate = "WP-CAR-9999"
+
+    # 1. Vehicle enters Gantry A
+    res_entry = p2p.record_passage(plate, "CAM-GANTRY-A", "ENTRY", timestamp=t0)
+    assert res_entry is None
+    assert "WPCAR9999" in p2p.entry_passages
+
+    # 2. Vehicle exits Gantry B after 300 seconds (5 minutes) -> 10km in 5min = 120 km/h (VIOLATION)
+    t_exit = t0 + 300.0
+    dossier = p2p.record_passage(plate, "CAM-GANTRY-B", "EXIT", timestamp=t_exit)
+    assert dossier is not None
+    assert dossier["is_violation"] is True
+    assert dossier["average_speed_kmh"] == 120.0
+    assert dossier["excess_kmh"] == 20.0
+    assert len(p2p.violations) == 1
+
+    # 3. Test REST API Integration
+    r_entry = client.post("/api/v1/speed/section-control/record", json={
+        "plate": "CP-SUV-5555",
+        "camera_id": "CAM-089",
+        "checkpoint_role": "ENTRY",
+        "timestamp": 20000.0,
+    })
+    assert r_entry.status_code == 200
+    assert r_entry.json()["status"] == "RECORDED"
+
+    r_exit = client.post("/api/v1/speed/section-control/record", json={
+        "plate": "CP-SUV-5555",
+        "camera_id": "CAM-090",
+        "checkpoint_role": "EXIT",
+        "timestamp": 20120.0,  # 120 seconds for 5.0 km = 150 km/h
+    })
+    assert r_exit.status_code == 200
+    assert r_exit.json()["status"] == "SECTION_EVALUATED"
+    assert r_exit.json()["dossier"]["is_violation"] is True
+
+    r_viols = client.get("/api/v1/speed/section-control/violations")
+    assert r_viols.status_code == 200
+    assert len(r_viols.json()["violations"]) >= 1
+
+    # 4. Test GIS Corridor Network endpoint
+    r_gis = client.get("/api/v1/gis/corridor-network")
+    assert r_gis.status_code == 200
+    assert "camera_nodes" in r_gis.json()
+    assert len(r_gis.json()["camera_nodes"]) >= 2
+    assert "corridors" in r_gis.json()
