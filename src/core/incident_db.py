@@ -72,36 +72,38 @@ class IncidentDatabase:
 
     def save_incident(self, alert_dict: Dict[str, Any], snapshot_path: Optional[str] = None) -> None:
         """Inserts an incident into persistent audit log."""
+        conn = self._get_connection()
         try:
-            with self._get_connection() as conn:
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO incidents (
-                        alert_id, incident_type, severity, timestamp, formatted_time,
-                        description, location_x, location_y, involved_tracks, zone_id,
-                        metadata_json, snapshot_path, license_plate, speed_kmh
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        alert_dict["alert_id"],
-                        alert_dict["incident_type"],
-                        alert_dict["severity"],
-                        alert_dict["timestamp"],
-                        alert_dict.get("formatted_time", ""),
-                        alert_dict["description"],
-                        float(alert_dict.get("location", [0, 0])[0]),
-                        float(alert_dict.get("location", [0, 0])[1]),
-                        json.dumps(alert_dict.get("involved_track_ids", [])),
-                        alert_dict.get("zone_id"),
-                        json.dumps(alert_dict.get("metadata", {})),
-                        snapshot_path or "",
-                        alert_dict.get("license_plate"),
-                        alert_dict.get("speed_kmh"),
-                    ),
-                )
-                conn.commit()
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO incidents (
+                    alert_id, incident_type, severity, timestamp, formatted_time,
+                    description, location_x, location_y, involved_tracks, zone_id,
+                    metadata_json, snapshot_path, license_plate, speed_kmh
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    alert_dict["alert_id"],
+                    alert_dict["incident_type"],
+                    alert_dict["severity"],
+                    alert_dict["timestamp"],
+                    alert_dict.get("formatted_time", ""),
+                    alert_dict["description"],
+                    float(alert_dict.get("location", [0, 0])[0]),
+                    float(alert_dict.get("location", [0, 0])[1]),
+                    json.dumps(alert_dict.get("involved_track_ids", [])),
+                    alert_dict.get("zone_id"),
+                    json.dumps(alert_dict.get("metadata", {})),
+                    snapshot_path or "",
+                    alert_dict.get("license_plate"),
+                    alert_dict.get("speed_kmh"),
+                ),
+            )
+            conn.commit()
         except Exception as e:
             logger.error(f"Failed to persist incident {alert_dict.get('alert_id')}: {e}")
+        finally:
+            conn.close()
 
     def query_incidents(
         self,
@@ -132,7 +134,8 @@ class IncidentDatabase:
         params.append(limit)
 
         results = []
-        with self._get_connection() as conn:
+        conn = self._get_connection()
+        try:
             cursor = conn.execute(query, params)
             for row in cursor.fetchall():
                 results.append({
@@ -148,11 +151,14 @@ class IncidentDatabase:
                     "metadata": json.loads(row["metadata_json"] or "{}"),
                     "snapshot_path": row["snapshot_path"],
                 })
+        finally:
+            conn.close()
         return results
 
     def get_stats(self) -> Dict[str, Any]:
         """Calculates historical incident aggregates."""
-        with self._get_connection() as conn:
+        conn = self._get_connection()
+        try:
             total = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
             critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE severity = 'CRITICAL'").fetchone()[0]
             warning = conn.execute("SELECT COUNT(*) FROM incidents WHERE severity = 'WARNING'").fetchone()[0]
@@ -161,3 +167,5 @@ class IncidentDatabase:
                 "critical_count": critical,
                 "warning_count": warning,
             }
+        finally:
+            conn.close()

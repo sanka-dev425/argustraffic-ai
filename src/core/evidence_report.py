@@ -6,6 +6,7 @@ and high-level executive traffic safety audit dossiers.
 
 import datetime
 import hashlib
+import html
 import json
 import logging
 from typing import Any, Dict, List, Optional
@@ -15,13 +16,13 @@ logger = logging.getLogger("argustraffic.evidence")
 
 def generate_forensic_html_report(alert: Dict[str, Any], system_meta: Optional[Dict[str, Any]] = None) -> str:
     """Generates an official court-grade forensic HTML evidence document for a single incident."""
-    alert_id = alert.get("alert_id", "N/A")
-    incident_type = alert.get("incident_type", "INCIDENT")
-    severity = alert.get("severity", "WARNING")
+    alert_id = html.escape(str(alert.get("alert_id", "N/A")))
+    incident_type = html.escape(str(alert.get("incident_type", "INCIDENT")))
+    severity = html.escape(str(alert.get("severity", "WARNING")))
     timestamp = alert.get("timestamp", 0)
     dt = datetime.datetime.fromtimestamp(timestamp) if timestamp else datetime.datetime.now()
     formatted_date = dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + " UTC"
-    description = alert.get("description", "")
+    description = html.escape(str(alert.get("description", "")))
     location = alert.get("location", [0, 0])
     tracks = alert.get("involved_track_ids", [])
     metadata = alert.get("metadata", {})
@@ -30,9 +31,9 @@ def generate_forensic_html_report(alert: Dict[str, Any], system_meta: Optional[D
     raw_payload = json.dumps(alert, sort_keys=True).encode("utf-8")
     evidence_hash = hashlib.sha256(raw_payload).hexdigest()
 
-    meta_rows = "".join(f"<tr><th>{k.replace('_', ' ').title()}</th><td>{v}</td></tr>" for k, v in metadata.items())
+    meta_rows = "".join(f"<tr><th>{html.escape(str(k).replace('_', ' ').title())}</th><td>{html.escape(str(v))}</td></tr>" for k, v in metadata.items())
 
-    html = f"""<!DOCTYPE html>
+    html_out = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -92,7 +93,7 @@ def generate_forensic_html_report(alert: Dict[str, Any], system_meta: Optional[D
 </body>
 </html>
 """
-    return html
+    return html_out
 
 
 def generate_executive_traffic_report(
@@ -108,6 +109,9 @@ def generate_executive_traffic_report(
     warning_count = stats.get("warning_count", sum(1 for i in recent_incidents if i.get("severity") == "WARNING"))
     safety_score = max(50, 100 - (critical_count * 5 + warning_count * 2))
 
+    safe_time_window = html.escape(str(time_window))
+    safe_officer_name = html.escape(str(officer_name))
+
     # Calculate Merkle Audit Seal
     raw_block = f"{now_str}_{total_recorded}_{critical_count}_{warning_count}_{officer_name}"
     report_hash = hashlib.sha256(raw_block.encode("utf-8")).hexdigest()
@@ -115,21 +119,26 @@ def generate_executive_traffic_report(
     incident_rows = ""
     for idx, inc in enumerate(recent_incidents[:15], 1):
         sev_color = "#ef4444" if inc.get("severity") == "CRITICAL" else "#f59e0b"
+        safe_time = html.escape(str(inc.get("formatted_time", now_str)))
+        safe_sev = html.escape(str(inc.get("severity", "WARNING")))
+        safe_type = html.escape(str(inc.get("incident_type", "INCIDENT")))
+        safe_desc = html.escape(str(inc.get("description", "N/A")))
+        safe_zone = html.escape(str(inc.get("zone_id", "Main Arterial")))
         incident_rows += f"""
         <tr>
           <td><strong>#{idx}</strong></td>
-          <td>{inc.get("formatted_time", now_str)}</td>
-          <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;color:#fff;background:{sev_color};font-size:11px;font-weight:700;">{inc.get("severity")}</span></td>
-          <td><strong>{inc.get("incident_type")}</strong></td>
-          <td>{inc.get("description", "N/A")}</td>
-          <td>{inc.get("zone_id", "Main Arterial")}</td>
+          <td>{safe_time}</td>
+          <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;color:#fff;background:{sev_color};font-size:11px;font-weight:700;">{safe_sev}</span></td>
+          <td><strong>{safe_type}</strong></td>
+          <td>{safe_desc}</td>
+          <td>{safe_zone}</td>
         </tr>
         """
 
     if not incident_rows:
         incident_rows = "<tr><td colspan='6' style='text-align:center;color:#64748b;padding:20px;'>No safety violations recorded in the selected period.</td></tr>"
 
-    html = f"""<!DOCTYPE html>
+    html_exec = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -163,11 +172,11 @@ def generate_executive_traffic_report(
     <div class="header">
       <div>
         <div class="title">ARGUSTRAFFIC AI &mdash; EXECUTIVE TRAFFIC SAFETY AUDIT</div>
-        <div class="sub">Autonomous Edge Telemetry & Incident Intelligence System &bull; Report Period: {time_window}</div>
+        <div class="sub">Autonomous Edge Telemetry & Incident Intelligence System &bull; Report Period: {safe_time_window}</div>
       </div>
       <div style="text-align: right;">
         <div style="font-size: 12px; font-weight: 700; color: #0f172a;">GENERATED: {now_str}</div>
-        <div style="font-size: 12px; color: #64748b;">AUTHOR: {officer_name}</div>
+        <div style="font-size: 12px; color: #64748b;">AUTHOR: {safe_officer_name}</div>
       </div>
     </div>
 
@@ -223,4 +232,4 @@ def generate_executive_traffic_report(
 </body>
 </html>
 """
-    return html
+    return html_exec

@@ -292,31 +292,6 @@ async def login(req: LoginRequest):
     
     result = auth_mgr.authenticate(req.username, req.password)
     if not result:
-        # Fallback helper for quick demo and testing
-        from src.core.auth_rbac import Role, ROLE_PERMISSIONS
-        uname = req.username.lower().strip()
-        role_map = {
-            "admin": (Role.SUPER_ADMIN, "Chief Traffic Supervisor"),
-            "superadmin": (Role.SUPER_ADMIN, "Chief Traffic Supervisor"),
-            "operator_01": (Role.TRAFFIC_OPERATOR, "Arterial Patrol Officer"),
-            "operator": (Role.TRAFFIC_OPERATOR, "Arterial Patrol Officer"),
-            "auditor_lead": (Role.FORENSIC_AUDITOR, "Legal Forensic Examiner"),
-            "auditor": (Role.FORENSIC_AUDITOR, "Legal Forensic Examiner"),
-            "viewer": (Role.READONLY_VIEWER, "Public Traffic Observer"),
-        }
-        if uname in role_map:
-            role, full_name = role_map[uname]
-            now = time.time()
-            result = {
-                "token": f"argus_sec_tok_{uname}",
-                "username": uname,
-                "full_name": full_name,
-                "role": role.value,
-                "permissions": ROLE_PERMISSIONS.get(role, []),
-                "expires_at": now + 86400,
-            }
-            auth_mgr.log_audit(uname, "AUTH_SUCCESS", f"Authenticated {role.value} Session")
-            return result
         raise HTTPException(status_code=401, detail="Invalid username or password.")
     return result
 

@@ -140,29 +140,21 @@ function initAuthSession() {
         errEl?.classList.add("hidden");
         showToast({ incident_type: "SECURITY", description: `Authenticated session granted for ${data.full_name}` });
       } else {
-        // Fallback local verification for offline desktop mode
-        currentUser = {
-          username: u,
-          full_name: u === "admin" ? "Saptha Sanka (Chief Supervisor)" : (u === "auditor_lead" ? "Legal Forensic Examiner" : "Arterial Patrol Officer"),
-          role: u === "admin" ? "SUPER_ADMIN" : (u === "auditor_lead" ? "FORENSIC_AUDITOR" : "TRAFFIC_OPERATOR"),
-          token: `argus_tok_${u}_${Date.now().toString(36)}`,
-        };
-        localStorage.setItem("argus_auth_user", JSON.stringify(currentUser));
-        updateUserUI();
-        document.getElementById("login-modal").classList.add("hidden");
-        errEl?.classList.add("hidden");
+        if (errEl) {
+          errEl.innerText = "Invalid authority credentials. Access denied.";
+          errEl.classList.remove("hidden");
+        }
+        const pwdInput = document.getElementById("login-password");
+        if (pwdInput) {
+          pwdInput.classList.add("input-error");
+          pwdInput.focus();
+        }
       }
     } catch (err) {
-      currentUser = {
-        username: u,
-        full_name: u === "admin" ? "Saptha Sanka (Chief Supervisor)" : (u === "auditor_lead" ? "Legal Forensic Examiner" : "Arterial Patrol Officer"),
-        role: u === "admin" ? "SUPER_ADMIN" : (u === "auditor_lead" ? "FORENSIC_AUDITOR" : "TRAFFIC_OPERATOR"),
-        token: `argus_tok_${u}_${Date.now().toString(36)}`,
-      };
-      localStorage.setItem("argus_auth_user", JSON.stringify(currentUser));
-      updateUserUI();
-      document.getElementById("login-modal").classList.add("hidden");
-      errEl?.classList.add("hidden");
+      if (errEl) {
+        errEl.innerText = "Connection to security gateway failed. Please retry.";
+        errEl.classList.remove("hidden");
+      }
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;

@@ -228,11 +228,8 @@ class SecurityAuthManager:
         # Verify password
         expected_hash, _ = self._hash_password(password, user["salt"])
         if not hmac.compare_digest(expected_hash, user["password_hash"]):
-            # Also allow fallback standard passwords for easy trial
-            standard_pwds = {"admin": "ArgusAdmin2026!", "operator_01": "operator123", "auditor_lead": "auditor123", "viewer": "viewer123"}
-            if not (clean_user in standard_pwds and password in (standard_pwds[clean_user], clean_user, "admin", "admin123")):
-                self.log_audit(username, "AUTH_FAILED", f"Password mismatch from {ip_address}", ip_address)
-                return None
+            self.log_audit(username, "AUTH_FAILED", f"Password mismatch from {ip_address}", ip_address)
+            return None
 
         # Generate secure random bearer token
         token = secrets.token_urlsafe(32)
