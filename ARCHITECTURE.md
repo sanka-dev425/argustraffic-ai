@@ -1,7 +1,7 @@
-# 🏛️ ArgusTraffic AI — Enterprise System Architecture & Specification
+# ArgusTraffic AI — Enterprise System Architecture & Specification
 
 ## 1. High-Level Vision & Purpose
-**ArgusTraffic AI** is an open-source, edge-first Intelligent Transportation Systems (ITS) platform that converts video sensor streams into real-time spatial telemetry, automated incident detection, multi-signal risk assessments, and forensic evidence packages.
+**ArgusTraffic AI** is an industrial-grade, edge-native Intelligent Transportation Systems (ITS) platform that converts video sensor streams into real-time spatial telemetry, automated incident detection, multi-signal risk assessments, and forensic evidence packages.
 
 ---
 
@@ -34,7 +34,7 @@ flowchart TD
         D1[Video Plane: MJPEG / WebRTC Stream]
         D2[Control Plane: REST APIs & Swagger UI]
         D3[Telemetry Plane: Real-Time WebSockets]
-        D4[UI Command Center: Cyber-Modern Dashboard]
+        D4[UI Command Center: Institutional Dashboard]
     end
 
     EdgePlane --> IntelligencePlane
@@ -57,3 +57,4 @@ The platform strictly enforces the **Dependency Inversion Principle (DIP)**:
 
 ## 4. Architectural Decision Records (ADRs)
 - [ADR 0001: Domain-Driven Architecture, Dependency Inversion, and Protocol Interfaces](docs/adr/0001-domain-driven-architecture-and-protocols.md)
+- [ADR 0002: Cryptographic Forensic Evidence Manifest and ANPR Privacy Lifecycle](docs/adr/0002-cryptographic-evidence-and-privacy-lifecycle.md)
