@@ -258,12 +258,31 @@ class NTPTimeSyncGuard:
 
 
 class CameraMountingStructure(str, Enum):
-    """Physical mounting infrastructure housing traffic and surveillance cameras."""
+    """Standard baseline mounting structures for reference and backward compatibility."""
     TRAFFIC_SIGNAL_POLE = "TRAFFIC_SIGNAL_POLE"   # Mast arms / upright posts (5.5m - 7m)
     STREET_LIGHT_POLE = "STREET_LIGHT_POLE"       # Street lampposts along arterials (8m - 12m)
     BUILDING_FACADE = "BUILDING_FACADE"           # Building walls, rooftops, parapets (12m - 30m)
     HIGHWAY_GANTRY = "HIGHWAY_GANTRY"             # Overhead steel gantries, toll plazas (6m - 9m)
     OVERPASS_BRIDGE = "OVERPASS_BRIDGE"           # Pedestrian / vehicular overpasses (5m - 8m)
+
+
+@dataclass
+class MountingStructureConfig:
+    """Enterprise dynamic mounting structure configuration defined by administrators."""
+    structure_key: str
+    label: str
+    recommended_height_min_m: float = 4.0
+    recommended_height_max_m: float = 15.0
+    vibration_sensitivity: str = "MEDIUM"
+    wind_sway_sensitivity: str = "MEDIUM"
+    perspective_angle: str = "STANDARD"
+    primary_application: str = "Traffic Surveillance & Enforcement"
+    is_custom: bool = False
+    created_at: float = 0.0
+    created_by: str = "SYSTEM"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
 
 MOUNTING_STRUCTURE_SPECS: Dict[str, Dict[str, Any]] = {
@@ -395,9 +414,73 @@ class CameraInventoryManager:
                     last_updated REAL NOT NULL
                 )
             """)
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS mounting_structures (
+                    structure_key TEXT PRIMARY KEY,
+                    label TEXT NOT NULL,
+                    recommended_height_min_m REAL DEFAULT 4.0,
+                    recommended_height_max_m REAL DEFAULT 15.0,
+                    vibration_sensitivity TEXT DEFAULT 'MEDIUM',
+                    wind_sway_sensitivity TEXT DEFAULT 'MEDIUM',
+                    perspective_angle TEXT DEFAULT 'STANDARD',
+                    primary_application TEXT DEFAULT 'Traffic Surveillance & Enforcement',
+                    is_custom INTEGER DEFAULT 0,
+                    created_at REAL NOT NULL,
+                    created_by TEXT DEFAULT 'SYSTEM'
+                )
+            """)
             conn.commit()
 
+        with self._get_connection() as conn:
+            self._seed_default_mounting_structures(conn)
         self._seed_default_cameras()
+
+    def _seed_default_mounting_structures(self, conn: sqlite3.Connection):
+        """Seeds baseline mounting structures if not already present."""
+        now = time.time()
+        for key, spec in MOUNTING_STRUCTURE_SPECS.items():
+            cursor = conn.cursor()
+            cursor.execute("SELECT structure_key FROM mounting_structures WHERE structure_key = ?", (key,))
+            if not cursor.fetchone():
+                h_min = spec["recommended_height_range_m"][0]
+                h_max = spec["recommended_height_range_m"][1]
+                conn.execute("""
+                    INSERT INTO mounting_structures (
+                        structure_key, label, recommended_height_min_m, recommended_height_max_m,
+                        vibration_sensitivity, wind_sway_sensitivity, perspective_angle,
+                        primary_application, is_custom, created_at, created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'SYSTEM')
+                """, (
+                    key,
+                    spec["label"],
+                    h_min,
+                    h_max,
+                    spec["vibration_sensitivity"],
+                    spec["wind_sway_sensitivity"],
+                    spec["perspective_angle"],
+                    spec["primary_application"],
+                    now,
+                ))
+        conn.commit()
+
+    def _ensure_mounting_structure_exists(self, structure_key: str, height: float = 6.0):
+        """Auto-registers custom structures specified by administrators."""
+        clean_key = structure_key.strip().upper().replace(" ", "_")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT structure_key FROM mounting_structures WHERE structure_key = ?", (clean_key,))
+            if not cursor.fetchone():
+                label = clean_key.replace("_", " ").title()
+                h_min = max(1.5, round(float(height) - 2.0, 1))
+                h_max = round(float(height) + 3.0, 1)
+                conn.execute("""
+                    INSERT INTO mounting_structures (
+                        structure_key, label, recommended_height_min_m, recommended_height_max_m,
+                        vibration_sensitivity, wind_sway_sensitivity, perspective_angle,
+                        primary_application, is_custom, created_at, created_by
+                    ) VALUES (?, ?, ?, ?, 'MEDIUM', 'MEDIUM', 'CUSTOM_PERSPECTIVE', 'Custom Configured Location', 1, ?, 'ADMIN')
+                """, (clean_key, label, h_min, h_max, time.time()))
+                conn.commit()
 
     def _seed_default_cameras(self):
         """Seeds standard physical camera nodes across municipal police divisions."""
@@ -555,10 +638,17 @@ class CameraInventoryManager:
         if operator_role == Role.STATION_ADMIN and operator_division:
             target_division = operator_division
 
-        mounting_struct = camera_data.get("mounting_structure", CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value)
-        # Validate mounting structure
-        if mounting_struct not in [m.value for m in CameraMountingStructure]:
-            mounting_struct = CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value
+        raw_struct = camera_data.get("mounting_structure", CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value)
+        clean_struct = str(raw_struct).strip().upper().replace(" ", "_")
+        if not clean_struct:
+            clean_struct = CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value
+
+        # Auto-provision custom structure in database if newly specified by admin
+        self._ensure_mounting_structure_exists(
+            clean_struct,
+            float(camera_data.get("mounting_height_m", 6.0))
+        )
+        mounting_struct = clean_struct
 
         now = time.time()
         node = CameraNode(
@@ -644,6 +734,16 @@ class CameraInventoryManager:
                 # If SUPER_ADMIN, they can also reassign division_id
                 if operator_role == Role.SUPER_ADMIN:
                     allowed_fields.append("division_id")
+
+                if "mounting_structure" in updates:
+                    raw_s = updates["mounting_structure"]
+                    clean_s = str(raw_s).strip().upper().replace(" ", "_")
+                    if clean_s:
+                        updates["mounting_structure"] = clean_s
+                        self._ensure_mounting_structure_exists(
+                            clean_s,
+                            float(updates.get("mounting_height_m", cam_dict.get("mounting_height_m", 6.0)))
+                        )
 
                 set_clauses = []
                 values = []
@@ -738,7 +838,110 @@ class CameraInventoryManager:
             cursor.execute(sql, tuple(params))
             return [dict(r) for r in cursor.fetchall()]
 
+    def list_mounting_structures(self) -> List[Dict[str, Any]]:
+        """Lists all configured camera mounting structures (baseline and admin-defined)."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mounting_structures ORDER BY is_custom ASC, structure_key ASC")
+            return [dict(r) for r in cursor.fetchall()]
+
+    def get_mounting_structure(self, structure_key: str) -> Optional[Dict[str, Any]]:
+        """Retrieves specific mounting structure configuration."""
+        clean_key = structure_key.strip().upper().replace(" ", "_")
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT * FROM mounting_structures WHERE structure_key = ?", (clean_key,))
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def add_or_update_mounting_structure(
+        self,
+        structure_key: str,
+        data: Dict[str, Any],
+        operator_role: Role = Role.SUPER_ADMIN,
+        operator_username: str = "SYSTEM",
+    ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+        """Allows administrators to configure arbitrary new physical mounting categories and specifications."""
+        if operator_role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+            return False, "Insufficient privilege: Requires STATION_ADMIN or SUPER_ADMIN.", None
+
+        clean_key = structure_key.strip().upper().replace(" ", "_")
+        if not clean_key:
+            return False, "Structure key cannot be empty.", None
+
+        label = data.get("label", clean_key.replace("_", " ").title())
+        h_min = float(data.get("recommended_height_min_m", 4.0))
+        h_max = float(data.get("recommended_height_max_m", 15.0))
+        vib = str(data.get("vibration_sensitivity", "MEDIUM")).upper()
+        sway = str(data.get("wind_sway_sensitivity", "MEDIUM")).upper()
+        angle = str(data.get("perspective_angle", "STANDARD")).upper()
+        app = str(data.get("primary_application", "Traffic Surveillance & Enforcement"))
+        now = time.time()
+
+        with self.lock:
+            with self._get_connection() as conn:
+                conn.execute("""
+                    INSERT INTO mounting_structures (
+                        structure_key, label, recommended_height_min_m, recommended_height_max_m,
+                        vibration_sensitivity, wind_sway_sensitivity, perspective_angle,
+                        primary_application, is_custom, created_at, created_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+                    ON CONFLICT(structure_key) DO UPDATE SET
+                        label = excluded.label,
+                        recommended_height_min_m = excluded.recommended_height_min_m,
+                        recommended_height_max_m = excluded.recommended_height_max_m,
+                        vibration_sensitivity = excluded.vibration_sensitivity,
+                        wind_sway_sensitivity = excluded.wind_sway_sensitivity,
+                        perspective_angle = excluded.perspective_angle,
+                        primary_application = excluded.primary_application
+                """, (clean_key, label, h_min, h_max, vib, sway, angle, app, now, operator_username))
+                conn.commit()
+
+            return True, f"Mounting structure '{clean_key}' saved.", self.get_mounting_structure(clean_key)
+
+    def delete_mounting_structure(
+        self,
+        structure_key: str,
+        operator_role: Role = Role.SUPER_ADMIN,
+    ) -> Tuple[bool, str]:
+        """Deletes a custom mounting structure with foreign key safety check."""
+        if operator_role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+            return False, "Insufficient privilege: Requires STATION_ADMIN or SUPER_ADMIN."
+
+        clean_key = structure_key.strip().upper()
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT is_custom FROM mounting_structures WHERE structure_key = ?", (clean_key,))
+                row = cursor.fetchone()
+                if not row:
+                    return False, f"Structure '{clean_key}' not found."
+
+                # Verify if any active cameras use this structure
+                cursor.execute("SELECT COUNT(*) as count FROM cameras WHERE mounting_structure = ?", (clean_key,))
+                cam_count = cursor.fetchone()["count"]
+                if cam_count > 0:
+                    return False, f"Cannot delete '{clean_key}': Currently referenced by {cam_count} cameras."
+
+                conn.execute("DELETE FROM mounting_structures WHERE structure_key = ?", (clean_key,))
+                conn.commit()
+                return True, f"Mounting structure '{clean_key}' deleted."
+
     def get_mounting_specs(self) -> Dict[str, Dict[str, Any]]:
-        """Returns physical and optical deployment specs for all camera mounting structures."""
-        return MOUNTING_STRUCTURE_SPECS
+        """Returns physical and optical deployment specs dynamically for all configured structures."""
+        structures = self.list_mounting_structures()
+        specs = {}
+        for s in structures:
+            key = s["structure_key"]
+            specs[key] = {
+                "structure_key": key,
+                "label": s["label"],
+                "recommended_height_range_m": [s["recommended_height_min_m"], s["recommended_height_max_m"]],
+                "vibration_sensitivity": s["vibration_sensitivity"],
+                "wind_sway_sensitivity": s["wind_sway_sensitivity"],
+                "perspective_angle": s["perspective_angle"],
+                "primary_application": s["primary_application"],
+                "is_custom": bool(s["is_custom"]),
+            }
+        return specs
 

@@ -665,3 +665,54 @@ def test_rest_camera_fleet_and_officer_management():
     assert data["station_division"] == "DIV_COLOMBO_CENTRAL"
     assert data["officers_count"] >= 1
 
+
+def test_dynamic_custom_mounting_structure_configuration():
+    """Verify administrator ability to configure custom physical mounting structures and register cameras to them."""
+    # 1. Admin configures a completely custom structure
+    cfg_res = client.post("/api/v1/cameras/mounting-structures", json={
+        "structure_key": "ROUNDABOUT_ISLAND_TOWER",
+        "label": "Central Roundabout Observation Tower",
+        "recommended_height_min_m": 8.0,
+        "recommended_height_max_m": 18.0,
+        "vibration_sensitivity": "LOW",
+        "wind_sway_sensitivity": "LOW",
+        "perspective_angle": "PANORAMIC_360",
+        "primary_application": "Multi-Exit Roundabout Queue & Weaving Surveillance",
+    })
+    assert cfg_res.status_code == 200
+    assert cfg_res.json()["status"] == "configured"
+    assert cfg_res.json()["structure"]["structure_key"] == "ROUNDABOUT_ISLAND_TOWER"
+
+    # 2. Query structures list
+    specs_res = client.get("/api/v1/cameras/mounting-structures")
+    assert specs_res.status_code == 200
+    assert "ROUNDABOUT_ISLAND_TOWER" in specs_res.json()
+    assert specs_res.json()["ROUNDABOUT_ISLAND_TOWER"]["is_custom"] is True
+
+    # 3. Register camera using custom structure
+    cam_res = client.post("/api/v1/cameras", json={
+        "camera_id": "CAM-RND-99",
+        "name": "Lipton Circus Roundabout Tower Cam 01",
+        "mounting_structure": "ROUNDABOUT_ISLAND_TOWER",
+        "mounting_height_m": 12.5,
+        "division_id": "DIV_COLOMBO_CENTRAL",
+        "station_name": "Colombo Central Traffic HQ",
+        "intersection_or_corridor": "Lipton Circus Circular Flow",
+        "latitude": 6.9180,
+        "longitude": 79.8650,
+        "rtsp_main_url": "rtsp://192.168.1.199:554/live",
+        "ip_address": "192.168.1.199",
+    })
+    assert cam_res.status_code == 200
+    cam_data = cam_res.json()["camera"]
+    assert cam_data["mounting_structure"] == "ROUNDABOUT_ISLAND_TOWER"
+    assert cam_data["mounting_height_m"] == 12.5
+
+    # 4. Clean up camera and custom structure
+    del_cam = client.delete("/api/v1/cameras/CAM-RND-99")
+    assert del_cam.status_code == 200
+
+    del_struct = client.delete("/api/v1/cameras/mounting-structures/ROUNDABOUT_ISLAND_TOWER")
+    assert del_struct.status_code == 200
+
+

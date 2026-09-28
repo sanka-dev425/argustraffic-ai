@@ -472,17 +472,76 @@ async def create_enterprise_user(
     return {"status": "created", "username": req.username, "role": req.role, "division_id": assigned_div}
 
 
+class MountingStructureConfigureRequest(BaseModel):
+    structure_key: str
+    label: str
+    recommended_height_min_m: float = 4.0
+    recommended_height_max_m: float = 15.0
+    vibration_sensitivity: str = "MEDIUM"
+    wind_sway_sensitivity: str = "MEDIUM"
+    perspective_angle: str = "STANDARD"
+    primary_application: str = "Traffic Surveillance & Enforcement"
+
+
 # ==============================================================================
 # Camera Fleet & Physical Mounting Device Management Endpoints
 # ==============================================================================
 @router.get("/cameras/mounting-structures", tags=["Camera Fleet Management"])
-async def get_mounting_structures():
+async def get_mounting_structures(format: Optional[str] = Query(None)):
     """Returns technical specs, typical height ranges, and vibration profiles for camera mounts."""
     state = get_components()
     cam_mgr = state.get("camera_inventory")
     if not cam_mgr:
         raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+    if format == "list":
+        return cam_mgr.list_mounting_structures()
     return cam_mgr.get_mounting_specs()
+
+
+@router.post("/cameras/mounting-structures", tags=["Camera Fleet Management"])
+async def configure_mounting_structure(
+    req: MountingStructureConfigureRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Allows administrators to dynamically define arbitrary camera mounting structures and engineering specs."""
+    role, _, caller_user = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    dump_fn = getattr(req, "model_dump", req.dict)
+    success, msg, struct = cam_mgr.add_or_update_mounting_structure(
+        structure_key=req.structure_key,
+        data=dump_fn(),
+        operator_role=role,
+        operator_username=caller_user,
+    )
+    if not success:
+        status_code = 403 if "privilege" in msg.lower() else 400
+        raise HTTPException(status_code=status_code, detail=msg)
+    return {"status": "configured", "message": msg, "structure": struct}
+
+
+@router.delete("/cameras/mounting-structures/{structure_key}", tags=["Camera Fleet Management"])
+async def delete_mounting_structure(
+    structure_key: str,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Deletes a custom mounting structure if not referenced by active cameras."""
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    success, msg = cam_mgr.delete_mounting_structure(structure_key=structure_key, operator_role=role)
+    if not success:
+        status_code = 403 if "privilege" in msg.lower() else 400
+        raise HTTPException(status_code=status_code, detail=msg)
+    return {"status": "deleted", "message": msg}
 
 
 @router.get("/cameras", tags=["Camera Fleet Management"])

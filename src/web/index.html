@@ -1338,27 +1338,159 @@
   </div>
 
   <!-- Register Camera Modal -->
+  <!-- Register Camera Modal -->
   <div id="camera-modal" class="modal-backdrop hidden">
-    <div class="modal-card">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
-        <div class="modal-title">REGISTER NEW CAMERA STREAM</div>
+        <div class="modal-title">REGISTER & CONFIGURE TRAFFIC CAMERA NODE</div>
         <button id="camera-modal-close" class="modal-close-btn">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="form-group"><label>Camera Name</label><input type="text" id="new-cam-name" class="form-input" placeholder="e.g. North Arterial PTZ Cam" /></div>
-        <div class="form-group"><label>Stream Protocol / Type</label>
-          <select id="new-cam-proto" class="form-input">
-            <option value="rtsp">RTSP IP Camera (H.264/H.265)</option>
-            <option value="onvif">ONVIF Network Camera</option>
-            <option value="usb">USB Webcam / DirectShow Device</option>
-            <option value="file">Forensic Video File (MP4/AVI)</option>
-          </select>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Hardware Camera ID (UUID / Serial)</label>
+            <input type="text" id="new-cam-id" class="form-input font-mono" placeholder="e.g. CAM-COL-088" />
+          </div>
+          <div class="form-group flex-2">
+            <label>Display Alias / Camera Name</label>
+            <input type="text" id="new-cam-name" class="form-input" placeholder="e.g. Town Hall Southbound Approach" />
+          </div>
         </div>
-        <div class="form-group"><label>Stream Connection URL / Device ID</label><input type="text" id="new-cam-url" class="form-input" placeholder="rtsp://admin:pass@192.168.1.150:554/stream1" /></div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <div class="flex justify-between items-center mb-1">
+              <label>Mounting Infrastructure Structure</label>
+              <button id="btn-open-structure-mgr" type="button" class="btn-link text-xs">+ Configure Structures</button>
+            </div>
+            <select id="new-cam-structure" class="form-input"></select>
+          </div>
+          <div class="form-group flex-1">
+            <label>Custom Structure (Override)</label>
+            <input type="text" id="new-cam-custom-structure" class="form-input" placeholder="e.g. ROUNDABOUT_TOWER" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Mounting Height (Meters)</label>
+            <input type="number" id="new-cam-height" class="form-input" step="0.1" value="6.5" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Tilt Angle (Degrees)</label>
+            <input type="number" id="new-cam-tilt" class="form-input" step="1" value="25" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Jurisdiction Division</label>
+            <select id="new-cam-division" class="form-input">
+              <option value="DIV_COLOMBO_CENTRAL">Colombo Central Traffic HQ</option>
+              <option value="DIV_KANDY">Kandy Municipal Division</option>
+              <option value="DIV_GALLE">Galle Coastal Division</option>
+              <option value="DIV_JAFFNA">Jaffna Northern Division</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Location / Intersection Description</label>
+          <input type="text" id="new-cam-intersection" class="form-input" placeholder="e.g. Galle Road / Bambalapitiya Junction Corridor" />
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Primary RTSP Stream URL</label>
+            <input type="text" id="new-cam-url" class="form-input font-mono" placeholder="rtsp://192.168.1.150:554/stream1" />
+          </div>
+          <div class="form-group flex-1">
+            <label>IP Address</label>
+            <input type="text" id="new-cam-ip" class="form-input font-mono" placeholder="192.168.1.150" />
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button id="btn-cancel-add-cam" class="btn btn-outline">Cancel</button>
-        <button id="btn-save-new-cam" class="btn btn-primary">Connect & Save Stream</button>
+        <button id="btn-save-new-cam" class="btn btn-primary">Save & Initialize Camera Node</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mounting Structure Manager Modal -->
+  <div id="mounting-structure-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">ADMINISTRATIVE MOUNTING STRUCTURE CONFIGURATOR</div>
+        <button id="mounting-modal-close" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-xs text-dim mb-3">Define custom physical mounting categories, height ranges, and perspective profiles suited for your municipality or highway jurisdiction.</p>
+        
+        <div class="structure-config-table-wrap mb-4">
+          <table class="tech-table w-full" id="structures-table">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Label</th>
+                <th>Height Range</th>
+                <th>Vibration</th>
+                <th>Perspective</th>
+                <th>Type</th>
+              </tr>
+            </thead>
+            <tbody id="structures-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-section border-t border-glass pt-3">
+          <div class="text-xs font-bold text-accent mb-2">ADD / UPDATE MOUNTING STRUCTURE SPECIFICATION</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Structure Key</label>
+              <input type="text" id="new-struct-key" class="form-input font-mono" placeholder="e.g. ELECTRICITY_POLE" />
+            </div>
+            <div class="form-group flex-2">
+              <label>Descriptive Label</label>
+              <input type="text" id="new-struct-label" class="form-input" placeholder="e.g. Concrete Utility / Electricity Pole" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Min Height (m)</label>
+              <input type="number" id="new-struct-hmin" class="form-input" step="0.5" value="6.0" />
+            </div>
+            <div class="form-group flex-1">
+              <label>Max Height (m)</label>
+              <input type="number" id="new-struct-hmax" class="form-input" step="0.5" value="12.0" />
+            </div>
+            <div class="form-group flex-1">
+              <label>Vibration</label>
+              <select id="new-struct-vib" class="form-input">
+                <option value="LOW">LOW</option>
+                <option value="MEDIUM" selected>MEDIUM</option>
+                <option value="HIGH">HIGH</option>
+              </select>
+            </div>
+            <div class="form-group flex-1">
+              <label>Perspective</label>
+              <select id="new-struct-angle" class="form-input">
+                <option value="STANDARD">STANDARD</option>
+                <option value="STEEP_DOWNWARD">STEEP_DOWNWARD</option>
+                <option value="MODERATE_ANGLE">MODERATE_ANGLE</option>
+                <option value="SHALLOW_PANORAMIC">SHALLOW_PANORAMIC</option>
+                <option value="PERPENDICULAR_DOWN">PERPENDICULAR_DOWN</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Primary Enforcement & Surveillance Application</label>
+            <input type="text" id="new-struct-app" class="form-input" placeholder="e.g. Suburban Corridor Flow & Speed Monitoring" />
+          </div>
+          <div class="flex justify-end mt-2">
+            <button id="btn-save-custom-structure" class="btn btn-primary btn-sm">+ Save Mounting Structure</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-close-struct-mgr" class="btn btn-outline">Close Configurator</button>
       </div>
     </div>
   </div>

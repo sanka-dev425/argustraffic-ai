@@ -853,16 +853,166 @@ function setupDeviceFleet() {
   });
 
   const modal = document.getElementById("camera-modal");
-  document.getElementById("btn-add-camera-modal")?.addEventListener("click", () => modal.classList.remove("hidden"));
+  const structModal = document.getElementById("mounting-structure-modal");
+
+  async function loadMountingStructuresDropdown() {
+    try {
+      const res = await fetch("/api/v1/cameras/mounting-structures?format=list");
+      if (!res.ok) return;
+      const list = await res.json();
+      const select = document.getElementById("new-cam-structure");
+      if (!select) return;
+      select.innerHTML = "";
+      list.forEach(s => {
+        const opt = document.createElement("option");
+        opt.value = s.structure_key;
+        opt.innerText = `${s.label} (${s.recommended_height_min_m}-${s.recommended_height_max_m}m)`;
+        select.appendChild(opt);
+      });
+    } catch (e) {
+      console.warn("Failed to load mounting structures:", e);
+    }
+  }
+
+  async function renderStructuresTable() {
+    try {
+      const res = await fetch("/api/v1/cameras/mounting-structures?format=list");
+      if (!res.ok) return;
+      const list = await res.json();
+      const tbody = document.getElementById("structures-table-body");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      list.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="font-mono text-accent text-xs font-bold">${s.structure_key}</td>
+          <td>${s.label}</td>
+          <td>${s.recommended_height_min_m}m - ${s.recommended_height_max_m}m</td>
+          <td><span class="badge ${s.vibration_sensitivity === 'HIGH' ? 'badge-warning' : 'badge-neutral'}">${s.vibration_sensitivity}</span></td>
+          <td class="text-xs text-dim">${s.perspective_angle}</td>
+          <td><span class="badge ${s.is_custom ? 'badge-info' : 'badge-neutral'}">${s.is_custom ? 'ADMIN CUSTOM' : 'BASELINE'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    } catch (e) {
+      console.warn("Failed to render structures table:", e);
+    }
+  }
+
+  document.getElementById("btn-add-camera-modal")?.addEventListener("click", () => {
+    loadMountingStructuresDropdown();
+    modal.classList.remove("hidden");
+  });
   document.getElementById("camera-modal-close")?.addEventListener("click", () => modal.classList.add("hidden"));
   document.getElementById("btn-cancel-add-cam")?.addEventListener("click", () => modal.classList.add("hidden"));
 
-  document.getElementById("btn-save-new-cam")?.addEventListener("click", () => {
-    const name = document.getElementById("new-cam-name").value.trim() || "New IP Camera";
-    const url = document.getElementById("new-cam-url").value.trim() || "rtsp://192.168.1.150:554/live";
+  // Structure configurator modal bindings
+  document.getElementById("btn-open-structure-mgr")?.addEventListener("click", () => {
+    renderStructuresTable();
+    structModal?.classList.remove("hidden");
+  });
+  document.getElementById("mounting-modal-close")?.addEventListener("click", () => structModal?.classList.add("hidden"));
+  document.getElementById("btn-close-struct-mgr")?.addEventListener("click", () => {
+    structModal?.classList.add("hidden");
+    loadMountingStructuresDropdown();
+  });
+
+  document.getElementById("btn-save-custom-structure")?.addEventListener("click", async () => {
+    const key = document.getElementById("new-struct-key")?.value.trim().toUpperCase().replace(/\s+/g, "_");
+    const label = document.getElementById("new-struct-label")?.value.trim();
+    const hmin = parseFloat(document.getElementById("new-struct-hmin")?.value || "4.0");
+    const hmax = parseFloat(document.getElementById("new-struct-hmax")?.value || "15.0");
+    const vib = document.getElementById("new-struct-vib")?.value || "MEDIUM";
+    const angle = document.getElementById("new-struct-angle")?.value || "STANDARD";
+    const appDesc = document.getElementById("new-struct-app")?.value.trim() || "Municipal Traffic Vision";
+
+    if (!key || !label) {
+      showToast({ incident_type: "CONFIG", description: "Structure key and label are required." });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("argus_token") || "";
+      const res = await fetch("/api/v1/cameras/mounting-structures", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          structure_key: key,
+          label: label,
+          recommended_height_min_m: hmin,
+          recommended_height_max_m: hmax,
+          vibration_sensitivity: vib,
+          wind_sway_sensitivity: "MEDIUM",
+          perspective_angle: angle,
+          primary_application: appDesc,
+        }),
+      });
+      if (res.ok) {
+        showToast({ incident_type: "CONFIG", description: `Mounting structure '${key}' successfully registered.` });
+        document.getElementById("new-struct-key").value = "";
+        document.getElementById("new-struct-label").value = "";
+        await renderStructuresTable();
+        await loadMountingStructuresDropdown();
+      } else {
+        const err = await res.json();
+        showToast({ incident_type: "ERROR", description: err.detail || "Failed to configure structure." });
+      }
+    } catch (e) {
+      showToast({ incident_type: "ERROR", description: "Network error saving mounting structure." });
+    }
+  });
+
+  document.getElementById("btn-save-new-cam")?.addEventListener("click", async () => {
+    const camId = document.getElementById("new-cam-id")?.value.trim() || `CAM-${Date.now().toString().slice(-4)}`;
+    const name = document.getElementById("new-cam-name")?.value.trim() || "New Traffic Camera";
+    const customStruct = document.getElementById("new-cam-custom-structure")?.value.trim().toUpperCase().replace(/\s+/g, "_");
+    const selectStruct = document.getElementById("new-cam-structure")?.value || "TRAFFIC_SIGNAL_POLE";
+    const mountingStructure = customStruct || selectStruct;
+    const height = parseFloat(document.getElementById("new-cam-height")?.value || "6.5");
+    const tilt = parseFloat(document.getElementById("new-cam-tilt")?.value || "25");
+    const division = document.getElementById("new-cam-division")?.value || "DIV_COLOMBO_CENTRAL";
+    const intersection = document.getElementById("new-cam-intersection")?.value.trim() || "Urban Corridor";
+    const url = document.getElementById("new-cam-url")?.value.trim() || "rtsp://192.168.1.150:554/stream1";
+    const ip = document.getElementById("new-cam-ip")?.value.trim() || "192.168.1.150";
+
     modal.classList.add("hidden");
-    switchStreamSource(url);
-    showToast({ incident_type: "CAMERA", description: `Registered and switched to '${name}'` });
+
+    try {
+      const token = localStorage.getItem("argus_token") || "";
+      const res = await fetch("/api/v1/cameras", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          camera_id: camId,
+          name: name,
+          mounting_structure: mountingStructure,
+          mounting_height_m: height,
+          tilt_angle_deg: tilt,
+          division_id: division,
+          station_name: division === "DIV_KANDY" ? "Kandy Municipal Division" : "Colombo Central Traffic HQ",
+          intersection_or_corridor: intersection,
+          rtsp_main_url: url,
+          ip_address: ip,
+        }),
+      });
+
+      if (res.ok) {
+        showToast({ incident_type: "CAMERA", description: `Registered ${camId} (${mountingStructure}) successfully.` });
+        switchStreamSource(url);
+      } else {
+        const err = await res.json();
+        showToast({ incident_type: "ERROR", description: err.detail || "Camera registration failed." });
+      }
+    } catch (e) {
+      showToast({ incident_type: "CAMERA", description: `Registered locally as '${name}'` });
+      switchStreamSource(url);
+    }
   });
 }
 
