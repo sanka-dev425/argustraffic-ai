@@ -53,6 +53,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initSLATimer();
   setupInspectorDrawer();
   setupGridSwitchers();
+  updateHwAccelTelemetry();
+  setInterval(updateHwAccelTelemetry, 8000);
 });
 
 /* ==========================================================================
@@ -747,6 +749,28 @@ function setupDeviceFleet() {
     switchStreamSource(url);
     showToast({ incident_type: "CAMERA", description: `Registered and switched to '${name}'` });
   });
+}
+
+/* ==========================================================================
+   8.1 HARDWARE-ACCELERATED VIDEO DECODING TELEMETRY
+   ========================================================================== */
+async function updateHwAccelTelemetry() {
+  try {
+    const res = await fetch("/api/v1/edge/hwaccel");
+    if (res.ok) {
+      const data = await res.json();
+      const hwBadge = document.getElementById("hw-decode-badge");
+      if (hwBadge) {
+        hwBadge.innerText = `${data.active_backend} (${data.active_stream_channels}/16 4K Streams Accelerated)`;
+      }
+      const hwLoad = document.getElementById("hw-decode-load");
+      if (hwLoad) {
+        hwLoad.innerText = `${data.asic_decode_load_pct}% ASIC Load`;
+      }
+    }
+  } catch (e) {
+    // Graceful offline fallback
+  }
 }
 
 /* ==========================================================================
