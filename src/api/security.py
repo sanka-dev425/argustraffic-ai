@@ -104,3 +104,17 @@ def sanitize_polygon(points: list) -> list:
         except (ValueError, TypeError):
             raise HTTPException(status_code=400, detail="Coordinate values must be valid real numbers.")
     return sanitized
+
+
+def sanitize_identifier(ident: str, max_length: int = 64) -> str:
+    """
+    Sanitizes alphanumeric identifiers (e.g. incident_id, camera_id)
+    to protect against path traversal (CWE-22) and shell injection.
+    """
+    import re
+    if not isinstance(ident, str):
+        raise HTTPException(status_code=400, detail="Identifier must be a string")
+    clean = re.sub(r"[^a-zA-Z0-9_\-]", "", ident.strip())
+    if not clean or len(clean) > max_length:
+        raise HTTPException(status_code=400, detail="Invalid identifier format")
+    return clean

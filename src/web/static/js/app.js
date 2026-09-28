@@ -459,10 +459,24 @@ function showToast(alert) {
   }, 4000);
 }
 
+function warmUpAudioContext() {
+  try {
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext && audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
+  } catch (e) {}
+}
+document.addEventListener("click", warmUpAudioContext, { once: true, passive: true });
+document.addEventListener("keydown", warmUpAudioContext, { once: true, passive: true });
+
 function triggerAudioAlert() {
   if (!audioEnabled) return;
   try {
     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(() => {});
+    }
     const osc = audioContext.createOscillator();
     const gain = audioContext.createGain();
     osc.type = "sawtooth";

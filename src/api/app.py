@@ -5,6 +5,7 @@ Combines REST services, WebSocket live video feeds, MJPEG stream, and UI Command
 
 import asyncio
 import base64
+from contextlib import asynccontextmanager
 import json
 import logging
 import os
@@ -443,6 +444,31 @@ async def websocket_stream_endpoint(websocket: WebSocket):
     finally:
         await broadcaster.remove_client(websocket)
         logger.info("WebSocket connection cleanly closed.")
+
+
+@asynccontextmanager
+async def lifespan(app_inst: FastAPI):
+    """Modern lifespan event handler for robust subsystem startup and shutdown."""
+    logger.info("ArgusTraffic AI platform online.")
+    yield
+    logger.info("Gracefully shutting down ArgusTraffic AI subsystems...")
+    broadcaster.running = False
+    if broadcaster.worker_task and not broadcaster.worker_task.done():
+        broadcaster.worker_task.cancel()
+    if app_state.get("video_stream"):
+        try:
+            app_state["video_stream"].release()
+        except Exception:
+            pass
+    if app_state.get("dispatcher"):
+        try:
+            app_state["dispatcher"].stop()
+        except Exception:
+            pass
+    logger.info("All subsystems cleanly terminated.")
+
+
+app.router.lifespan_context = lifespan
 
 
 def start_server():

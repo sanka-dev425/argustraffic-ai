@@ -28,6 +28,7 @@ from src.core.evidence_report import generate_executive_traffic_report, generate
 from src.core.incident_engine import IncidentEngine
 from src.core.tracker import SpatialTracker
 from src.core.zone_manager import FlowVector, TrafficZone, ZoneManager
+from src.api.security import sanitize_identifier
 from src.utils.visualizer import FrameVisualizer
 
 router = APIRouter(prefix="/api/v1")
@@ -596,7 +597,7 @@ async def mark_clip_synced(payload: Dict[str, Any]):
     vault = state.get("edge_vault")
     if not vault:
         raise HTTPException(status_code=503, detail="Edge Vault offline")
-    inc_id = payload.get("incident_id")
+    inc_id = sanitize_identifier(str(payload.get("incident_id", "")))
     success = vault.mark_as_synced(inc_id)
     return {"incident_id": inc_id, "synced": success}
 
@@ -604,6 +605,7 @@ async def mark_clip_synced(payload: Dict[str, Any]):
 @router.get("/edge-vault/clips/{incident_id}", tags=["Edge Vault & Storage"])
 async def download_incident_clip(incident_id: str):
     """Streams or downloads forensic MP4 video clip for the requested incident."""
+    incident_id = sanitize_identifier(incident_id)
     state = get_components()
     vault = state.get("edge_vault")
     ring_buf = state.get("edge_ring_buffer")
@@ -728,6 +730,7 @@ async def trigger_camera_reboot(payload: Dict[str, Any]):
     cam_id = payload.get("camera_id")
     if not cam_id:
         raise HTTPException(status_code=400, detail="camera_id required")
+    cam_id = sanitize_identifier(str(cam_id))
     res = watchdog.trigger_self_healing(cam_id, force=payload.get("force", False))
     return res
 
