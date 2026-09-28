@@ -475,11 +475,92 @@ class HardwareDecodeManager:
         }
 
 
+def render_no_signal_frame(
+    width: int = 1280,
+    height: int = 720,
+    camera_id: str = "CH-01",
+    source_url: str = "",
+    reason: str = "VIDEO LOSS / LINK DOWN",
+    reconnect_attempt: int = 1,
+    next_retry_sec: float = 2.0,
+    animated_phase: int = 0,
+) -> np.ndarray:
+    """
+    Renders an authentic industrial CCTV 'NO SIGNAL' test pattern.
+    Features dark technical scanlines, blinking red warning badge,
+    channel identifier, optical grid crosshairs, and live reconnect countdown.
+    """
+    frame = np.zeros((height, width, 3), dtype=np.uint8)
+    # Tactical dark background with subtle blue-gray tint
+    frame[:] = (24, 18, 14)
+
+    # CRT scanlines
+    frame[::4, :, :] = (18, 14, 10)
+
+    # Subtle cyber grid
+    grid_spacing = 80
+    for x in range(0, width, grid_spacing):
+        cv2.line(frame, (x, 0), (x, height), (32, 26, 20), 1)
+    for y in range(0, height, grid_spacing):
+        cv2.line(frame, (0, y), (width, y), (32, 26, 20), 1)
+
+    # Corner framing brackets
+    bracket_len = 50
+    margin = 40
+    cv2.line(frame, (margin, margin), (margin + bracket_len, margin), (70, 60, 50), 2)
+    cv2.line(frame, (margin, margin), (margin, margin + bracket_len), (70, 60, 50), 2)
+    cv2.line(frame, (width - margin, margin), (width - margin - bracket_len, margin), (70, 60, 50), 2)
+    cv2.line(frame, (width - margin, margin), (width - margin, margin + bracket_len), (70, 60, 50), 2)
+    cv2.line(frame, (margin, height - margin), (margin + bracket_len, height - margin), (70, 60, 50), 2)
+    cv2.line(frame, (margin, height - margin), (margin, height - margin - bracket_len), (70, 60, 50), 2)
+    cv2.line(frame, (width - margin, height - margin), (width - margin - bracket_len, height - margin), (70, 60, 50), 2)
+    cv2.line(frame, (width - margin, height - margin), (width - margin, margin + bracket_len), (70, 60, 50), 2)
+
+    # Center warning container
+    cx, cy = width // 2, height // 2
+    box_w, box_h = min(620, width - 60), 230
+    x1, y1 = cx - box_w // 2, cy - box_h // 2
+    x2, y2 = cx + box_w // 2, cy + box_h // 2
+
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (20, 16, 12), -1)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (45, 45, 220), 2)
+
+    # Blinking red alert pill
+    is_blink_on = (animated_phase // 15) % 2 == 0
+    pill_color = (35, 35, 235) if is_blink_on else (20, 20, 120)
+    pill_w, pill_h = 250, 34
+    px1, py1 = cx - pill_w // 2, y1 + 18
+    cv2.rectangle(frame, (px1, py1), (px1 + pill_w, py1 + pill_h), pill_color, -1)
+    cv2.putText(frame, "[ VIDEO LOSS ]", (cx - 82, py1 + 24), cv2.FONT_HERSHEY_SIMPLEX, 0.70, (255, 255, 255), 2, cv2.LINE_AA)
+
+    # Big "NO SIGNAL" headline
+    cv2.putText(frame, "NO SIGNAL", (cx - 150, cy + 18), cv2.FONT_HERSHEY_SIMPLEX, 1.4, (240, 240, 245), 3, cv2.LINE_AA)
+
+    # Reason & Channel Info
+    src_display = (source_url[:40] + "...") if len(source_url) > 40 else (source_url or "RTSP / IP CAMERA")
+    sub_text = f"CHANNEL: {camera_id}  |  SRC: {src_display}"
+    cv2.putText(frame, sub_text, (cx - 210, cy + 54), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (180, 180, 180), 1, cv2.LINE_AA)
+
+    # Reconnect status & countdown
+    retry_str = f"AUTO-RECONNECTING (ATTEMPT #{reconnect_attempt}) IN {next_retry_sec:.1f}s"
+    cv2.putText(frame, retry_str, (cx - 225, cy + 90), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (40, 200, 240), 1, cv2.LINE_AA)
+
+    # Top OSD bar
+    now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    cv2.putText(frame, f"ARGUSTRAFFIC AI  //  CHANNEL: {camera_id}  //  {now_str}", (margin + 10, margin - 15), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 229, 255), 1, cv2.LINE_AA)
+
+    # Bottom OSD status
+    cv2.putText(frame, "STATUS: LINK DOWN  |  PROTOCOL: RTSP/UDP  |  WATCHDOG: RECONNECT ENGINE ACTIVE", (margin + 10, height - margin + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (140, 140, 150), 1, cv2.LINE_AA)
+
+    return frame
+
+
 class HardwareAcceleratedCapture:
     """
     High-throughput non-blocking video capture pipeline.
     Employs an asynchronous frame-grabbing thread, zero-copy buffer queue,
     and automatic reconnection resilience for robust RTSP/4K IP camera feeds.
+    Provides CCTV NO SIGNAL / VIDEO LOSS rendering with automatic reconnection loops.
     """
 
     def __init__(self, source: Union[str, int], channel_id: str = "CH-01", backend: HardwareAccelerationBackend = HardwareAccelerationBackend.AUTO):
@@ -494,6 +575,12 @@ class HardwareAcceleratedCapture:
         self.lock = threading.Lock()
         self.frames_decoded = 0
         self.frames_dropped = 0
+        self.connection_status = "CONNECTING"
+        self.consecutive_failures = 0
+        self.reconnect_attempts = 0
+        self.last_reconnect_time = 0.0
+        self.reconnect_interval_sec = 2.5
+        self.no_signal_frame_count = 0
         self._init_backend_capture()
 
     def _init_backend_capture(self) -> None:
@@ -501,11 +588,11 @@ class HardwareAcceleratedCapture:
         if self.source == "synthetic" or self.source is None or self.source == "":
             self.is_synthetic = True
             self.synthetic_sim = SyntheticTrafficSimulator()
+            self.connection_status = "ONLINE"
             return
 
         try:
             src = int(self.source) if str(self.source).isdigit() else self.source
-            # Try hardware-accelerated FFMPEG/MSMF capture API
             if os.name == "nt":
                 self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
                 if not self.cap.isOpened():
@@ -514,40 +601,100 @@ class HardwareAcceleratedCapture:
                 self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
 
             if self.cap and self.cap.isOpened():
-                # Configure low-latency real-time video buffer
                 self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
-                # Attempt hardware decode property if available
                 if hasattr(cv2, "CAP_PROP_HW_ACCELERATION"):
                     try:
                         self.cap.set(cv2.CAP_PROP_HW_ACCELERATION, cv2.VIDEO_ACCELERATION_ANY)
                     except Exception:
                         pass
                 self.is_synthetic = False
+                self.connection_status = "ONLINE"
+                self.consecutive_failures = 0
             else:
-                self.is_synthetic = True
-                self.synthetic_sim = SyntheticTrafficSimulator()
+                self.connection_status = "NO_SIGNAL"
+                self.consecutive_failures = 5
         except Exception:
-            self.is_synthetic = True
-            self.synthetic_sim = SyntheticTrafficSimulator()
+            self.connection_status = "NO_SIGNAL"
+            self.consecutive_failures = 5
+
+    def _attempt_reconnect(self) -> bool:
+        """Attempts to re-establish connection to physical camera feed."""
+        self.reconnect_attempts += 1
+        self.last_reconnect_time = time.time()
+        if self.cap:
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            self.cap = None
+
+        try:
+            src = int(self.source) if str(self.source).isdigit() else self.source
+            if os.name == "nt":
+                self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
+                if not self.cap.isOpened():
+                    self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+            else:
+                self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+
+            if self.cap and self.cap.isOpened():
+                self.connection_status = "ONLINE"
+                self.consecutive_failures = 0
+                return True
+        except Exception:
+            pass
+
+        self.connection_status = "NO_SIGNAL"
+        return False
 
     def read_frame(self) -> Tuple[bool, np.ndarray]:
-        """Fetches the next hardware-decoded video frame."""
+        """Fetches the next hardware-decoded video frame or authentic NO SIGNAL test pattern."""
         if not self.is_synthetic and self.cap is not None and self.cap.isOpened():
             ret, frame = self.cap.read()
             if ret and frame is not None:
                 self.frames_decoded += 1
+                self.consecutive_failures = 0
+                self.connection_status = "ONLINE"
                 return True, frame
             else:
                 self.frames_dropped += 1
-                # Loop video file if reached EOF
-                try:
-                    self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    ret2, frame2 = self.cap.read()
-                    if ret2 and frame2 is not None:
-                        self.frames_decoded += 1
-                        return True, frame2
-                except Exception:
-                    pass
+                self.consecutive_failures += 1
+
+                # If this is a local video file (not RTSP), loop it
+                if isinstance(self.source, str) and not self.source.startswith("rtsp://") and not self.source.startswith("http://"):
+                    try:
+                        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                        ret2, frame2 = self.cap.read()
+                        if ret2 and frame2 is not None:
+                            self.frames_decoded += 1
+                            self.consecutive_failures = 0
+                            return True, frame2
+                    except Exception:
+                        pass
+
+        # If this is a real camera feed that failed or disconnected:
+        if not self.is_synthetic:
+            self.consecutive_failures += 1
+            if self.consecutive_failures >= 3:
+                self.connection_status = "NO_SIGNAL"
+                now = time.time()
+                if (now - self.last_reconnect_time) >= self.reconnect_interval_sec:
+                    if self._attempt_reconnect():
+                        ret_r, frame_r = self.cap.read()
+                        if ret_r and frame_r is not None:
+                            return True, frame_r
+
+                self.no_signal_frame_count += 1
+                next_in = max(0.1, self.reconnect_interval_sec - (now - self.last_reconnect_time))
+                no_sig_frame = render_no_signal_frame(
+                    camera_id=self.channel_id,
+                    source_url=str(self.source),
+                    reason="RTSP / IP LINK DOWN",
+                    reconnect_attempt=self.reconnect_attempts,
+                    next_retry_sec=next_in,
+                    animated_phase=self.no_signal_frame_count,
+                )
+                return True, no_sig_frame
 
         if self.synthetic_sim is None:
             self.synthetic_sim = SyntheticTrafficSimulator()

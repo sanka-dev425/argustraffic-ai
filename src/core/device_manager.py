@@ -60,7 +60,26 @@ class StreamRelayProxy:
             self._last_sub_frame = frame
 
     def get_broadcast_frame(self, for_ui_display: bool = True) -> Optional[np.ndarray]:
-        """Returns the appropriate stream (sub-stream for UI, main-stream for AI)."""
+        """Returns the appropriate stream (sub-stream for UI, main-stream for AI).
+        When the physical stream has stalled (>5s), returns an authentic NO SIGNAL frame
+        to avoid displaying misleading frozen video in control centers."""
+        now = time.time()
+        if (now - self._last_frame_time) > 5.0:
+            from src.utils.video_stream import render_no_signal_frame
+            elapsed = now - self._last_frame_time
+            w = 640 if for_ui_display else 1280
+            h = 360 if for_ui_display else 720
+            return render_no_signal_frame(
+                width=w,
+                height=h,
+                camera_id=self.camera_id,
+                source_url=self.rtsp_url,
+                reason="STREAM HEARTBEAT LOSS (>5s)",
+                reconnect_attempt=int(elapsed // 3) + 1,
+                next_retry_sec=max(0.1, 3.0 - (elapsed % 3)),
+                animated_phase=int(elapsed * 10),
+            )
+
         if for_ui_display and self._last_sub_frame is not None:
             return self._last_sub_frame
         return self._last_main_frame

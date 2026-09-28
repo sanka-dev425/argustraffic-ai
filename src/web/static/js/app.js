@@ -243,13 +243,74 @@ function initWebSocket() {
 
   ws.onclose = () => {
     statusEl.innerHTML = `<span class="pulse-dot" style="background:#ff3d71;box-shadow:0 0 8px #ff3d71"></span><span>RECONNECTING</span>`;
+    showNoSignalOverlay(currentVideoSource, "WEBSOCKET STREAM INTERRUPTED");
     fallbackToMjpegStream();
     setTimeout(initWebSocket, 2000);
   };
 
   ws.onerror = (err) => {
+    showNoSignalOverlay(currentVideoSource, "CONNECTION TIMEOUT");
     fallbackToMjpegStream();
   };
+
+  if (streamImg) {
+    streamImg.onerror = () => {
+      showNoSignalOverlay(currentVideoSource, "STREAM DECODE FAILURE");
+    };
+  }
+}
+
+let currentVideoSource = "synthetic";
+let noSignalCountdown = 2.5;
+let noSignalInterval = null;
+
+function showNoSignalOverlay(channelName = "CAM-042", reason = "FEED LINK DOWN") {
+  const overlay = document.getElementById("no-signal-overlay");
+  const meta = document.getElementById("no-signal-meta");
+  if (meta) meta.innerHTML = `CHANNEL: ${channelName.toUpperCase()} &bull; ${reason}`;
+  if (overlay) overlay.classList.remove("hidden");
+
+  const statusEl = document.getElementById("connection-status");
+  if (statusEl) {
+    statusEl.innerHTML = `<span class="pulse-dot" style="background:#ff3d71;box-shadow:0 0 8px #ff3d71"></span><span>VIDEO LOSS / NO SIGNAL</span>`;
+  }
+
+  if (!noSignalInterval) {
+    noSignalCountdown = 2.5;
+    noSignalInterval = setInterval(() => {
+      noSignalCountdown = Math.max(0.1, noSignalCountdown - 0.5);
+      const timerEl = document.getElementById("no-signal-timer");
+      if (timerEl) timerEl.innerText = `${noSignalCountdown.toFixed(1)}s`;
+      if (noSignalCountdown <= 0.2) {
+        noSignalCountdown = 2.5;
+      }
+    }, 500);
+  }
+}
+
+function hideNoSignalOverlay() {
+  const overlay = document.getElementById("no-signal-overlay");
+  if (overlay && !overlay.classList.contains("hidden")) {
+    overlay.classList.add("hidden");
+  }
+  if (noSignalInterval) {
+    clearInterval(noSignalInterval);
+    noSignalInterval = null;
+  }
+}
+
+function forceCameraReconnect() {
+  const overlayBtn = document.querySelector(".no-signal-btn");
+  if (overlayBtn) {
+    overlayBtn.innerHTML = "<span>RE-ESTABLISHING RTSP HANDSHAKE...</span>";
+    setTimeout(() => {
+      overlayBtn.innerHTML = "<span>⚡ FORCE RECONNECT</span>";
+    }, 1500);
+  }
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: "set_source", source: currentVideoSource }));
+  }
+  showToast({ incident_type: "CAMERA", description: `Reconnection handshake initiated for ${currentVideoSource}` });
 }
 
 function fallbackToMjpegStream() {
@@ -267,6 +328,7 @@ function handleFrameData(data) {
   const streamImg = document.getElementById("stream-img");
   if (data.image && streamImg) {
     streamImg.src = data.image;
+    hideNoSignalOverlay();
   }
   const wall1 = document.getElementById("wall-stream-1");
   if (data.image && wall1) {
@@ -560,6 +622,7 @@ function triggerPtz(action) {
 }
 
 function switchStreamSource(src) {
+  currentVideoSource = src;
   const sel = document.getElementById("source-select");
   if (sel) sel.value = src;
 

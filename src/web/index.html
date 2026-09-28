@@ -619,6 +619,24 @@
                 <img id="stream-img" alt="Live Camera Feed" />
                 <canvas id="drawing-canvas"></canvas>
 
+                <!-- Tactical CCTV Video Loss / No Signal HUD Overlay -->
+                <div id="no-signal-overlay" class="no-signal-overlay hidden">
+                  <div class="no-signal-box">
+                    <div class="no-signal-badge">
+                      <span class="no-signal-dot"></span>
+                      <span>VIDEO LOSS DETECTED</span>
+                    </div>
+                    <div class="no-signal-headline">NO SIGNAL</div>
+                    <div class="no-signal-meta" id="no-signal-meta">CHANNEL: CAM-042 (CANAL ST) &bull; LINK DOWN</div>
+                    <div class="no-signal-sub">
+                      Auto-reconnect watchdog active &bull; Retrying in <span id="no-signal-timer">2.5s</span>
+                    </div>
+                    <button class="btn btn-sm btn-outline no-signal-btn" onclick="forceCameraReconnect()">
+                      <span>⚡ FORCE RECONNECT</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div id="drawing-toolbar" class="draw-banner hidden">
                   <span>DRAWING ZONE: Click to place polygon vertices. Click <strong>Finish Zone</strong> to save.</span>
                   <div class="draw-actions">

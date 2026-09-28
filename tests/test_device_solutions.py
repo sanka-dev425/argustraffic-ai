@@ -152,3 +152,46 @@ def test_api_device_endpoints():
     r4 = client.get("/api/v1/devices/time-sync/status")
     assert r4.status_code == 200
     assert r4.json()["sync_status"] == "SYNCHRONIZED"
+
+
+def test_render_no_signal_frame_generator():
+    """Verify authentic CCTV NO SIGNAL test pattern generation and dimensions."""
+    from src.utils.video_stream import render_no_signal_frame
+    frame = render_no_signal_frame(
+        width=1280,
+        height=720,
+        camera_id="CAM-COLOMBO-04",
+        source_url="rtsp://192.168.1.120:554/live",
+        reason="RTSP HANDSHAKE TIMEOUT",
+        reconnect_attempt=2,
+        next_retry_sec=1.5,
+    )
+    assert frame.shape == (720, 1280, 3)
+    assert frame.dtype == np.uint8
+
+
+def test_stream_relay_proxy_no_signal_fallback():
+    """Verify StreamRelayProxy returns NO SIGNAL frame instead of frozen image when feed stalls."""
+    proxy = StreamRelayProxy("CAM-FAIL-01", "rtsp://10.0.0.99:554/live")
+    # Simulate a stream that has stalled (>5.0s)
+    proxy._last_frame_time = time.time() - 8.0
+    stale_frame = proxy.get_broadcast_frame(for_ui_display=True)
+    assert stale_frame is not None
+    assert stale_frame.shape == (360, 640, 3)
+
+    ai_stale_frame = proxy.get_broadcast_frame(for_ui_display=False)
+    assert ai_stale_frame is not None
+    assert ai_stale_frame.shape == (720, 1280, 3)
+
+
+def test_hardware_capture_no_signal_on_unreachable_stream():
+    """Verify HardwareAcceleratedCapture enters NO_SIGNAL state and emits test pattern on link failure."""
+    from src.utils.video_stream import HardwareAcceleratedCapture
+    cap = HardwareAcceleratedCapture(source="nonexistent_stream.mp4", channel_id="CAM-OFFLINE-01")
+    assert cap.connection_status == "NO_SIGNAL"
+    ret, frame = cap.read_frame()
+    assert ret is True
+    assert frame is not None
+    assert frame.shape[0] > 0
+    cap.release()
+
