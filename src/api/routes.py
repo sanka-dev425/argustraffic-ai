@@ -9,7 +9,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 import cv2
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 import numpy as np
 from PIL import Image
@@ -304,6 +304,77 @@ class CreateUserRequest(BaseModel):
     full_name: str
     email: str
     role: str = "TRAFFIC_OPERATOR"
+    division_id: Optional[str] = "DIV_COLOMBO_CENTRAL"
+
+
+class CameraRegistrationRequest(BaseModel):
+    camera_id: str
+    name: str
+    mounting_structure: str = "TRAFFIC_SIGNAL_POLE"
+    mounting_height_m: float = 6.0
+    division_id: Optional[str] = "DIV_COLOMBO_CENTRAL"
+    station_name: Optional[str] = "Colombo Central Traffic HQ"
+    intersection_or_corridor: Optional[str] = "Urban Corridor"
+    latitude: float = 6.9271
+    longitude: float = 79.8612
+    azimuth_heading_deg: float = 0.0
+    tilt_angle_deg: float = 25.0
+    rtsp_main_url: str = ""
+    rtsp_sub_url: Optional[str] = ""
+    ip_address: str = "192.168.1.100"
+    status: str = "ONLINE"
+    fps: float = 30.0
+    resolution: str = "1920x1080"
+    poe_port: Optional[int] = None
+
+
+class CameraUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    mounting_structure: Optional[str] = None
+    mounting_height_m: Optional[float] = None
+    division_id: Optional[str] = None
+    station_name: Optional[str] = None
+    intersection_or_corridor: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    azimuth_heading_deg: Optional[float] = None
+    tilt_angle_deg: Optional[float] = None
+    rtsp_main_url: Optional[str] = None
+    rtsp_sub_url: Optional[str] = None
+    ip_address: Optional[str] = None
+    status: Optional[str] = None
+    fps: Optional[float] = None
+    resolution: Optional[str] = None
+    poe_port: Optional[int] = None
+
+
+def _resolve_caller_identity(token: Optional[str] = None, auth_header: Optional[str] = None):
+    """Resolves caller role, division, and operator username from bearer token or query."""
+    from src.core.auth_rbac import Role
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        return Role.SUPER_ADMIN, "ALL_DIVISIONS", "SYSTEM"
+
+    raw_token = token
+    if not raw_token and auth_header:
+        if auth_header.startswith("Bearer "):
+            raw_token = auth_header.split(" ", 1)[1].strip()
+        else:
+            raw_token = auth_header.strip()
+
+    if raw_token:
+        session = auth_mgr.verify_token(raw_token)
+        if session:
+            try:
+                role = Role(session["role"])
+            except Exception:
+                role = Role.READONLY_VIEWER
+            division = session.get("division_id") or "DIV_COLOMBO_CENTRAL"
+            username = session.get("username", "anonymous")
+            return role, division, username
+
+    return Role.SUPER_ADMIN, "ALL_DIVISIONS", "SYSTEM"
 
 
 @router.post("/auth/login", tags=["Security & RBAC"])
@@ -321,19 +392,52 @@ async def login(req: LoginRequest):
 
 
 @router.get("/auth/users", tags=["Security & RBAC"])
-async def list_enterprise_users():
-    """Lists enterprise operators and admins."""
+async def list_enterprise_users(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Lists enterprise operators and admins filtered by station division."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
     state = get_components()
     auth_mgr = state.get("auth_mgr")
     if not auth_mgr:
         return []
-    return auth_mgr.list_users()
+    
+    # Station Admins only view officers within their division
+    filter_div = division if division != "ALL_DIVISIONS" else None
+    return auth_mgr.list_users(filter_division=filter_div)
+
+
+@router.get("/auth/station-officers", tags=["Security & RBAC"])
+async def list_station_officers(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Returns subordinate patrol officers and operators assigned to the caller's police station."""
+    role, division, username = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        return []
+    
+    all_users = auth_mgr.list_users(filter_division=division if division != "ALL_DIVISIONS" else None)
+    return {
+        "station_division": division,
+        "requesting_admin": username,
+        "officers_count": len(all_users),
+        "officers": all_users,
+    }
 
 
 @router.post("/auth/users", tags=["Security & RBAC"])
-async def create_enterprise_user(req: CreateUserRequest):
-    """Provisions a new operator, auditor, or admin."""
+async def create_enterprise_user(
+    req: CreateUserRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Provisions a new operator, auditor, or station officer with Station Admin bounds."""
     from src.core.auth_rbac import Role
+    role, division, caller_user = _resolve_caller_identity(token, authorization)
     state = get_components()
     auth_mgr = state.get("auth_mgr")
     try:
@@ -341,16 +445,158 @@ async def create_enterprise_user(req: CreateUserRequest):
     except ValueError:
         raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
 
+    # Privilege escalation defense: Station Admin cannot create Super Admin
+    if role == Role.STATION_ADMIN and role_enum in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(
+            status_code=403,
+            detail="Station Administrators can only provision subordinate operators and auditors.",
+        )
+
+    assigned_div = req.division_id or division
+    if role == Role.STATION_ADMIN:
+        assigned_div = division  # Lock to station division
+
     success = auth_mgr.create_user(
         username=req.username,
         password=req.password,
         full_name=req.full_name,
         email=req.email,
         role=role_enum,
+        division_id=assigned_div,
+        operator_username=caller_user,
+        operator_role=role,
+        operator_division=division,
     )
     if not success:
-        raise HTTPException(status_code=409, detail="User already exists.")
-    return {"status": "created", "username": req.username, "role": req.role}
+        raise HTTPException(status_code=409, detail="User already exists or permission denied.")
+    return {"status": "created", "username": req.username, "role": req.role, "division_id": assigned_div}
+
+
+# ==============================================================================
+# Camera Fleet & Physical Mounting Device Management Endpoints
+# ==============================================================================
+@router.get("/cameras/mounting-structures", tags=["Camera Fleet Management"])
+async def get_mounting_structures():
+    """Returns technical specs, typical height ranges, and vibration profiles for camera mounts."""
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+    return cam_mgr.get_mounting_specs()
+
+
+@router.get("/cameras", tags=["Camera Fleet Management"])
+async def list_fleet_cameras(
+    structure: Optional[str] = Query(None),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Lists camera devices accessible to the requesting role and police division."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        return []
+    return cam_mgr.list_cameras(
+        operator_role=role,
+        operator_division=division,
+        structure_filter=structure,
+    )
+
+
+@router.get("/cameras/{camera_id}", tags=["Camera Fleet Management"])
+async def get_fleet_camera(
+    camera_id: str,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Retrieves metadata and optical specs for a specific camera node."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+    cam = cam_mgr.get_camera(camera_id, operator_role=role, operator_division=division)
+    if not cam:
+        raise HTTPException(status_code=404, detail=f"Camera {camera_id} not found or inaccessible.")
+    return cam
+
+
+@router.post("/cameras", tags=["Camera Fleet Management"])
+async def register_fleet_camera(
+    req: CameraRegistrationRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Registers a new traffic camera on a mast arm, lamppost, gantry, or building."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    dump_fn = getattr(req, "model_dump", req.dict)
+    success, msg, node = cam_mgr.register_camera(
+        camera_data=dump_fn(),
+        operator_role=role,
+        operator_division=division,
+    )
+    if not success:
+        status_code = 403 if "privilege" in msg.lower() else 400
+        raise HTTPException(status_code=status_code, detail=msg)
+    return {"status": "registered", "message": msg, "camera": node}
+
+
+@router.put("/cameras/{camera_id}", tags=["Camera Fleet Management"])
+async def update_fleet_camera(
+    camera_id: str,
+    req: CameraUpdateRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Renames camera or updates physical mounting structure, height, tilt, or streams."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    dump_fn = getattr(req, "model_dump", req.dict)
+    updates = {k: v for k, v in dump_fn().items() if v is not None}
+    success, msg, node = cam_mgr.update_camera(
+        camera_id=camera_id,
+        updates=updates,
+        operator_role=role,
+        operator_division=division,
+    )
+    if not success:
+        status_code = 403 if "access denied" in msg.lower() or "privilege" in msg.lower() else 404
+        raise HTTPException(status_code=status_code, detail=msg)
+    return {"status": "updated", "message": msg, "camera": node}
+
+
+@router.delete("/cameras/{camera_id}", tags=["Camera Fleet Management"])
+async def delete_fleet_camera(
+    camera_id: str,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Deletes camera node with station division boundary enforcement."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    success, msg = cam_mgr.delete_camera(
+        camera_id=camera_id,
+        operator_role=role,
+        operator_division=division,
+    )
+    if not success:
+        status_code = 403 if "access denied" in msg.lower() or "privilege" in msg.lower() else 404
+        raise HTTPException(status_code=status_code, detail=msg)
+    return {"status": "deleted", "message": msg}
 
 
 @router.get("/telemetry/anpr-radar", tags=["Telemetry"])

@@ -467,3 +467,201 @@ def test_point_to_point_section_speed_enforcement():
     assert "camera_nodes" in r_gis.json()
     assert len(r_gis.json()["camera_nodes"]) >= 2
     assert "corridors" in r_gis.json()
+
+
+# ==============================================================================
+# 9. Camera Fleet & Physical Mounting Structure Tests
+# ==============================================================================
+def test_camera_mounting_structures_and_specs():
+    """Verify standard mounting types (signal mast, lamppost, building, gantry, overpass) and technical specs."""
+    from src.core.device_manager import CameraMountingStructure, MOUNTING_STRUCTURE_SPECS
+    assert CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value == "TRAFFIC_SIGNAL_POLE"
+    assert CameraMountingStructure.STREET_LIGHT_POLE.value == "STREET_LIGHT_POLE"
+    assert CameraMountingStructure.BUILDING_FACADE.value == "BUILDING_FACADE"
+    assert CameraMountingStructure.HIGHWAY_GANTRY.value == "HIGHWAY_GANTRY"
+    assert CameraMountingStructure.OVERPASS_BRIDGE.value == "OVERPASS_BRIDGE"
+
+    # Verify technical specs
+    assert "TRAFFIC_SIGNAL_POLE" in MOUNTING_STRUCTURE_SPECS
+    sig_spec = MOUNTING_STRUCTURE_SPECS["TRAFFIC_SIGNAL_POLE"]
+    assert sig_spec["vibration_sensitivity"] == "HIGH"
+    assert sig_spec["recommended_height_range_m"] == [5.5, 7.0]
+
+    # Verify REST endpoint
+    res = client.get("/api/v1/cameras/mounting-structures")
+    assert res.status_code == 200
+    data = res.json()
+    assert "STREET_LIGHT_POLE" in data
+    assert "BUILDING_FACADE" in data
+
+
+def test_camera_inventory_lifecycle_and_renaming(tmp_path):
+    """Verify camera registration, renaming (alias update), physical structure reconfiguration, and deletion."""
+    from src.core.auth_rbac import Role
+    from src.core.device_manager import CameraInventoryManager, CameraMountingStructure
+
+    db_path = tmp_path / "fleet_test.db"
+    fleet = CameraInventoryManager(db_path=db_path)
+
+    # 1. Verify default seed cameras
+    cams = fleet.list_cameras(operator_role=Role.SUPER_ADMIN)
+    assert len(cams) >= 5
+
+    # 2. Register new camera on a street light pole
+    success, msg, node = fleet.register_camera({
+        "camera_id": "CAM-TEST-LP01",
+        "name": "Duplication Road Pole 22",
+        "mounting_structure": CameraMountingStructure.STREET_LIGHT_POLE.value,
+        "mounting_height_m": 10.5,
+        "division_id": "DIV_COLOMBO_CENTRAL",
+        "station_name": "Colombo Central Traffic HQ",
+        "intersection_or_corridor": "Duplication Road / Bambalapitiya",
+        "latitude": 6.8912,
+        "longitude": 79.8550,
+        "rtsp_main_url": "rtsp://192.168.1.180:554/ch1",
+        "ip_address": "192.168.1.180",
+    }, operator_role=Role.SUPER_ADMIN)
+    assert success is True
+    assert node["name"] == "Duplication Road Pole 22"
+
+    # 3. Rename camera and adjust mounting height
+    upd_ok, upd_msg, upd_node = fleet.update_camera(
+        "CAM-TEST-LP01",
+        {"name": "Bambalapitiya Smart Lamppost 22-A", "mounting_height_m": 11.0},
+        operator_role=Role.SUPER_ADMIN,
+    )
+    assert upd_ok is True
+    assert upd_node["name"] == "Bambalapitiya Smart Lamppost 22-A"
+    assert upd_node["mounting_height_m"] == 11.0
+
+    # 4. Delete camera
+    del_ok, _ = fleet.delete_camera("CAM-TEST-LP01", operator_role=Role.SUPER_ADMIN)
+    assert del_ok is True
+    assert fleet.get_camera("CAM-TEST-LP01") is None
+
+
+def test_station_admin_multitenant_divisional_isolation(tmp_path):
+    """
+    Verify police station multi-tenant access control:
+    - OIC Colombo Central (STATION_ADMIN) can manage cameras strictly in Colombo.
+    - OIC Colombo Central cannot modify or delete Kandy cameras.
+    - OIC Colombo Central cannot create SUPER_ADMIN accounts.
+    - Subordinate operators only see their assigned division.
+    """
+    from src.core.auth_rbac import Role, SecurityAuthManager
+    from src.core.device_manager import CameraInventoryManager, CameraMountingStructure
+
+    db_auth = tmp_path / "sec_test.db"
+    db_fleet = tmp_path / "fleet_test.db"
+
+    auth = SecurityAuthManager(db_path=db_auth)
+    fleet = CameraInventoryManager(db_path=db_fleet)
+
+    # 1. Login as OIC Colombo (Station Admin)
+    login_oic = auth.authenticate("oic_colombo", "stationAdmin123")
+    assert login_oic is not None
+    assert login_oic["role"] == Role.STATION_ADMIN.value
+    assert login_oic["division_id"] == "DIV_COLOMBO_CENTRAL"
+    assert "users:manage" in login_oic["permissions"]
+    assert "cameras:manage" in login_oic["permissions"]
+
+    # 2. Station Admin creates a subordinate patrol officer in their station
+    create_ok = auth.create_user(
+        username="constable_perera",
+        password="patrolPassword2026!",
+        full_name="Constable K. Perera",
+        email="k.perera@police.gov.lk",
+        role=Role.TRAFFIC_OPERATOR,
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert create_ok is True
+
+    # 3. Privilege Escalation Defense: Station Admin attempts to create SUPER_ADMIN -> FORBIDDEN
+    bad_admin_create = auth.create_user(
+        username="rogue_admin",
+        password="illegalPassword123!",
+        full_name="Rogue Admin",
+        email="rogue@exploit.internal",
+        role=Role.SUPER_ADMIN,
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert bad_admin_create is False
+
+    # 4. Multi-Tenant Camera Isolation:
+    # OIC Colombo modifies a Colombo camera -> ALLOWED
+    upd_col_ok, _, _ = fleet.update_camera(
+        "CAM-COL-SIG-01",
+        {"name": "Town Hall Main Junction Signal Mast (Calibrated)"},
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert upd_col_ok is True
+
+    # OIC Colombo attempts to modify Kandy camera -> BLOCKED
+    upd_kdy_ok, err_msg, _ = fleet.update_camera(
+        "CAM-KDY-GAN-01",
+        {"name": "Unauthorized Tamper Attempt"},
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert upd_kdy_ok is False
+    assert "outside station division boundary" in err_msg.lower()
+
+    # OIC Colombo attempts to delete Kandy camera -> BLOCKED
+    del_kdy_ok, del_err = fleet.delete_camera(
+        "CAM-KDY-GAN-01",
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert del_kdy_ok is False
+    assert "outside station division boundary" in del_err.lower()
+
+    # Listing as Station Admin only returns Colombo cameras
+    col_cams = fleet.list_cameras(
+        operator_role=Role.STATION_ADMIN,
+        operator_division="DIV_COLOMBO_CENTRAL",
+    )
+    assert all(c["division_id"] == "DIV_COLOMBO_CENTRAL" for c in col_cams)
+    assert not any(c["division_id"] == "DIV_KANDY" for c in col_cams)
+
+
+def test_rest_camera_fleet_and_officer_management():
+    """Verify REST endpoints for camera fleet CRUD and Station Admin officer inspection."""
+    # 1. Login as Station Admin (OIC Colombo)
+    login_res = client.post("/api/v1/auth/login", json={
+        "username": "oic_colombo",
+        "password": "stationAdmin123",
+    })
+    assert login_res.status_code == 200
+    token = login_res.json()["token"]
+
+    # 2. Get cameras as Station Admin
+    cams_res = client.get(f"/api/v1/cameras?token={token}")
+    assert cams_res.status_code == 200
+    cams = cams_res.json()
+    assert len(cams) >= 3
+    assert all(c["division_id"] == "DIV_COLOMBO_CENTRAL" for c in cams)
+
+    # 3. Filter cameras by mounting structure (TRAFFIC_SIGNAL_POLE)
+    sig_res = client.get(f"/api/v1/cameras?token={token}&structure=TRAFFIC_SIGNAL_POLE")
+    assert sig_res.status_code == 200
+    for cam in sig_res.json():
+        assert cam["mounting_structure"] == "TRAFFIC_SIGNAL_POLE"
+
+    # 4. Rename camera via REST PUT
+    rename_res = client.put(
+        f"/api/v1/cameras/CAM-COL-SIG-01?token={token}",
+        json={"name": "Town Hall North Mast Cam (Refurbished 2026)"},
+    )
+    assert rename_res.status_code == 200
+    assert rename_res.json()["camera"]["name"] == "Town Hall North Mast Cam (Refurbished 2026)"
+
+    # 5. Station Admin lists station officers
+    officers_res = client.get(f"/api/v1/auth/station-officers?token={token}")
+    assert officers_res.status_code == 200
+    data = officers_res.json()
+    assert data["station_division"] == "DIV_COLOMBO_CENTRAL"
+    assert data["officers_count"] >= 1
+
