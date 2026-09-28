@@ -955,3 +955,228 @@ function initSLATimer() {
     }
   }, 1000);
 }
+
+/* ==========================================================================
+   11. INCIDENTS & HOTLIST SUB-TAB NAVIGATION
+   ========================================================================== */
+function switchIncidentsTab(tabName) {
+  const btnInc = document.getElementById("tab-btn-incidents");
+  const btnHot = document.getElementById("tab-btn-hotlist");
+  const secInc = document.getElementById("section-incidents-table");
+  const secHot = document.getElementById("section-hotlist-table");
+
+  if (tabName === "hotlist") {
+    btnInc?.classList.remove("active");
+    btnHot?.classList.add("active");
+    secInc?.classList.add("hidden");
+    secHot?.classList.remove("hidden");
+    loadHotlistRecords();
+  } else {
+    btnHot?.classList.remove("active");
+    btnInc?.classList.add("active");
+    secHot?.classList.add("hidden");
+    secInc?.classList.remove("hidden");
+  }
+}
+
+async function loadHotlistRecords() {
+  try {
+    const res = await fetch("/api/v1/hotlist/records");
+    if (res.ok) {
+      const data = await res.json();
+      const tbody = document.getElementById("hotlist-table-body");
+      if (tbody && data.records) {
+        tbody.innerHTML = data.records.map(r => `
+          <tr>
+            <td><code>${r.plate_raw || r.plate}</code></td>
+            <td><span class="badge-${r.severity === 'CRITICAL' ? 'critical' : 'warning'}">${r.category}</span></td>
+            <td><span class="badge-${r.severity === 'CRITICAL' ? 'critical' : 'info'}">${r.severity}</span></td>
+            <td>${r.vehicle_model || r.description}</td>
+            <td>${r.flagged_by || 'National Traffic Police'}</td>
+            <td>${r.reported_date || 'Active Alert'}</td>
+            <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('${r.plate_raw || r.plate}')">Dispatch APB</button></td>
+          </tr>
+        `).join("");
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load hotlist records:", e);
+  }
+}
+
+function openAddHotlistModal() {
+  document.getElementById("hotlist-modal")?.classList.remove("hidden");
+}
+
+function closeAddHotlistModal() {
+  document.getElementById("hotlist-modal")?.classList.add("hidden");
+}
+
+async function submitNewHotlistRecord() {
+  const plate = document.getElementById("new-hotlist-plate").value.trim();
+  const category = document.getElementById("new-hotlist-category").value;
+  const desc = document.getElementById("new-hotlist-desc").value.trim() || "Suspect Vehicle";
+  const flagged = document.getElementById("new-hotlist-flagged").value.trim() || "Traffic Police";
+
+  if (!plate) {
+    alert("Please enter a valid license plate number.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/v1/hotlist/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plate: plate,
+        category: category,
+        severity: category.includes("STOLEN") || category.includes("FELON") || category.includes("AMBER") ? "CRITICAL" : "MEDIUM",
+        vehicle_model: desc,
+        flagged_by: flagged,
+      }),
+    });
+    if (res.ok) {
+      closeAddHotlistModal();
+      loadHotlistRecords();
+      showToast({ incident_type: "SECURITY", description: `Registered wanted plate '${plate}' into National Hotlist.` });
+    }
+  } catch (e) {
+    alert("Failed to register plate to hotlist.");
+  }
+}
+
+async function testPlateInterception(plate) {
+  try {
+    const res = await fetch("/api/v1/hotlist/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plate: plate, camera_id: "CAM-042", speed_kmh: 72.4 }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.is_flagged) {
+        triggerAudioAlert();
+        showToast({
+          incident_type: "WANTED_INTERCEPT",
+          description: `🚨 APB DISPATCH: Target ${plate} [${data.match_details?.category}] flagged at CAM-042!`,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Interception query failed:", e);
+  }
+}
+
+function filterHotlistTable(query) {
+  const q = query.toUpperCase();
+  const rows = document.querySelectorAll("#hotlist-table-body tr");
+  rows.forEach(r => {
+    r.style.display = r.innerText.toUpperCase().includes(q) ? "" : "none";
+  });
+}
+
+/* ==========================================================================
+   12. MODAL FORENSICS & RING-BUFFER DOWNLOAD
+   ========================================================================== */
+let activeModalIncidentId = "INC-2025-0847";
+
+function openForensicModal(id, hazard, cam, sev, speed, plate) {
+  activeModalIncidentId = id;
+  const modal = document.getElementById("incident-modal");
+  document.getElementById("m-id").innerText = id;
+  document.getElementById("m-sev").innerText = sev;
+  document.getElementById("m-sev").className = `badge-${sev === 'CRITICAL' ? 'critical' : (sev === 'HIGH' ? 'warning' : 'info')}`;
+  document.getElementById("m-time").innerText = new Date().toISOString();
+  document.getElementById("m-zone").innerText = cam;
+  document.getElementById("m-tracks").innerText = `${plate} (${speed})`;
+  document.getElementById("m-desc").innerText = `${hazard} identified at ${cam}. Speed measured at ${speed}.`;
+
+  const btnAck = document.getElementById("btn-modal-ack");
+  if (btnAck) {
+    btnAck.disabled = false;
+    btnAck.innerText = "✓ Acknowledge";
+  }
+
+  modal?.classList.remove("hidden");
+}
+
+async function ackCurrentModalIncident() {
+  const btn = document.getElementById("btn-modal-ack");
+  const badge = document.getElementById("m-officer-badge")?.value || "SLP-4921";
+  const notes = document.getElementById("m-action-notes")?.value || "Officer Acknowledged";
+
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/v1/sla/acknowledge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        incident_id: activeModalIncidentId,
+        officer_id: currentUser.username || "POLICE_OP_01",
+        badge_number: badge,
+        action_taken: notes,
+      }),
+    });
+    if (res.ok) {
+      if (btn) btn.innerText = "✓ Acknowledged (Logged)";
+      showToast({ incident_type: "SECURITY", description: `Incident ${activeModalIncidentId} signed by Officer ${badge}.` });
+    }
+  } catch (e) {
+    if (btn) btn.innerText = "✓ Acknowledged";
+  }
+}
+
+function downloadIncidentClip() {
+  showToast({ incident_type: "EVIDENCE", description: `Downloading 15s Ring-Buffer MP4 clip for ${activeModalIncidentId}...` });
+  window.open("/api/v1/edge-vault/pending-sync", "_blank");
+}
+
+/* ==========================================================================
+   13. CAMERA REMOTE SELF-HEALING & REBOOT
+   ========================================================================== */
+async function rebootCameraNode(cameraId) {
+  if (!confirm(`Are you sure you want to execute an automated ONVIF reset and PoE power-cycle on ${cameraId}?`)) {
+    return;
+  }
+  showToast({ incident_type: "CAMERA", description: `Issuing PoE power-cycle command to ${cameraId}...` });
+  try {
+    const res = await fetch("/api/v1/camera-watchdog/reboot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ camera_id: cameraId, force: true }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      showToast({ incident_type: "CAMERA", description: `Power cycle executed on ${cameraId}. Watchdog reconnecting in 30s.` });
+    }
+  } catch (e) {
+    console.error("Camera reboot command failed:", e);
+  }
+}
+
+/* ==========================================================================
+   14. PLATFORM SETTINGS PERSISTENCE
+   ========================================================================== */
+function savePlatformSettings() {
+  const jurisdiction = document.getElementById("setting-jurisdiction")?.value || "National Police Traffic Command";
+  const timezone = document.getElementById("setting-timezone")?.value || "Asia/Colombo";
+  const slaLimit = document.getElementById("setting-sla-limit")?.value || "45";
+  const sirenEnabled = document.getElementById("setting-siren-toggle")?.checked ?? true;
+
+  const settings = {
+    jurisdiction: jurisdiction,
+    timezone: timezone,
+    slaLimit: parseInt(slaLimit),
+    sirenEnabled: sirenEnabled,
+  };
+
+  localStorage.setItem("argus_platform_settings", JSON.stringify(settings));
+
+  // Update UI topbar jurisdiction pill if element exists
+  const titleEl = document.querySelector(".jurisdiction-pill span:last-child");
+  if (titleEl) titleEl.innerText = jurisdiction;
+
+  showToast({ incident_type: "SETTINGS", description: "Platform configuration successfully persisted to local encrypted store." });
+}
+

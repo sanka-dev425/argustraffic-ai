@@ -815,19 +815,31 @@
             </div>
           </div>
 
-          <div class="filter-ribbon">
-            <div class="search-box">
-              <input type="text" placeholder="Search by Plate, Incident ID, or Camera..." class="form-input" />
-            </div>
-            <div class="filter-controls">
-              <select class="form-select"><option>All Severities</option><option>Critical</option><option>High</option><option>Medium</option></select>
-              <select class="form-select"><option>All Statuses</option><option>Open</option><option>Dispatched</option><option>Resolved</option></select>
-              <button class="btn btn-outline">Filter</button>
-            </div>
+          <!-- Incidents & Hotlist Sub-Navigation Tabs -->
+          <div class="sub-tabs-bar">
+            <button class="sub-tab-btn active" id="tab-btn-incidents" onclick="switchIncidentsTab('incidents')">
+              🚨 Active Traffic Hazards & Incidents (3)
+            </button>
+            <button class="sub-tab-btn" id="tab-btn-hotlist" onclick="switchIncidentsTab('hotlist')">
+              🎯 Wanted Vehicles & Blacklist Hotlist (3)
+            </button>
           </div>
 
-          <div class="panel-card">
-            <table class="data-table">
+          <!-- SECTION 1: INCIDENTS TABLE -->
+          <div id="section-incidents-table">
+            <div class="filter-ribbon">
+              <div class="search-box">
+                <input type="text" placeholder="Search by Plate, Incident ID, or Camera..." class="form-input" />
+              </div>
+              <div class="filter-controls">
+                <select class="form-select"><option>All Severities</option><option>Critical</option><option>High</option><option>Medium</option></select>
+                <select class="form-select"><option>All Statuses</option><option>Open</option><option>Dispatched</option><option>Resolved</option></select>
+                <button class="btn btn-outline">Filter</button>
+              </div>
+            </div>
+
+            <div class="panel-card">
+              <table class="data-table">
               <thead>
                 <tr>
                   <th>Incident ID</th>
@@ -879,7 +891,66 @@
             </table>
           </div>
         </div>
-      </main>
+
+        <!-- SECTION 2: WANTED VEHICLE HOTLIST TABLE -->
+        <div id="section-hotlist-table" class="hidden">
+          <div class="filter-ribbon">
+            <div class="search-box">
+              <input type="text" id="hotlist-search-input" placeholder="Quick plate lookup (e.g. CP-HVY-3012)..." class="form-input" onkeyup="filterHotlistTable(this.value)" />
+            </div>
+            <div class="filter-controls">
+              <button class="btn btn-outline" onclick="loadHotlistRecords()">🔄 Refresh Hotlist</button>
+              <button class="btn btn-primary" onclick="openAddHotlistModal()">+ Register Wanted Plate</button>
+            </div>
+          </div>
+
+          <div class="panel-card">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Vehicle Plate</th>
+                  <th>Category</th>
+                  <th>Severity</th>
+                  <th>Vehicle Description</th>
+                  <th>Flagged By / Authority</th>
+                  <th>Reported Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="hotlist-table-body">
+                <tr>
+                  <td><code>CP-HVY-3012</code></td>
+                  <td><span class="badge-critical">STOLEN_VEHICLE</span></td>
+                  <td><span class="badge-critical">CRITICAL</span></td>
+                  <td>Toyota HiAce Red Commercial Van</td>
+                  <td>Sri Lanka Police Crime Division</td>
+                  <td>2026-09-27T08:30Z</td>
+                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('CP-HVY-3012')">Dispatch APB</button></td>
+                </tr>
+                <tr>
+                  <td><code>NW-SUV-9014</code></td>
+                  <td><span class="badge-critical">WANTED_FELON</span></td>
+                  <td><span class="badge-critical">CRITICAL</span></td>
+                  <td>Dark Blue Mitsubishi Pajero</td>
+                  <td>Special Task Force HQ</td>
+                  <td>2026-09-28T14:15Z</td>
+                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('NW-SUV-9014')">Dispatch APB</button></td>
+                </tr>
+                <tr>
+                  <td><code>WP-CAR-7821</code></td>
+                  <td><span class="badge-warning">EXPIRED_REVENUE</span></td>
+                  <td><span class="badge-info">MEDIUM</span></td>
+                  <td>Silver Honda Civic Sedan</td>
+                  <td>Dept of Motor Traffic (RMV)</td>
+                  <td>2026-09-01T00:00Z</td>
+                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('WP-CAR-7821')">Issue Citation</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
 
       <!-- VIEW 4: ANALYTICS -->
       <main class="content-view hidden" id="view-analytics">
@@ -1147,11 +1218,46 @@
       <main class="content-view hidden" id="view-settings">
         <div class="security-page-wrap">
           <div class="security-header">
-            <div><h2 class="view-heading">PLATFORM SETTINGS & JURISDICTION PREFERENCES</h2><p class="view-subheading">Configure municipal branding, timezones, and interface density.</p></div>
+            <div>
+              <h2 class="view-heading">ENTERPRISE PLATFORM SETTINGS & JURISDICTION PREFERENCES</h2>
+              <p class="view-subheading">Configure national police command branding, response SLA thresholds, audio sirens, and edge vault parameters.</p>
+            </div>
+            <button class="btn btn-primary" onclick="savePlatformSettings()">💾 Save Platform Configuration</button>
           </div>
-          <div class="panel-card">
-            <div class="form-group"><label>Jurisdiction Name</label><input type="text" class="form-input" value="Metro City Transportation Authority" /></div>
-            <div class="form-group" style="margin-top:12px;"><label>Timezone</label><input type="text" class="form-input" value="America/New_York (UTC-5)" /></div>
+          <div class="panel-card" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group">
+              <label>National Law Enforcement & Municipal Jurisdiction Title</label>
+              <input type="text" id="setting-jurisdiction" class="form-input" value="National Police Traffic Command & Control Center" />
+            </div>
+            <div class="form-group">
+              <label>Official Operating Timezone</label>
+              <select id="setting-timezone" class="form-select">
+                <option value="Asia/Colombo" selected>Asia/Colombo (UTC+05:30) &bull; Sri Lanka Standard Time</option>
+                <option value="UTC">UTC (Universal Coordinated Time)</option>
+                <option value="America/New_York">America/New_York (UTC-05:00) &bull; Eastern Time</option>
+                <option value="Europe/London">Europe/London (UTC+00:00) &bull; GMT / BST</option>
+              </select>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+              <div class="form-group">
+                <label>Critical Incident Escalation SLA Limit (Seconds)</label>
+                <input type="number" id="setting-sla-limit" class="form-input" value="45" min="15" max="300" />
+              </div>
+              <div class="form-group">
+                <label>Edge Ring-Buffer Pre-Incident Window (Seconds)</label>
+                <input type="number" id="setting-buffer-window" class="form-input" value="15" min="5" max="60" />
+              </div>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+              <div>
+                <strong style="color: #f1f5f9;">High-Priority Audio Klaxon Siren</strong>
+                <p style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Trigger audible synthesizer siren alarm on CRITICAL hazard detection or Wanted Vehicle hit.</p>
+              </div>
+              <input type="checkbox" id="setting-siren-toggle" checked style="width: 20px; height: 20px; accent-color: #00e5ff; cursor: pointer;" />
+            </div>
+            <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
+              <button class="btn btn-primary" onclick="savePlatformSettings()">💾 Save Platform Configuration</button>
+            </div>
           </div>
         </div>
       </main>
@@ -1175,10 +1281,58 @@
           <div class="m-field"><span class="m-lbl">Involved Tracks:</span> <span id="m-tracks">-</span></div>
           <div class="m-field full-width"><span class="m-lbl">Description:</span> <p id="m-desc">-</p></div>
         </div>
+
+        <!-- Real-Time Officer Acknowledgment Bar -->
+        <div style="margin-top: 16px; padding: 12px 14px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="m-officer-badge" class="form-input" placeholder="Officer Badge # (e.g. SLP-4921)" value="SLP-4921" style="max-width: 170px;" />
+            <input type="text" id="m-action-notes" class="form-input" placeholder="Action Taken / Dispatch Instruction..." value="Dispatched Highway Patrol Interceptor Unit" style="flex: 1;" />
+            <button class="btn btn-outline" id="btn-modal-ack" onclick="ackCurrentModalIncident()">✓ Acknowledge</button>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button id="btn-export-log" class="btn btn-outline">Export JSON</button>
+        <button class="btn btn-outline" onclick="downloadIncidentClip()"><span style="color:#00e5ff;">📼</span> Download 15s Clip</button>
         <button id="btn-view-dossier" class="btn btn-primary" onclick="generateExecutiveReport()">Open Court-Admissible Dossier</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Wanted Vehicle Hotlist Modal -->
+  <div id="hotlist-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">REGISTER WANTED / STOLEN VEHICLE TO HOTLIST</div>
+        <button onclick="closeAddHotlistModal()" class="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>License Plate Number</label>
+          <input type="text" id="new-hotlist-plate" class="form-input" placeholder="e.g. WP-CAR-9901" style="text-transform: uppercase;" />
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Alert Category</label>
+          <select id="new-hotlist-category" class="form-select">
+            <option value="STOLEN_VEHICLE">STOLEN_VEHICLE (Red Urgent Intercept)</option>
+            <option value="WANTED_FELON">WANTED_FELON (Armed & Dangerous / APB)</option>
+            <option value="AMBER_ALERT">AMBER_ALERT (Child Abduction Interception)</option>
+            <option value="EXPIRED_REVENUE_LICENSE">EXPIRED_REVENUE_LICENSE (RMV Citation)</option>
+            <option value="UNREGISTERED_PLATE">UNREGISTERED_PLATE (Suspicious Invariant)</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Vehicle Description / Model</label>
+          <input type="text" id="new-hotlist-desc" class="form-input" placeholder="e.g. Dark Grey Nissan Leaf Electric" />
+        </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Flagged By / Reporting Police Unit</label>
+          <input type="text" id="new-hotlist-flagged" class="form-input" placeholder="e.g. Colombo Central Police Station" value="Sri Lanka Police Crime Division" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button onclick="closeAddHotlistModal()" class="btn btn-outline">Cancel</button>
+        <button onclick="submitNewHotlistRecord()" class="btn btn-primary">+ Register into National Hotlist</button>
       </div>
     </div>
   </div>
