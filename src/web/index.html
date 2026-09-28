@@ -34,44 +34,137 @@
     </div>
   </div>
 
-  <!-- Zero-Trust Enterprise Security Gateway Modal / Screen -->
-  <div id="login-modal" class="login-overlay hidden">
-    <div class="login-card">
-      <div class="login-header">
-        <div class="login-icon">
-          <img src="/static/img/logo.png" width="64" height="64" class="login-logo-img" alt="ArgusTraffic AI" />
+  <!-- Official Figma Split-Screen Zero-Trust Security Gateway -->
+  <div id="login-modal" class="figma-login-wrapper hidden">
+    <!-- Left Hero Column: Brand & Security Overview -->
+    <div class="figma-login-left">
+      <div class="login-grid-bg"></div>
+      
+      <div class="login-brand-top">
+        <div class="brand-icon-box">
+          <img src="/static/img/logo.png" width="32" height="32" alt="Argus Logo" />
         </div>
-        <div class="login-title">ArgusTraffic Enterprise Portal</div>
-        <div class="login-sub">Zero-Trust Authentication & RBAC Session Token Provisioning</div>
+        <span class="login-brand-name">ARGUS <span style="color: #00e5ff;">TRAFFIC AI</span></span>
       </div>
 
-      <form id="login-form" class="login-form">
-        <div class="form-group">
-          <label for="login-username">Operator / Supervisor ID</label>
-          <input type="text" id="login-username" class="form-input" value="admin" placeholder="e.g. admin" required autocomplete="username" />
-        </div>
-        <div class="form-group">
-          <label for="login-password">Cryptographic Password</label>
-          <input type="password" id="login-password" class="form-input" value="ArgusAdmin2026!" placeholder="••••••••••••" required autocomplete="current-password" />
-        </div>
+      <div class="login-hero-content">
+        <div class="pill-badge-nta">NATIONAL TRAFFIC AUTHORITY</div>
+        <h1 class="login-hero-headline">
+          Traffic intelligence.<br />
+          Operational control.
+        </h1>
+        <p class="login-hero-subtext">
+          Secure access to national-scale traffic monitoring, incident response, digital forensics and infrastructure operations.
+        </p>
 
-        <div class="login-meta-row" style="display: flex; justify-content: space-between; align-items: center; margin: 12px 0 20px 0; font-size: 11px; color: var(--text-muted);">
-          <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; text-transform: none;">
-            <input type="checkbox" id="remember-session" checked style="accent-color: var(--cyan-neon);" /> Keep terminal session active
-          </label>
-          <span style="color: var(--cyan-neon); font-family: var(--font-mono); font-size: 10px;">SHA-256 AES-GCM</span>
-        </div>
+        <div class="login-feature-list">
+          <div class="feature-item">
+            <div class="feature-check-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="feature-text">
+              <div class="feature-title">Zero-Trust access</div>
+              <div class="feature-sub">Continuous identity, device and session verification</div>
+            </div>
+          </div>
 
-        <button type="submit" class="btn btn-primary btn-block" id="btn-login-submit" style="padding: 12px; font-weight: 700; letter-spacing: 0.5px;">
-          <span>AUTHORIZE SECURE SESSION</span> &rarr;
-        </button>
-        
-        <div id="login-error" class="login-error hidden">Invalid credentials. Please verify username and password.</div>
+          <div class="feature-item">
+            <div class="feature-check-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="feature-text">
+              <div class="feature-title">Mission-critical availability</div>
+              <div class="feature-sub">Resilient live operations across edge and control systems</div>
+            </div>
+          </div>
 
-        <div class="login-footer-badge" style="margin-top: 20px; padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.08); text-align: center; font-size: 10.5px; color: var(--text-muted);">
-          Protected under CJIS & Municipal Digital Evidence Governance Standards
+          <div class="feature-item">
+            <div class="feature-check-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="feature-text">
+              <div class="feature-title">Complete auditability</div>
+              <div class="feature-sub">Every sensitive action is attributed and retained</div>
+            </div>
+          </div>
         </div>
-      </form>
+      </div>
+
+      <div class="login-bottom-status">
+        <span class="status-pulse-dot"></span>
+        <div>
+          <div class="status-headline">All authentication services operational</div>
+          <div class="status-subline">Identity region ME-01 &bull; 24 ms</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Operator Sign-In Form -->
+    <div class="figma-login-right">
+      <div class="login-form-container">
+        <div class="login-tag-overline">SECURE OPERATOR ACCESS</div>
+        <h2 class="login-right-title">Sign in to ARGUSTRAFFIC AI</h2>
+        <p class="login-right-subtitle">Use your authority credentials or organization single sign-on.</p>
+
+        <form id="login-form" class="figma-form-body">
+          <div class="form-group-figma">
+            <label class="form-label-figma" for="login-username">AUTHORITY EMAIL</label>
+            <div class="input-wrapper-figma">
+              <input type="text" id="login-username" class="figma-input-field" value="admin" placeholder="name@authority.gov" required autocomplete="username" />
+            </div>
+          </div>
+
+          <div class="form-group-figma">
+            <label class="form-label-figma" for="login-password">PASSWORD</label>
+            <div class="input-wrapper-figma password-wrapper">
+              <input type="password" id="login-password" class="figma-input-field" value="ArgusAdmin2026!" placeholder="Enter your password" required autocomplete="current-password" />
+              <button type="button" class="btn-toggle-pwd" id="btn-toggle-pwd">Show</button>
+            </div>
+          </div>
+
+          <div class="login-options-row">
+            <label class="checkbox-label-figma">
+              <input type="checkbox" id="remember-session" checked />
+              <span>Trust this managed device for 12 hours</span>
+            </label>
+            <a href="javascript:void(0)" class="link-forgot-pwd" onclick="alert('For credential recovery, contact Enterprise IT Security Operations.')">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="btn-figma-primary" id="btn-login-submit">
+            <span>Continue securely</span> &gt;
+          </button>
+
+          <div id="login-error" class="login-error hidden">Invalid credentials. Please verify your authority ID and password.</div>
+
+          <div class="figma-divider">
+            <span>OR USE ORGANIZATION ACCESS</span>
+          </div>
+
+          <button type="button" class="btn-figma-sso" id="btn-sso-login">
+            <span class="sso-badge-na">NA</span>
+            <span>Continue with Authority SSO</span>
+          </button>
+
+          <div class="authorized-notice-box">
+            <div class="notice-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <div class="notice-content">
+              <div class="notice-title">Authorized use only</div>
+              <div class="notice-desc">Access is monitored. Failed attempts and all privileged actions are recorded in the security audit trail.</div>
+            </div>
+          </div>
+
+          <div class="figma-login-footer">
+            <div class="footer-links">
+              <a href="#">Privacy</a>
+              <a href="#">Security</a>
+              <a href="#">Accessibility</a>
+            </div>
+            <div class="footer-platform">Platform 6.18.2</div>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 

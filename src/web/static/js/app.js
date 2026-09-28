@@ -169,6 +169,35 @@ function initAuthSession() {
     }
   });
 
+  // Password visibility toggle
+  const togglePwdBtn = document.getElementById("btn-toggle-pwd");
+  togglePwdBtn?.addEventListener("click", () => {
+    const pwdInput = document.getElementById("login-password");
+    if (pwdInput) {
+      if (pwdInput.type === "password") {
+        pwdInput.type = "text";
+        togglePwdBtn.innerText = "Hide";
+      } else {
+        pwdInput.type = "password";
+        togglePwdBtn.innerText = "Show";
+      }
+    }
+  });
+
+  // Authority SSO Login
+  document.getElementById("btn-sso-login")?.addEventListener("click", () => {
+    currentUser = {
+      username: "sso.supervisor",
+      full_name: "Saptha Sanka (Authority SSO)",
+      role: "SUPER_ADMIN",
+      token: `argus_sso_fed_${Date.now().toString(36)}`,
+    };
+    localStorage.setItem("argus_auth_user", JSON.stringify(currentUser));
+    updateUserUI();
+    document.getElementById("login-modal").classList.add("hidden");
+    showToast({ incident_type: "SECURITY", description: "Authenticated via National Traffic Authority SSO" });
+  });
+
   document.getElementById("btn-logout")?.addEventListener("click", () => {
     localStorage.removeItem("argus_auth_user");
     document.getElementById("login-modal").classList.remove("hidden");
