@@ -157,7 +157,7 @@ function setupNavButtons() {
 
   btnFinishLaunch.addEventListener('click', async () => {
     btnFinishLaunch.disabled = true;
-    btnFinishLaunch.textContent = '🚀 Launching Command Center...';
+    btnFinishLaunch.textContent = 'Launching Command Center...';
     await callBridge('launch_app');
     setTimeout(() => {
       window.location.href = 'http://127.0.0.1:8080';
@@ -179,7 +179,7 @@ function setupCameraList() {
 
   if (btnScanCams) {
     btnScanCams.addEventListener('click', async () => {
-      btnScanCams.textContent = '⏳ Scanning subnet...';
+      btnScanCams.textContent = 'Scanning subnet...';
       btnScanCams.disabled = true;
 
       let cams = await callBridge('scan_cameras');
@@ -188,9 +188,9 @@ function setupCameraList() {
       }
 
       renderDiscoveredCameras(cams);
-      btnScanCams.textContent = '✓ Scan Complete';
+      btnScanCams.textContent = 'Scan Complete';
       setTimeout(() => {
-        btnScanCams.textContent = '🔍 Auto-Scan Subnet';
+        btnScanCams.textContent = 'Auto-Scan Subnet';
         btnScanCams.disabled = false;
       }, 2500);
     });
@@ -239,7 +239,7 @@ async function startVerificationPipeline() {
     { pct: 55, msg: "Calibrating Optical Speed Radar...", log: "[+] Calibrated homography matrix (18.5 px/m, limit 60 km/h)." },
     { pct: 75, msg: "Provisioning SuperAdmin & Security Vault...", log: "[+] Seeded primary administrator into SQLite security vault." },
     { pct: 90, msg: "Configuring Camera Feeds & Video Pipeline...", log: `[+] Bound stream source: ${selectedSource}` },
-    { pct: 100, msg: "Enterprise Suite Ready", log: "[✓] Deployment verified. Starting ArgusTraffic AI services on 127.0.0.1:8080." }
+    { pct: 100, msg: "Enterprise Suite Ready", log: "[SUCCESS] Deployment verified. Starting ArgusTraffic AI services on 127.0.0.1:8080." }
   ];
 
   const adminUser = document.getElementById('admin-user')?.value || 'admin';

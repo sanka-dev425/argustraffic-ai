@@ -130,7 +130,7 @@ class SLAEscalationManager:
                         rec["escalation_notice"] = f"CRITICAL SLA BREACH: Unacknowledged for {int(elapsed)}s (> {rec['sla_limit_seconds']}s limit)"
                         self.total_escalations += 1
                         newly_escalated.append(dict(rec))
-                        logger.warning(f"🚨 SLA ESCALATION: {inc_id} escalated to DIVISION CHIEF!")
+                        logger.warning(f"[SLA ESCALATION] {inc_id} escalated to DIVISION CHIEF!")
 
         return newly_escalated
 

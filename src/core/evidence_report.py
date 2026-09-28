@@ -55,7 +55,7 @@ def generate_forensic_html_report(alert: Dict[str, Any], system_meta: Optional[D
 </head>
 <body>
   <div class="container">
-    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <button class="btn-print" onclick="window.print()">Print / Save as PDF</button>
     <div class="header">
       <div>
         <div class="title">ARGUSTRAFFIC AI &mdash; COURT-ADMISSIBLE FORENSIC DOSSIER</div>
@@ -167,7 +167,7 @@ def generate_executive_traffic_report(
 </head>
 <body>
   <div class="report-wrap">
-    <button class="btn-print" onclick="window.print()">🖨️ Print Executive Report / Export PDF</button>
+    <button class="btn-print" onclick="window.print()">Print Executive Report / Export PDF</button>
 
     <div class="header">
       <div>

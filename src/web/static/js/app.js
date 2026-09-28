@@ -71,7 +71,7 @@ function runBootSequence() {
     { text: "▶ Calibrating Multi-Target Spatial Matrix & Kalman Filters...", pct: 50, label: "KALMAN TRACKER ONLINE • 50%" },
     { text: "▶ Sealing Cryptographic SHA-256 Merkle Ledger Vault in %LOCALAPPDATA%...", pct: 75, label: "EVIDENCE LEDGER SEALED • 75%" },
     { text: "▶ Verifying Zero-Trust Security Protocols & Session Permissions...", pct: 90, label: "RBAC PERMISSIONS VERIFIED • 90%" },
-    { text: "✓ Enterprise Autonomous Vision Command Center Ready.", pct: 100, label: "SYSTEM READY • 100%" }
+    { text: "Enterprise Autonomous Vision Command Center Initialized.", pct: 100, label: "SYSTEM READY • 100%" }
   ];
 
   let currentPhase = 0;
@@ -304,7 +304,7 @@ function forceCameraReconnect() {
   if (overlayBtn) {
     overlayBtn.innerHTML = "<span>RE-ESTABLISHING RTSP HANDSHAKE...</span>";
     setTimeout(() => {
-      overlayBtn.innerHTML = "<span>⚡ FORCE RECONNECT</span>";
+      overlayBtn.innerHTML = "<span>FORCE RECONNECT</span>";
     }, 1500);
   }
   if (ws && ws.readyState === WebSocket.OPEN) {
@@ -444,7 +444,7 @@ function showToast(alert) {
   const toast = document.createElement("div");
   toast.className = "toast";
   toast.innerHTML = `
-    <div style="font-size: 1.4rem;">🚨</div>
+    <div style="display:flex;align-items:center;color:#ef4444;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
     <div>
       <div style="font-weight:700;font-size:0.85rem;color:#ff1744;">${alert.incident_type || 'INCIDENT'} ALERT</div>
       <div style="font-size:0.75rem;color:#ddd;">${alert.description || 'Hazard detected'}</div>
@@ -549,12 +549,12 @@ async function ackCurrentAlert() {
     });
     if (res.ok) {
       if (banner) banner.style.opacity = "0.5";
-      if (btn) btn.innerText = "✓ Acknowledged (Logged)";
+      if (btn) btn.innerText = "Acknowledged (Logged)";
       showToast({ incident_type: "SECURITY", description: "Incident logged into ISO/IEC 27037 non-repudiation audit ledger." });
     }
   } catch (err) {
     if (banner) banner.style.opacity = "0.5";
-    if (btn) btn.innerText = "✓ Acknowledged";
+    if (btn) btn.innerText = "Acknowledged";
   }
 }
 
@@ -619,7 +619,7 @@ function setupControls() {
   btnAudio?.addEventListener("click", () => {
     audioEnabled = !audioEnabled;
     btnAudio.classList.toggle("active");
-    btnAudio.innerText = audioEnabled ? "🔊 Siren Active" : "🔇 Siren Muted";
+    btnAudio.innerText = audioEnabled ? "Siren Active" : "Siren Muted";
   });
 
   const btnSnapshot = document.getElementById("btn-snapshot");
@@ -722,11 +722,11 @@ function setupDrawingCanvas() {
     if (isDrawingMode) {
       canvas.classList.add("active-draw");
       toolbar.classList.remove("hidden");
-      btnDraw.innerText = "✖ Cancel Drawing";
+      btnDraw.innerText = "Cancel Drawing";
     } else {
       canvas.classList.remove("active-draw");
       toolbar.classList.add("hidden");
-      btnDraw.innerText = "✏️ Draw Custom Zone";
+      btnDraw.innerText = "Draw Geofence Zone";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
   });
@@ -773,7 +773,7 @@ function setupDrawingCanvas() {
     isDrawingMode = false;
     canvas.classList.remove("active-draw");
     toolbar.classList.add("hidden");
-    btnDraw.innerText = "✏️ Draw Custom Zone";
+    btnDraw.innerText = "Draw Geofence Zone";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawnPoints = [];
   });
@@ -782,7 +782,7 @@ function setupDrawingCanvas() {
     isDrawingMode = false;
     canvas.classList.remove("active-draw");
     toolbar.classList.add("hidden");
-    btnDraw.innerText = "✏️ Draw Custom Zone";
+    btnDraw.innerText = "Draw Geofence Zone";
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawnPoints = [];
   });
@@ -838,7 +838,7 @@ function generateExecutiveReport() {
 function setupDeviceFleet() {
   const btnScan = document.getElementById("btn-scan-network");
   btnScan?.addEventListener("click", async () => {
-    btnScan.innerText = "⏳ Scanning 192.168.1.0/24...";
+    btnScan.innerText = "Scanning 192.168.1.0/24...";
     btnScan.disabled = true;
     try {
       const res = await fetch("/api/v1/cameras/discover");
@@ -847,7 +847,7 @@ function setupDeviceFleet() {
     } catch (e) {
       showToast({ incident_type: "DISCOVERY", description: "Subnet scan completed. 4 active stream nodes verified." });
     } finally {
-      btnScan.innerText = "🔍 Auto-Scan Subnet (192.168.1.0/24)";
+      btnScan.innerText = "Auto-Scan Subnet (192.168.1.0/24)";
       btnScan.disabled = false;
     }
   });
@@ -1085,7 +1085,7 @@ function initANPRRadarPolling() {
             container.innerHTML = data.vehicles.map(v => `
               <div class="anpr-chip">
                 <span class="chip-plate">${v.license_plate || 'WP-CAR-7821'}</span>
-                <span class="chip-speed ${v.speed_kmh > 60 ? 'speeding' : 'normal'}">${v.speed_kmh} km/h ${v.speed_kmh > 60 ? '⚠️' : ''}</span>
+                <span class="chip-speed ${v.speed_kmh > 60 ? 'speeding' : 'normal'}">${v.speed_kmh} km/h ${v.speed_kmh > 60 ? ' [SPEEDING]' : ''}</span>
                 <span class="chip-status">TRACK #${v.track_id}</span>
               </div>
             `).join("");
@@ -1222,7 +1222,7 @@ async function testPlateInterception(plate) {
         triggerAudioAlert();
         showToast({
           incident_type: "WANTED_INTERCEPT",
-          description: `🚨 APB DISPATCH: Target ${plate} [${data.match_details?.category}] flagged at CAM-042!`,
+          description: `APB DISPATCH: Target ${plate} [${data.match_details?.category}] flagged at CAM-042!`,
         });
       }
     }
@@ -1258,7 +1258,7 @@ function openForensicModal(id, hazard, cam, sev, speed, plate) {
   const btnAck = document.getElementById("btn-modal-ack");
   if (btnAck) {
     btnAck.disabled = false;
-    btnAck.innerText = "✓ Acknowledge";
+    btnAck.innerText = "Acknowledge";
   }
 
   modal?.classList.remove("hidden");
@@ -1283,11 +1283,11 @@ async function ackCurrentModalIncident() {
       }),
     });
     if (res.ok) {
-      if (btn) btn.innerText = "✓ Acknowledged (Logged)";
+      if (btn) btn.innerText = "Acknowledged (Logged)";
       showToast({ incident_type: "SECURITY", description: `Incident ${activeModalIncidentId} signed by Officer ${badge}.` });
     }
   } catch (e) {
-    if (btn) btn.innerText = "✓ Acknowledged";
+    if (btn) btn.innerText = "Acknowledged";
   }
 }
 

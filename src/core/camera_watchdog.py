@@ -122,7 +122,7 @@ class CameraSelfHealingWatchdog:
             }
             self.remediation_log.append(remediation_entry)
 
-        logger.warning(f"⚡ SELF-HEALING ACTION EXECUTED: Power cycle sent to {camera_id} ({cam['ip_address']})")
+        logger.warning(f"[SELF-HEALING] Action executed: Power cycle sent to {camera_id} ({cam['ip_address']})")
         return {
             "success": True,
             "action": "POWER_CYCLE_EXECUTED",
