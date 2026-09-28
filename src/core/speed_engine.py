@@ -17,21 +17,47 @@ class SpeedRadarEngine:
         pixels_per_meter: float = 18.5,
         speed_limit_kmh: float = 60.0,
         smoothing_window: int = 8,
+        perspective_correction: bool = False,
+        vanishing_y: float = 120.0,
+        reference_y: float = 540.0,
+        max_plausible_speed_kmh: float = 240.0,
     ):
         """
         Args:
-            pixels_per_meter: Calibration constant mapping image pixels to physical meters.
+            pixels_per_meter: Calibration constant mapping image pixels to physical meters at reference depth.
             speed_limit_kmh: Regulatory speed threshold for violation detection.
             smoothing_window: Trajectory frame window for moving average velocity calculation.
+            perspective_correction: Whether to apply non-linear depth foreshortening compensation.
+            vanishing_y: Estimated vertical coordinate of the roadway horizon/vanishing point.
+            reference_y: Vertical coordinate in image space where pixels_per_meter is calibrated.
+            max_plausible_speed_kmh: Physical upper bound to reject tracker teleportation anomalies.
         """
         self.pixels_per_meter = max(1.0, pixels_per_meter)
         self.speed_limit_kmh = speed_limit_kmh
         self.smoothing_window = smoothing_window
+        self.perspective_correction = perspective_correction
+        self.vanishing_y = vanishing_y
+        self.reference_y = reference_y
+        self.max_plausible_speed_kmh = max_plausible_speed_kmh
 
         # Trajectory history: track_id -> deque of (timestamp, cx, cy)
         self._trajectories: Dict[int, deque] = {}
         # Cached smoothed speeds: track_id -> km/h
         self._current_speeds: Dict[int, float] = {}
+
+    def get_pixels_per_meter_at_y(self, y: float) -> float:
+        """Calculates perspective depth-adjusted pixels per meter at frame height y."""
+        if not self.perspective_correction:
+            return self.pixels_per_meter
+
+        # Clamped distance from vanishing horizon
+        denom = max(10.0, self.reference_y - self.vanishing_y)
+        dist_from_horizon = max(10.0, y - self.vanishing_y)
+        depth_scale = dist_from_horizon / denom
+
+        # Bound scale between 0.25 (deep horizon) and 2.5 (extreme foreground)
+        depth_scale = max(0.25, min(2.5, depth_scale))
+        return self.pixels_per_meter * depth_scale
 
     def update_track(
         self, track_id: int, cx: float, cy: float, timestamp: Optional[float] = None
@@ -63,10 +89,23 @@ class SpeedRadarEngine:
 
         # Pixel Euclidean distance
         pixel_dist = math.hypot(x_end - x_start, y_end - y_start)
+
+        # Depth-aware perspective calibration
+        avg_y = (y_start + y_end) / 2.0
+        local_ppm = self.get_pixels_per_meter_at_y(avg_y)
+
         # Convert to physical meters
-        meters = pixel_dist / self.pixels_per_meter
+        meters = pixel_dist / local_ppm
         # Metric speed: m/s -> km/h
         raw_speed_kmh = (meters / dt) * 3.6
+
+        # Data Science Sanity Guard: Check physical plausibility
+        if math.isnan(raw_speed_kmh) or math.isinf(raw_speed_kmh) or raw_speed_kmh < 0.0:
+            return self._current_speeds.get(track_id, 0.0)
+
+        # Outlier rejection: Discard tracking teleportation spikes
+        if raw_speed_kmh > self.max_plausible_speed_kmh:
+            return self._current_speeds.get(track_id, 0.0)
 
         # Exponential moving average filter with previous speed
         prev_speed = self._current_speeds.get(track_id, raw_speed_kmh)

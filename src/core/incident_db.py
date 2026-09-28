@@ -179,3 +179,80 @@ class IncidentDatabase:
             }
         finally:
             conn.close()
+
+    def get_analytics_summary(self) -> Dict[str, Any]:
+        """Calculates multi-dimensional statistical summaries across incident history."""
+        conn = self._get_connection()
+        try:
+            total = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
+            severity_rows = conn.execute(
+                "SELECT severity, COUNT(*) as cnt FROM incidents GROUP BY severity"
+            ).fetchall()
+            severity_breakdown = {row["severity"]: row["cnt"] for row in severity_rows}
+
+            type_rows = conn.execute(
+                "SELECT incident_type, COUNT(*) as cnt FROM incidents GROUP BY incident_type ORDER BY cnt DESC LIMIT 10"
+            ).fetchall()
+            type_breakdown = {row["incident_type"]: row["cnt"] for row in type_rows}
+
+            speed_stats = conn.execute(
+                "SELECT AVG(speed_kmh) as avg_speed, MAX(speed_kmh) as max_speed FROM incidents WHERE speed_kmh IS NOT NULL AND speed_kmh > 0"
+            ).fetchone()
+
+            avg_spd = round(float(speed_stats["avg_speed"] or 0.0), 1)
+            max_spd = round(float(speed_stats["max_speed"] or 0.0), 1)
+
+            speeds = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT speed_kmh FROM incidents WHERE speed_kmh IS NOT NULL AND speed_kmh > 0 ORDER BY speed_kmh ASC"
+                ).fetchall()
+            ]
+            p85_speed = round(speeds[int(len(speeds) * 0.85)], 1) if speeds else 0.0
+
+            return {
+                "total_events": total,
+                "severity_distribution": severity_breakdown,
+                "type_distribution": type_breakdown,
+                "speed_metrics": {
+                    "average_kmh": avg_spd,
+                    "max_observed_kmh": max_spd,
+                    "p85_percentile_kmh": p85_speed,
+                },
+            }
+        finally:
+            conn.close()
+
+    def export_geojson(self, limit: int = 500) -> Dict[str, Any]:
+        """Exports spatial incident points as an RFC 7946 GeoJSON FeatureCollection."""
+        conn = self._get_connection()
+        try:
+            cursor = conn.execute(
+                "SELECT * FROM incidents WHERE location_x IS NOT NULL AND location_y IS NOT NULL ORDER BY timestamp DESC LIMIT ?",
+                (limit,),
+            )
+            features = []
+            for row in cursor.fetchall():
+                features.append({
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [float(row["location_x"]), float(row["location_y"])],
+                    },
+                    "properties": {
+                        "alert_id": row["alert_id"],
+                        "incident_type": row["incident_type"],
+                        "severity": row["severity"],
+                        "timestamp": row["timestamp"],
+                        "formatted_time": row["formatted_time"],
+                        "license_plate": row["license_plate"] if "license_plate" in row.keys() else None,
+                        "speed_kmh": row["speed_kmh"] if "speed_kmh" in row.keys() else None,
+                        "zone_id": row["zone_id"],
+                    },
+                })
+            return {
+                "type": "FeatureCollection",
+                "features": features,
+            }
+        finally:
+            conn.close()

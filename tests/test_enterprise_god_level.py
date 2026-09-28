@@ -337,3 +337,73 @@ def test_websocket_broadcaster_hub():
 
     # After exit, client is cleanly removed
     assert len(broadcaster.clients) == initial_count
+
+
+def test_speed_radar_perspective_and_outlier_filtering():
+    """Verify perspective depth-adjusted speed calculation and outlier rejection."""
+    from src.core.speed_engine import SpeedRadarEngine
+
+    radar = SpeedRadarEngine(
+        pixels_per_meter=20.0,
+        speed_limit_kmh=60.0,
+        perspective_correction=True,
+        vanishing_y=100.0,
+        reference_y=500.0,
+        max_plausible_speed_kmh=200.0,
+    )
+
+    # 1. Perspective check: ppm near horizon should be smaller than ppm in foreground
+    ppm_horizon = radar.get_pixels_per_meter_at_y(150.0)
+    ppm_foreground = radar.get_pixels_per_meter_at_y(500.0)
+    assert ppm_horizon < ppm_foreground
+    assert ppm_foreground == 20.0
+
+    # 2. Plausibility check: Outlier jump (e.g. 5000 pixels in 0.05s) should be rejected
+    radar.update_track(track_id=1, cx=100.0, cy=400.0, timestamp=1000.0)
+    speed_jump = radar.update_track(track_id=1, cx=5000.0, cy=400.0, timestamp=1000.05)
+    assert speed_jump == 0.0  # Rejected by max_plausible_speed_kmh
+
+
+def test_data_engineering_analytics_and_geojson_export(tmp_path):
+    """Verify statistical analytics summaries and RFC 7946 GeoJSON generation."""
+    from src.core.incident_db import IncidentDatabase
+
+    db = IncidentDatabase(db_path=tmp_path / "analytics_test.db")
+    for i in range(10):
+        db.save_incident({
+            "alert_id": f"INC-STAT-{i}",
+            "incident_type": "OVERSPEEDING" if i % 2 == 0 else "STALLED_VEHICLE",
+            "severity": "CRITICAL" if i < 3 else "WARNING",
+            "timestamp": time.time() + i,
+            "formatted_time": "2026-09-29 01:00:00",
+            "description": f"Incident sample {i}",
+            "location": [100.0 + i, 200.0 + i],
+            "involved_track_ids": [i],
+            "zone_id": "ZONE-A",
+            "speed_kmh": 60.0 + (i * 5.0),
+        })
+
+    # Test analytics summary
+    analytics = db.get_analytics_summary()
+    assert analytics["total_events"] == 10
+    assert "OVERSPEEDING" in analytics["type_distribution"]
+    assert analytics["speed_metrics"]["average_kmh"] > 0
+    assert analytics["speed_metrics"]["p85_percentile_kmh"] >= analytics["speed_metrics"]["average_kmh"]
+
+    # Test GeoJSON export
+    geojson = db.export_geojson(limit=10)
+    assert geojson["type"] == "FeatureCollection"
+    assert len(geojson["features"]) == 10
+    feat = geojson["features"][0]
+    assert feat["type"] == "Feature"
+    assert feat["geometry"]["type"] == "Point"
+    assert "alert_id" in feat["properties"]
+
+    # Test REST endpoints
+    r_ana = client.get("/api/v1/incidents/analytics")
+    assert r_ana.status_code == 200
+    assert "speed_metrics" in r_ana.json()
+
+    r_geo = client.get("/api/v1/incidents/geojson")
+    assert r_geo.status_code == 200
+    assert r_geo.json()["type"] == "FeatureCollection"

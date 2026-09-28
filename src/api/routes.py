@@ -226,6 +226,29 @@ async def get_incident_stats():
     return state["db"].get_stats()
 
 
+@router.get("/incidents/analytics", tags=["Incidents & Data Science"])
+async def get_incident_analytics():
+    """Retrieves multi-dimensional statistical summaries, speed distribution percentiles, and incident frequencies."""
+    state = get_components()
+    if not state.get("db"):
+        return {
+            "total_events": 0,
+            "severity_distribution": {},
+            "type_distribution": {},
+            "speed_metrics": {"average_kmh": 0.0, "max_observed_kmh": 0.0, "p85_percentile_kmh": 0.0},
+        }
+    return state["db"].get_analytics_summary()
+
+
+@router.get("/incidents/geojson", tags=["Incidents & Data Science"])
+async def get_incident_geojson(limit: int = Query(500, description="Max spatial records to export")):
+    """Exports spatial incident occurrences as an RFC 7946 standard GeoJSON FeatureCollection."""
+    state = get_components()
+    if not state.get("db"):
+        return {"type": "FeatureCollection", "features": []}
+    return state["db"].export_geojson(limit=limit)
+
+
 @router.get("/incidents/{alert_id}/report", tags=["Incidents"])
 async def download_incident_report(alert_id: str):
     """Generates official court-admissible forensic dossier for an incident."""
