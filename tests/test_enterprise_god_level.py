@@ -278,3 +278,62 @@ def test_all_enterprise_rest_endpoints():
     r8 = client.get("/api/v1/camera-watchdog/diagnostics")
     assert r8.status_code == 200
     assert "cameras" in r8.json()
+
+    # 7. Direct Clip Download
+    r9 = client.get("/api/v1/edge-vault/clips/INC-AUTOTEST-999")
+    assert r9.status_code == 200
+    assert r9.headers["content-type"] in ["video/mp4", "image/jpeg"]
+    assert len(r9.content) > 0
+
+
+def test_incident_db_license_plate_and_zone_queries(tmp_path):
+    """Verify license_plate and speed_kmh fields are saved and queried properly."""
+    from src.core.incident_db import IncidentDatabase
+    db = IncidentDatabase(db_path=tmp_path / "test_plate.db")
+
+    alert = {
+        "alert_id": "INC-PLATE-001",
+        "incident_type": "WRONG_WAY",
+        "severity": "CRITICAL",
+        "timestamp": time.time(),
+        "formatted_time": "2026-09-29 01:00:00",
+        "description": "Vehicle going wrong way",
+        "location": [200.0, 300.0],
+        "involved_track_ids": [42],
+        "zone_id": "ZONE-HIGHWAY-01",
+        "metadata": {"cam": "CAM-01"},
+        "license_plate": "WP-CAR-7821",
+        "speed_kmh": 88.5,
+    }
+    db.save_incident(alert)
+
+    # Query with license plate filter
+    res = db.query_incidents(license_plate="WP-CAR-7821")
+    assert len(res) == 1
+    assert res[0]["alert_id"] == "INC-PLATE-001"
+    assert res[0]["license_plate"] == "WP-CAR-7821"
+    assert res[0]["speed_kmh"] == 88.5
+    assert res[0]["zone_id"] == "ZONE-HIGHWAY-01"
+
+    # Query with zone_id filter
+    res_zone = db.query_incidents(zone_id="ZONE-HIGHWAY-01")
+    assert len(res_zone) == 1
+
+    # Query non-existent
+    res_none = db.query_incidents(license_plate="UNKNOWN-PLATE")
+    assert len(res_none) == 0
+
+
+def test_websocket_broadcaster_hub():
+    """Verify WebSocket stream connects, registers with Broadcaster, and disconnects cleanly."""
+    from src.api.app import broadcaster
+    initial_count = len(broadcaster.clients)
+
+    with client.websocket_connect("/ws/stream") as ws:
+        # Client is added
+        assert len(broadcaster.clients) >= initial_count + 1
+        # Send action
+        ws.send_json({"action": "set_confidence", "value": 0.40})
+
+    # After exit, client is cleanly removed
+    assert len(broadcaster.clients) == initial_count

@@ -267,89 +267,68 @@ def process_single_frame(frame_idx: int):
     return buffer, tracked_dets, new_alerts, inf_ms
 
 
-@app.get("/video/feed", tags=["Video"])
-async def video_feed_endpoint():
-    """MJPEG Streaming endpoint for direct HTTP video feed."""
-    async def frame_generator():
-        frame_idx = 0
-        while True:
-            frame_idx += 1
-            buffer, _, _, _ = await asyncio.to_thread(process_single_frame, frame_idx)
-            if buffer is not None:
-                yield (b"--frame\r\n"
-                       b"Content-Type: image/jpeg\r\n\r\n" + buffer.tobytes() + b"\r\n")
-            await asyncio.sleep(0.033)
-
-    return StreamingResponse(
-        frame_generator(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
-    )
-
-
-@app.websocket("/ws/stream")
-async def websocket_stream_endpoint(websocket: WebSocket):
+class VideoStreamBroadcaster:
     """
-    Robust asynchronous WebSocket endpoint delivering real-time annotated video frames,
-    detections, tracking vectors, and incident alerts with separated non-blocking I/O.
+    Centralized Single-Producer Multi-Consumer Broadcaster.
+    Maintains a single computer vision processing loop that encodes frames once
+    and broadcasts to all active WebSocket clients concurrently without duplicated inference.
     """
-    await websocket.accept()
-    logger.info("Client connected to real-time WebSocket video stream.")
 
-    frame_idx = 0
-    prev_time = time.perf_counter()
-    stop_event = asyncio.Event()
+    def __init__(self):
+        self.clients: set[WebSocket] = set()
+        self.lock = asyncio.Lock()
+        self.latest_buffer: Optional[bytes] = None
+        self.latest_payload: Optional[str] = None
+        self.worker_task: Optional[asyncio.Task] = None
+        self.running = False
+        self.frame_idx = 0
+        self.prev_time = 0.0
 
-    async def client_receiver():
-        """Handles incoming commands from client without blocking frame stream."""
+    async def add_client(self, ws: WebSocket) -> None:
+        async with self.lock:
+            self.clients.add(ws)
+            if self.worker_task is None or self.worker_task.done():
+                self.running = True
+                self.worker_task = asyncio.create_task(self._broadcast_loop())
+        if self.latest_payload:
+            try:
+                await ws.send_text(self.latest_payload)
+            except Exception:
+                pass
+
+    async def remove_client(self, ws: WebSocket) -> None:
+        async with self.lock:
+            self.clients.discard(ws)
+
+    async def _broadcast_loop(self) -> None:
+        logger.info("Centralized VideoStreamBroadcaster worker started.")
         try:
-            while not stop_event.is_set():
-                msg = await websocket.receive_text()
-                try:
-                    data = json.loads(msg)
-                    action = data.get("action")
-                    if action == "set_source":
-                        new_src = data.get("source", "synthetic")
-                        logger.info(f"Switching video source to: {new_src}")
-                        if app_state["video_stream"]:
-                            app_state["video_stream"].release()
-                        app_state["video_stream"] = VideoStream(source=new_src)
-                    elif action == "toggle_zones":
-                        app_state["visualizer"].show_zones = not app_state["visualizer"].show_zones
-                    elif action == "toggle_trajectories":
-                        app_state["visualizer"].show_trajectories = not app_state["visualizer"].show_trajectories
-                    elif action == "set_confidence":
-                        app_state["detector"].confidence_threshold = float(data.get("value", 0.35))
-                except Exception as ex:
-                    logger.warning(f"Error handling client action: {ex}")
-        except WebSocketDisconnect:
-            pass
-        except Exception:
-            pass
-        finally:
-            stop_event.set()
-
-    async def stream_sender():
-        """Pushes frames and telemetry to client at smooth ~30 FPS."""
-        nonlocal frame_idx, prev_time
-        try:
-            while not stop_event.is_set():
+            while self.running:
                 loop_start = time.perf_counter()
-                frame_idx += 1
 
-                # Process computer vision in worker thread
-                buffer, tracked_dets, new_alerts, inf_ms = await asyncio.to_thread(process_single_frame, frame_idx)
+                async with self.lock:
+                    num_clients = len(self.clients)
+
+                if num_clients == 0:
+                    await asyncio.sleep(0.05)
+                    continue
+
+                self.frame_idx += 1
+                buffer, tracked_dets, new_alerts, inf_ms = await asyncio.to_thread(
+                    process_single_frame, self.frame_idx
+                )
 
                 if buffer is not None:
-                    # Measure performance
                     now = time.perf_counter()
-                    app_state["current_latency_ms"] = (now - prev_time) * 1000.0 if prev_time else 15.0
-                    loop_elapsed = now - loop_start
-                    app_state["current_fps"] = 1.0 / loop_elapsed if loop_elapsed > 0 else 30.0
-                    prev_time = now
+                    if self.prev_time:
+                        app_state["current_latency_ms"] = (now - self.prev_time) * 1000.0
+                        loop_elapsed = now - loop_start
+                        app_state["current_fps"] = 1.0 / loop_elapsed if loop_elapsed > 0 else 30.0
+                    self.prev_time = now
 
                     b64_frame = base64.b64encode(buffer).decode("utf-8")
-                    payload = {
-                        "frame_idx": frame_idx,
+                    payload = json.dumps({
+                        "frame_idx": self.frame_idx,
                         "fps": round(app_state["current_fps"], 1),
                         "inference_ms": round(inf_ms, 1),
                         "active_tracks_count": len(app_state["tracker"].tracks) if app_state.get("tracker") else 0,
@@ -365,32 +344,105 @@ async def websocket_stream_endpoint(websocket: WebSocket):
                         ],
                         "new_alerts": [a.to_dict() for a in (new_alerts or [])],
                         "image": f"data:image/jpeg;base64,{b64_frame}",
-                    }
-                    await websocket.send_text(json.dumps(payload))
+                    })
 
-                # Frame pacing (~30 FPS)
+                    self.latest_buffer = buffer.tobytes()
+                    self.latest_payload = payload
+
+                    async with self.lock:
+                        target_clients = list(self.clients)
+
+                    if target_clients:
+                        results = await asyncio.gather(
+                            *[ws.send_text(payload) for ws in target_clients],
+                            return_exceptions=True,
+                        )
+                        stale = [ws for ws, res in zip(target_clients, results) if isinstance(res, Exception)]
+                        if stale:
+                            async with self.lock:
+                                for ws in stale:
+                                    self.clients.discard(ws)
+
                 pacing_sleep = max(0.005, (1.0 / 30.0) - (time.perf_counter() - loop_start))
                 await asyncio.sleep(pacing_sleep)
-        except WebSocketDisconnect:
+        except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error(f"WebSocket send loop error: {e}")
+            logger.error(f"Broadcaster loop error: {e}")
         finally:
-            stop_event.set()
+            logger.info("VideoStreamBroadcaster worker ended.")
 
-    # Run receiver and sender concurrently
-    receiver_task = asyncio.create_task(client_receiver())
-    sender_task = asyncio.create_task(stream_sender())
 
-    # Wait until either disconnects
-    done, pending = await asyncio.wait(
-        [receiver_task, sender_task],
-        return_when=asyncio.FIRST_COMPLETED
+broadcaster = VideoStreamBroadcaster()
+app_state["broadcaster"] = broadcaster
+
+
+@app.get("/video/feed", tags=["Video"])
+async def video_feed_endpoint():
+    """MJPEG Streaming endpoint for direct HTTP video feed backed by centralized broadcaster."""
+    async def frame_generator():
+        if broadcaster.worker_task is None or broadcaster.worker_task.done():
+            broadcaster.running = True
+            broadcaster.worker_task = asyncio.create_task(broadcaster._broadcast_loop())
+
+        while True:
+            if broadcaster.latest_buffer:
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + broadcaster.latest_buffer + b"\r\n"
+                )
+            else:
+                buf, _, _, _ = await asyncio.to_thread(process_single_frame, 1)
+                if buf is not None:
+                    yield (
+                        b"--frame\r\n"
+                        b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
+                    )
+            await asyncio.sleep(0.033)
+
+    return StreamingResponse(
+        frame_generator(),
+        media_type="multipart/x-mixed-replace; boundary=frame",
     )
 
-    for task in pending:
-        task.cancel()
-    logger.info("WebSocket connection cleanly closed.")
+
+@app.websocket("/ws/stream")
+async def websocket_stream_endpoint(websocket: WebSocket):
+    """
+    Robust asynchronous WebSocket endpoint delivering real-time annotated video frames,
+    detections, tracking vectors, and incident alerts with separated non-blocking I/O.
+    """
+    await websocket.accept()
+    logger.info("Client connected to real-time WebSocket video stream.")
+    await broadcaster.add_client(websocket)
+
+    try:
+        while True:
+            msg = await websocket.receive_text()
+            try:
+                data = json.loads(msg)
+                action = data.get("action")
+                if action == "set_source":
+                    new_src = data.get("source", "synthetic")
+                    logger.info(f"Switching video source to: {new_src}")
+                    if app_state["video_stream"]:
+                        app_state["video_stream"].release()
+                    app_state["video_stream"] = VideoStream(source=new_src)
+                elif action == "toggle_zones":
+                    app_state["visualizer"].show_zones = not app_state["visualizer"].show_zones
+                elif action == "toggle_trajectories":
+                    app_state["visualizer"].show_trajectories = not app_state["visualizer"].show_trajectories
+                elif action == "set_confidence":
+                    app_state["detector"].confidence_threshold = float(data.get("value", 0.35))
+            except Exception as ex:
+                logger.warning(f"Error handling client action: {ex}")
+    except WebSocketDisconnect:
+        pass
+    except Exception:
+        pass
+    finally:
+        await broadcaster.remove_client(websocket)
+        logger.info("WebSocket connection cleanly closed.")
 
 
 def start_server():

@@ -619,58 +619,60 @@ class HardwareAcceleratedCapture:
 
     def _attempt_reconnect(self) -> bool:
         """Attempts to re-establish connection to physical camera feed."""
-        self.reconnect_attempts += 1
-        self.last_reconnect_time = time.time()
-        if self.cap:
+        with self.lock:
+            self.reconnect_attempts += 1
+            self.last_reconnect_time = time.time()
+            if self.cap:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
+
             try:
-                self.cap.release()
+                src = int(self.source) if str(self.source).isdigit() else self.source
+                if os.name == "nt":
+                    self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
+                    if not self.cap.isOpened():
+                        self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+                else:
+                    self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+
+                if self.cap and self.cap.isOpened():
+                    self.connection_status = "ONLINE"
+                    self.consecutive_failures = 0
+                    return True
             except Exception:
                 pass
-            self.cap = None
 
-        try:
-            src = int(self.source) if str(self.source).isdigit() else self.source
-            if os.name == "nt":
-                self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
-                if not self.cap.isOpened():
-                    self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
-            else:
-                self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
-
-            if self.cap and self.cap.isOpened():
-                self.connection_status = "ONLINE"
-                self.consecutive_failures = 0
-                return True
-        except Exception:
-            pass
-
-        self.connection_status = "NO_SIGNAL"
-        return False
+            self.connection_status = "NO_SIGNAL"
+            return False
 
     def read_frame(self) -> Tuple[bool, np.ndarray]:
         """Fetches the next hardware-decoded video frame or authentic NO SIGNAL test pattern."""
-        if not self.is_synthetic and self.cap is not None and self.cap.isOpened():
-            ret, frame = self.cap.read()
-            if ret and frame is not None:
-                self.frames_decoded += 1
-                self.consecutive_failures = 0
-                self.connection_status = "ONLINE"
-                return True, frame
-            else:
-                self.frames_dropped += 1
-                self.consecutive_failures += 1
+        with self.lock:
+            if not self.is_synthetic and self.cap is not None and self.cap.isOpened():
+                ret, frame = self.cap.read()
+                if ret and frame is not None:
+                    self.frames_decoded += 1
+                    self.consecutive_failures = 0
+                    self.connection_status = "ONLINE"
+                    return True, frame
+                else:
+                    self.frames_dropped += 1
+                    self.consecutive_failures += 1
 
-                # If this is a local video file (not RTSP), loop it
-                if isinstance(self.source, str) and not self.source.startswith("rtsp://") and not self.source.startswith("http://"):
-                    try:
-                        self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                        ret2, frame2 = self.cap.read()
-                        if ret2 and frame2 is not None:
-                            self.frames_decoded += 1
-                            self.consecutive_failures = 0
-                            return True, frame2
-                    except Exception:
-                        pass
+                    # If this is a local video file (not RTSP), loop it
+                    if isinstance(self.source, str) and not self.source.startswith("rtsp://") and not self.source.startswith("http://"):
+                        try:
+                            self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                            ret2, frame2 = self.cap.read()
+                            if ret2 and frame2 is not None:
+                                self.frames_decoded += 1
+                                self.consecutive_failures = 0
+                                return True, frame2
+                        except Exception:
+                            pass
 
         # If this is a real camera feed that failed or disconnected:
         if not self.is_synthetic:
@@ -680,9 +682,11 @@ class HardwareAcceleratedCapture:
                 now = time.time()
                 if (now - self.last_reconnect_time) >= self.reconnect_interval_sec:
                     if self._attempt_reconnect():
-                        ret_r, frame_r = self.cap.read()
-                        if ret_r and frame_r is not None:
-                            return True, frame_r
+                        with self.lock:
+                            if self.cap is not None and self.cap.isOpened():
+                                ret_r, frame_r = self.cap.read()
+                                if ret_r and frame_r is not None:
+                                    return True, frame_r
 
                 self.no_signal_frame_count += 1
                 next_in = max(0.1, self.reconnect_interval_sec - (now - self.last_reconnect_time))
@@ -696,20 +700,23 @@ class HardwareAcceleratedCapture:
                 )
                 return True, no_sig_frame
 
-        if self.synthetic_sim is None:
-            self.synthetic_sim = SyntheticTrafficSimulator()
-        self.frames_decoded += 1
-        return True, self.synthetic_sim.next_frame()
+        with self.lock:
+            if self.synthetic_sim is None:
+                self.synthetic_sim = SyntheticTrafficSimulator()
+            self.frames_decoded += 1
+            frame = self.synthetic_sim.next_frame()
+        return True, frame
 
     def release(self) -> None:
         """Releases video capture hardware handles."""
-        self.running = False
-        if self.cap:
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            self.cap = None
+        with self.lock:
+            self.running = False
+            if self.cap:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
 
 
 class VideoStream:

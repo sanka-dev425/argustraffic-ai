@@ -164,6 +164,25 @@ class EdgeStorageVault:
                 logger.error(f"Error updating sync status for {incident_id}: {e}")
         return False
 
+    def get_clip_path(self, incident_id: str) -> Optional[Path]:
+        """Returns the local filesystem path to the MP4/AVI/JPEG clip for an incident."""
+        mf = self.manifests_dir / f"{incident_id}.json"
+        if mf.exists():
+            try:
+                with open(mf, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                p = Path(data.get("clip_path", ""))
+                if p.exists():
+                    return p
+            except Exception:
+                pass
+
+        for f in self.clips_dir.glob(f"{incident_id}*"):
+            if f.is_file() and f.stat().st_size > 0:
+                return f
+
+        return None
+
     def _enforce_disk_quota(self) -> None:
         """Purges oldest unsynced/synced clips if local disk quota is exceeded (FIFO)."""
         clips = sorted(self.clips_dir.glob("*.*"), key=lambda p: p.stat().st_mtime)

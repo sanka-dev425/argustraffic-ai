@@ -1128,8 +1128,8 @@ async function ackCurrentModalIncident() {
 }
 
 function downloadIncidentClip() {
-  showToast({ incident_type: "EVIDENCE", description: `Downloading 15s Ring-Buffer MP4 clip for ${activeModalIncidentId}...` });
-  window.open("/api/v1/edge-vault/pending-sync", "_blank");
+  showToast({ incident_type: "EVIDENCE", description: `Downloading forensic MP4 evidence clip for ${activeModalIncidentId}...` });
+  window.open(`/api/v1/edge-vault/clips/${encodeURIComponent(activeModalIncidentId)}`, "_blank");
 }
 
 /* ==========================================================================

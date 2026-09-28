@@ -111,6 +111,8 @@ class IncidentDatabase:
         incident_type: Optional[str] = None,
         start_time: Optional[float] = None,
         end_time: Optional[float] = None,
+        license_plate: Optional[str] = None,
+        zone_id: Optional[str] = None,
         limit: int = 100,
     ) -> List[Dict[str, Any]]:
         """Queries historical incidents with multi-attribute filtering."""
@@ -129,6 +131,12 @@ class IncidentDatabase:
         if end_time:
             query += " AND timestamp <= ?"
             params.append(end_time)
+        if license_plate:
+            query += " AND license_plate = ?"
+            params.append(license_plate.strip().upper())
+        if zone_id:
+            query += " AND zone_id = ?"
+            params.append(zone_id)
 
         query += " ORDER BY timestamp DESC LIMIT ?"
         params.append(limit)
@@ -150,6 +158,8 @@ class IncidentDatabase:
                     "zone_id": row["zone_id"],
                     "metadata": json.loads(row["metadata_json"] or "{}"),
                     "snapshot_path": row["snapshot_path"],
+                    "license_plate": row["license_plate"] if "license_plate" in row.keys() else None,
+                    "speed_kmh": row["speed_kmh"] if "speed_kmh" in row.keys() else None,
                 })
         finally:
             conn.close()
