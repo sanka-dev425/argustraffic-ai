@@ -41,7 +41,15 @@ jobs:
 
       - name: Compile Inno Setup Enterprise Installer
         run: |
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_inno.iss
+          if (Get-Command iscc -ErrorAction SilentlyContinue) {
+            iscc installer_inno.iss
+          } elseif (Test-Path "C:\Program Files\Inno Setup 7\ISCC.exe") {
+            & "C:\Program Files\Inno Setup 7\ISCC.exe" installer_inno.iss
+          } elseif (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
+            & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_inno.iss
+          } else {
+            & "C:\Program Files\Inno Setup 6\ISCC.exe" installer_inno.iss
+          }
 
       - name: Archive Portable Binary Distribution
         run: |
