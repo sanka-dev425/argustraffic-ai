@@ -42,6 +42,20 @@ class Track:
         return self.bbox[3] - self.bbox[1]
 
 
+def batch_iou(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
+    """Vectorized SIMD pairwise IoU computation between N boxes_a and M boxes_b."""
+    if len(boxes_a) == 0 or len(boxes_b) == 0:
+        return np.zeros((len(boxes_a), len(boxes_b)), dtype=np.float32)
+    tl = np.maximum(boxes_a[:, None, :2], boxes_b[None, :, :2])
+    br = np.minimum(boxes_a[:, None, 2:], boxes_b[None, :, 2:])
+    wh = np.clip(br - tl, a_min=0, a_max=None)
+    inter = wh[:, :, 0] * wh[:, :, 1]
+    area_a = (boxes_a[:, 2] - boxes_a[:, 0]) * (boxes_a[:, 3] - boxes_a[:, 1])
+    area_b = (boxes_b[:, 2] - boxes_b[:, 0]) * (boxes_b[:, 3] - boxes_b[:, 1])
+    union = area_a[:, None] + area_b[None, :] - inter
+    return np.where(union > 0, inter / union, 0.0).astype(np.float32)
+
+
 def compute_iou(boxA: Tuple[float, float, float, float], boxB: Tuple[float, float, float, float]) -> float:
     """Calculates Intersection over Union (IoU) between two bounding boxes."""
     xA = max(boxA[0], boxB[0])
@@ -93,16 +107,15 @@ class SpatialTracker:
         unmatched_tracks = set(active_track_ids)
 
         if active_track_ids and detections:
-            # Build cost matrix based on 1.0 - IoU
-            cost_matrix = np.zeros((len(active_track_ids), len(detections)), dtype=np.float32)
-            for t_idx, t_id in enumerate(active_track_ids):
-                track = self.tracks[t_id]
-                for d_idx, det in enumerate(detections):
-                    iou = compute_iou(track.bbox, det.bbox)
-                    # Class matching bonus
-                    if track.class_id == det.class_id:
-                        iou += 0.1
-                    cost_matrix[t_idx, d_idx] = iou
+            # Vectorized SIMD cost matrix computation
+            track_boxes = np.array([self.tracks[tid].bbox for tid in active_track_ids], dtype=np.float32)
+            det_boxes = np.array([d.bbox for d in detections], dtype=np.float32)
+            cost_matrix = batch_iou(track_boxes, det_boxes)
+
+            # Vectorized class matching bonus
+            track_classes = np.array([self.tracks[tid].class_id for tid in active_track_ids])[:, None]
+            det_classes = np.array([d.class_id for d in detections])[None, :]
+            cost_matrix += np.where(track_classes == det_classes, 0.1, 0.0)
 
             # Greedy Hungarian-style matching
             matched_track_indices = set()

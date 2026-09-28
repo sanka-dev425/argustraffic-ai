@@ -243,7 +243,9 @@ class TrafficDetector:
         if self.half:
             predict_kwargs["half"] = True
 
-        results = self.model.predict(**predict_kwargs)
+        ctx = torch.inference_mode() if hasattr(torch, "inference_mode") else torch.no_grad()
+        with ctx:
+            results = self.model.predict(**predict_kwargs)
 
         detections: List[Detection] = []
         if len(results) > 0:

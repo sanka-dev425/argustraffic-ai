@@ -55,7 +55,7 @@ class FrameVisualizer:
         h, w = canvas.shape[:2]
 
         # 1. Render Polygons / Zones
-        if self.show_zones and zone_manager:
+        if self.show_zones and zone_manager and zone_manager.zones:
             overlay = canvas.copy()
             for zone in zone_manager.zones.values():
                 pts = np.array(zone.polygon, dtype=np.int32)
