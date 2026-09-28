@@ -517,13 +517,59 @@ function switchToIncidents() {
   if (btn) btn.click();
 }
 
-function ackCurrentAlert() {
+async function ackCurrentAlert() {
   const banner = document.getElementById("emergency-banner");
-  if (banner) {
-    banner.style.opacity = "0.5";
-    document.getElementById("btn-ack-alert").innerText = "✓ Acknowledged";
+  const btn = document.getElementById("btn-ack-alert");
+  if (btn) btn.disabled = true;
+
+  try {
+    const res = await fetch("/api/v1/sla/acknowledge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        incident_id: "INC-CRITICAL-01",
+        officer_id: currentUser.username || "POLICE_OP_01",
+        badge_number: "SLP-4921",
+        action_taken: "Control Room Operator Acknowledged & Notified Interceptor Unit",
+      }),
+    });
+    if (res.ok) {
+      if (banner) banner.style.opacity = "0.5";
+      if (btn) btn.innerText = "✓ Acknowledged (Logged)";
+      showToast({ incident_type: "SECURITY", description: "Incident logged into ISO/IEC 27037 non-repudiation audit ledger." });
+    }
+  } catch (err) {
+    if (banner) banner.style.opacity = "0.5";
+    if (btn) btn.innerText = "✓ Acknowledged";
   }
-  showToast({ incident_type: "ALERT", description: "Critical alert acknowledged by supervisor." });
+}
+
+async function setWeatherFilter(mode) {
+  try {
+    const res = await fetch("/api/v1/weather/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: mode }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      showToast({ incident_type: "CAMERA", description: `Optical Filter switched to: ${data.new_mode}` });
+    }
+  } catch (e) {
+    console.error("Failed to set weather mode:", e);
+  }
+}
+
+function switchPoliceDivision(divId) {
+  const divNames = {
+    "ALL": "National Police HQ (All Divisions)",
+    "DIV_COLOMBO_CENTRAL": "Colombo Central Division",
+    "DIV_KANDY": "Kandy Municipal Division",
+    "DIV_GALLE": "Galle Coastal Division",
+    "DIV_JAFFNA": "Jaffna Northern Division",
+  };
+  const name = divNames[divId] || divId;
+  showToast({ incident_type: "POLICE_MESH", description: `Switched operational view to: ${name}` });
 }
 
 /* ==========================================================================

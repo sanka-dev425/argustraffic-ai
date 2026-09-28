@@ -1342,3 +1342,61 @@ body {
   border: 1px solid rgba(239, 68, 68, 0.4);
 }
 
+/* National Division Selector & Optical Weather Toolbar */
+.division-select {
+  background: transparent;
+  border: none;
+  color: #00e5ff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.division-select option {
+  background: #0f141d;
+  color: #f1f5f9;
+}
+
+.ops-filter-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(15, 20, 28, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+
+.filter-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.filter-select {
+  background: transparent;
+  border: none;
+  color: #00e5ff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.filter-select option {
+  background: #0f141d;
+  color: #f1f5f9;
+}
+
+.anpr-chip.wanted {
+  background: rgba(239, 68, 68, 0.25) !important;
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3) !important;
+}
+
+

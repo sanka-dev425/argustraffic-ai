@@ -460,3 +460,208 @@ async def get_time_sync_status():
     }
 
 
+# ==============================================================================
+# 1. Wanted Vehicle Hotlist & Instant ANPR Interception
+# ==============================================================================
+@router.get("/hotlist/records", tags=["Hotlist & ANPR Interception"])
+async def get_hotlist_records():
+    """Returns active national hotlist database records and lookup metrics."""
+    state = get_components()
+    engine = state.get("hotlist_engine")
+    if not engine:
+        raise HTTPException(status_code=503, detail="Hotlist Engine offline")
+    return {
+        "records": engine.get_all_records(),
+        "statistics": engine.get_statistics(),
+    }
+
+
+@router.post("/hotlist/lookup", tags=["Hotlist & ANPR Interception"])
+async def lookup_hotlist_plate(payload: Dict[str, Any]):
+    """Performs sub-millisecond plate lookup with fuzzy OCR noise tolerance."""
+    state = get_components()
+    engine = state.get("hotlist_engine")
+    if not engine:
+        raise HTTPException(status_code=503, detail="Hotlist Engine offline")
+    plate = payload.get("plate", "")
+    match = engine.lookup_plate(plate, allow_fuzzy=payload.get("allow_fuzzy", True))
+    interception = engine.generate_interception_payload(
+        plate=plate,
+        camera_id=payload.get("camera_id", "CAM-042"),
+        speed_kmh=payload.get("speed_kmh"),
+    )
+    return {
+        "detected_plate": plate,
+        "is_flagged": match is not None,
+        "match_details": match,
+        "interception_dispatch": interception,
+    }
+
+
+@router.post("/hotlist/add", tags=["Hotlist & ANPR Interception"])
+async def add_hotlist_record(payload: Dict[str, Any]):
+    """Adds a new wanted or stolen vehicle to the hotlist database."""
+    state = get_components()
+    engine = state.get("hotlist_engine")
+    if not engine:
+        raise HTTPException(status_code=503, detail="Hotlist Engine offline")
+    plate = payload.get("plate", "")
+    if not plate:
+        raise HTTPException(status_code=400, detail="Plate is required")
+    norm = engine.add_record(plate, payload)
+    return {"status": "SUCCESS", "normalized_plate": norm, "record": payload}
+
+
+# ==============================================================================
+# 2. Automated Incident Escalation SLA & Operator Accountability
+# ==============================================================================
+@router.get("/sla/active-queue", tags=["SLA & Operator Accountability"])
+async def get_sla_queue():
+    """Returns currently monitored incidents with remaining SLA response countdowns."""
+    state = get_components()
+    mgr = state.get("sla_manager")
+    if not mgr:
+        raise HTTPException(status_code=503, detail="SLA Watchdog offline")
+    return {
+        "active_queue": mgr.get_active_watchdog_queue(),
+        "total_escalations": mgr.total_escalations,
+    }
+
+
+@router.post("/sla/acknowledge", tags=["SLA & Operator Accountability"])
+async def acknowledge_incident(payload: Dict[str, Any]):
+    """Records official officer acknowledgment of a hazard alert, logging response time."""
+    state = get_components()
+    mgr = state.get("sla_manager")
+    if not mgr:
+        raise HTTPException(status_code=503, detail="SLA Watchdog offline")
+    inc_id = payload.get("incident_id")
+    if not inc_id:
+        raise HTTPException(status_code=400, detail="incident_id required")
+    rec = mgr.acknowledge_incident(
+        incident_id=inc_id,
+        officer_id=payload.get("officer_id", "POLICE_OP_01"),
+        badge_number=payload.get("badge_number", "SLP-4921"),
+        action_taken=payload.get("action_taken", "Dispatched Patrol Unit"),
+    )
+    if not rec:
+        raise HTTPException(status_code=404, detail="Incident not found in active SLA board")
+    return {"status": "ACKNOWLEDGED", "record": rec}
+
+
+# ==============================================================================
+# 3. National Police HQ & Multi-Station Mesh Aggregator
+# ==============================================================================
+@router.get("/mesh/national-overview", tags=["National Police HQ Mesh"])
+async def get_mesh_overview():
+    """Aggregates multi-division traffic telemetry nationwide for Police HQ."""
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    return mesh.get_national_overview()
+
+
+@router.post("/mesh/heartbeat", tags=["National Police HQ Mesh"])
+async def post_division_heartbeat(payload: Dict[str, Any]):
+    """Receives periodic health and telemetry heartbeat from regional division nodes."""
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    div_id = payload.get("division_id")
+    if not div_id:
+        raise HTTPException(status_code=400, detail="division_id required")
+    mesh.record_heartbeat(div_id, payload)
+    return {"status": "HEARTBEAT_RECORDED", "division_id": div_id}
+
+
+# ==============================================================================
+# 4. Edge Storage Vault & Store-and-Forward Sync
+# ==============================================================================
+@router.get("/edge-vault/pending-sync", tags=["Edge Vault & Storage"])
+async def get_pending_sync():
+    """Returns local offline incident video clips awaiting sync to Headquarters."""
+    state = get_components()
+    vault = state.get("edge_vault")
+    if not vault:
+        raise HTTPException(status_code=503, detail="Edge Vault offline")
+    return {"pending_clips": vault.get_pending_sync_queue()}
+
+
+@router.post("/edge-vault/mark-synced", tags=["Edge Vault & Storage"])
+async def mark_clip_synced(payload: Dict[str, Any]):
+    """Marks an offline clip as successfully received at central headquarters."""
+    state = get_components()
+    vault = state.get("edge_vault")
+    if not vault:
+        raise HTTPException(status_code=503, detail="Edge Vault offline")
+    inc_id = payload.get("incident_id")
+    success = vault.mark_as_synced(inc_id)
+    return {"incident_id": inc_id, "synced": success}
+
+
+# ==============================================================================
+# 5. Adverse Weather & Optical Filters
+# ==============================================================================
+@router.get("/weather/status", tags=["Optical Weather Enhancement"])
+async def get_weather_status():
+    """Returns active optical weather filter mode and detected atmospheric conditions."""
+    state = get_components()
+    enhancer = state.get("weather_enhancer")
+    if not enhancer:
+        raise HTTPException(status_code=503, detail="Weather Enhancer offline")
+    return {
+        "active_mode": enhancer.mode.value if hasattr(enhancer.mode, "value") else str(enhancer.mode),
+        "detected_condition": enhancer.last_detected_condition,
+        "total_frames_processed": enhancer.total_frames_processed,
+    }
+
+
+@router.post("/weather/mode", tags=["Optical Weather Enhancement"])
+async def set_weather_mode(payload: Dict[str, Any]):
+    """Overrides optical filter mode (AUTO, BYPASS, DEHAZE, NIGHT_BOOST, ANTI_GLARE)."""
+    state = get_components()
+    enhancer = state.get("weather_enhancer")
+    if not enhancer:
+        raise HTTPException(status_code=503, detail="Weather Enhancer offline")
+    from src.perception.preprocessing.weather_enhancer import WeatherFilterMode
+    mode_str = payload.get("mode", "AUTO").upper()
+    try:
+        enhancer.mode = WeatherFilterMode[mode_str]
+        return {"status": "SUCCESS", "new_mode": enhancer.mode.value}
+    except KeyError:
+        raise HTTPException(status_code=400, detail=f"Invalid mode. Choose from: {[m.value for m in WeatherFilterMode]}")
+
+
+# ==============================================================================
+# 6. Remote PoE Camera Self-Healing & NOC Diagnostics
+# ==============================================================================
+@router.get("/camera-watchdog/diagnostics", tags=["Camera Self-Healing & NOC"])
+async def get_camera_diagnostics():
+    """Returns real-time link diagnostics and self-healing tickets across all cameras."""
+    state = get_components()
+    watchdog = state.get("camera_watchdog")
+    if not watchdog:
+        raise HTTPException(status_code=503, detail="Camera Watchdog offline")
+    return {
+        "cameras": watchdog.get_fleet_diagnostics(),
+        "recent_remediations": watchdog.get_remediation_history(),
+    }
+
+
+@router.post("/camera-watchdog/reboot", tags=["Camera Self-Healing & NOC"])
+async def trigger_camera_reboot(payload: Dict[str, Any]):
+    """Triggers automated ONVIF software reset and PoE power cycle on a frozen camera."""
+    state = get_components()
+    watchdog = state.get("camera_watchdog")
+    if not watchdog:
+        raise HTTPException(status_code=503, detail="Camera Watchdog offline")
+    cam_id = payload.get("camera_id")
+    if not cam_id:
+        raise HTTPException(status_code=400, detail="camera_id required")
+    res = watchdog.trigger_self_healing(cam_id, force=payload.get("force", False))
+    return res
+
+
+

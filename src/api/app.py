@@ -28,6 +28,12 @@ from src.core.incident_engine import IncidentEngine
 from src.core.tracker import SpatialTracker
 from src.core.zone_manager import ZoneManager
 from src.core.auth_rbac import SecurityAuthManager
+from src.core.edge_recorder import EdgeRingBuffer, EdgeStorageVault
+from src.core.hotlist_engine import WantedVehicleHotlistEngine
+from src.core.sla_escalation import SLAEscalationManager
+from src.core.station_mesh import NationalStationMeshAggregator
+from src.core.camera_watchdog import CameraSelfHealingWatchdog
+from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
 
@@ -50,6 +56,13 @@ app_state: Dict[str, Any] = {
     "db": None,
     "dispatcher": None,
     "auth_mgr": None,
+    "hotlist_engine": None,
+    "sla_manager": None,
+    "station_mesh": None,
+    "edge_vault": None,
+    "edge_ring_buffer": None,
+    "weather_enhancer": None,
+    "camera_watchdog": None,
     "current_fps": 30.0,
     "current_latency_ms": 12.0,
 }
@@ -64,7 +77,7 @@ def load_config() -> Dict[str, Any]:
 
 
 def init_app_state():
-    """Initializes detector, tracker, zones, and incident engine."""
+    """Initializes detector, tracker, zones, incident engine, and enterprise subsystems."""
     cfg = load_config()
     app_state["config"] = cfg
 
@@ -110,6 +123,17 @@ def init_app_state():
 
     # 8. Security Vault & Role-Based Access Control
     app_state["auth_mgr"] = SecurityAuthManager()
+
+    # 9. Enterprise Mission-Critical Engines
+    app_state["hotlist_engine"] = WantedVehicleHotlistEngine()
+    app_state["sla_manager"] = SLAEscalationManager()
+    app_state["station_mesh"] = NationalStationMeshAggregator()
+    app_state["edge_vault"] = EdgeStorageVault()
+    app_state["edge_ring_buffer"] = EdgeRingBuffer(capacity_seconds=15.0)
+    app_state["weather_enhancer"] = OpticalWeatherEnhancer()
+    app_state["camera_watchdog"] = CameraSelfHealingWatchdog()
+    app_state["camera_watchdog"].register_camera("CAM-042", "192.168.1.100", "192.168.1.2", 1)
+    app_state["camera_watchdog"].register_camera("CAM-118", "192.168.1.101", "192.168.1.2", 2)
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 
@@ -158,25 +182,41 @@ async def get_index():
 
 
 def process_single_frame(frame_idx: int):
-    """Synchronous CPU/GPU vision pipeline running inside worker thread."""
+    """Synchronous CPU/GPU vision pipeline running inside worker thread with enterprise extensions."""
     detector = app_state["detector"]
     tracker = app_state["tracker"]
     zone_mgr = app_state["zone_manager"]
     incident_eng = app_state["incident_engine"]
     visualizer = app_state["visualizer"]
     stream = app_state["video_stream"]
+    enhancer = app_state.get("weather_enhancer")
+    ring_buf = app_state.get("edge_ring_buffer")
+    edge_vault = app_state.get("edge_vault")
+    sla_mgr = app_state.get("sla_manager")
+    watchdog = app_state.get("camera_watchdog")
 
     if not stream:
         return None, None, None, 0.0
 
     ret, frame = stream.read_frame()
+    if watchdog:
+        watchdog.record_frame_status("CAM-042", ret and frame is not None)
+
     if not ret or frame is None:
         return None, None, None, 0.0
+
+    # 0. Edge Ring Buffer & Weather Pre-Filter
+    if ring_buf:
+        ring_buf.append(frame)
+
+    proc_frame = frame
+    if enhancer:
+        proc_frame, _ = enhancer.enhance(frame)
 
     loop_start = time.perf_counter()
 
     # 1. Detect
-    detections, inf_ms = detector.detect(frame)
+    detections, inf_ms = detector.detect(proc_frame)
 
     # 2. Track
     tracked_dets = tracker.update(detections)
@@ -190,17 +230,27 @@ def process_single_frame(frame_idx: int):
         fps=app_state["current_fps"],
     )
 
-    # Persist and dispatch new alerts
-    if new_alerts and app_state.get("db"):
+    # Persist, archive in edge vault, and register in SLA watchdog
+    if new_alerts:
         for a in new_alerts:
             ad = a.to_dict()
-            app_state["db"].save_incident(ad)
+            if app_state.get("db"):
+                app_state["db"].save_incident(ad)
             if app_state.get("dispatcher"):
                 app_state["dispatcher"].dispatch(ad)
+            if sla_mgr:
+                sla_mgr.register_incident(ad)
+            if edge_vault and ring_buf:
+                clip_frames = ring_buf.get_pre_event_window(10.0)
+                edge_vault.lock_incident_clip(ad.get("alert_id", "INC"), clip_frames, ad)
+
+    # Periodic SLA Escalation check
+    if sla_mgr and (frame_idx % 30 == 0):
+        sla_mgr.evaluate_escalations()
 
     # 4. Render Annotations onto Frame
     annotated_frame = visualizer.render(
-        frame=frame,
+        frame=proc_frame,
         detections=tracked_dets,
         tracker=tracker,
         zone_manager=zone_mgr,

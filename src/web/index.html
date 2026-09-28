@@ -286,7 +286,13 @@
           </div>
           <div class="jurisdiction-pill">
             <span class="pill-dot"></span>
-            <span>Metro City Transportation Authority</span>
+            <select id="division-mesh-selector" class="division-select" onchange="switchPoliceDivision(this.value)">
+              <option value="ALL">National Police HQ (All Divisions)</option>
+              <option value="DIV_COLOMBO_CENTRAL" selected>Colombo Central Division</option>
+              <option value="DIV_KANDY">Kandy Municipal Division</option>
+              <option value="DIV_GALLE">Galle Coastal Division</option>
+              <option value="DIV_JAFFNA">Jaffna Northern Division</option>
+            </select>
           </div>
         </div>
 
@@ -608,6 +614,16 @@
               </div>
 
               <div class="ops-actions">
+                <div class="ops-filter-box">
+                  <span class="filter-label">FILTER:</span>
+                  <select id="weather-filter-select" class="channel-select filter-select" onchange="setWeatherFilter(this.value)">
+                    <option value="AUTO">AUTO (Scene-Adaptive)</option>
+                    <option value="DEHAZE">🌧️ Rain / Fog De-Haze</option>
+                    <option value="NIGHT_BOOST">🌙 Low-Light Night Boost</option>
+                    <option value="ANTI_GLARE">💡 Headlight Anti-Glare</option>
+                    <option value="BYPASS">☀️ Clear Daylight (Bypass)</option>
+                  </select>
+                </div>
                 <button id="btn-draw-mode" class="header-btn">✏️ Draw Custom Zone</button>
                 <button id="btn-fullscreen" class="header-btn">⛶ Fullscreen</button>
               </div>
