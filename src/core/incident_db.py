@@ -28,10 +28,13 @@ class IncidentDatabase:
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=10.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
         return conn
 
     def _init_db(self) -> None:
-        with self._get_connection() as conn:
+        conn = self._get_connection()
+        try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS incidents (
                     alert_id TEXT PRIMARY KEY,
@@ -63,6 +66,8 @@ class IncidentDatabase:
             conn.execute("CREATE INDEX IF NOT EXISTS idx_type ON incidents(incident_type)")
             conn.execute("CREATE INDEX IF NOT EXISTS idx_plate ON incidents(license_plate)")
             conn.commit()
+        finally:
+            conn.close()
         logger.info(f"Incident database initialized at: {self.db_path}")
 
     def save_incident(self, alert_dict: Dict[str, Any], snapshot_path: Optional[str] = None) -> None:

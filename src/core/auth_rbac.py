@@ -70,11 +70,14 @@ class SecurityAuthManager:
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path), timeout=10.0)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode = WAL;")
+        conn.execute("PRAGMA synchronous = NORMAL;")
         return conn
 
     def _init_db(self):
         """Initializes tables for enterprise users, sessions, and security audits."""
-        with self._get_connection() as conn:
+        conn = self._get_connection()
+        try:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     username TEXT PRIMARY KEY,
@@ -109,6 +112,8 @@ class SecurityAuthManager:
                 )
             """)
             conn.commit()
+        finally:
+            conn.close()
 
         # Seed initial default users if table empty or missing standard accounts
         self._seed_default_users()
@@ -132,7 +137,8 @@ class SecurityAuthManager:
             ("auditor_lead", "Legal Forensic Examiner", "forensics@legal-audit.gov", "auditor123", Role.FORENSIC_AUDITOR),
             ("viewer", "Public Traffic Observer", "viewer@city-traffic.gov", "viewer123", Role.READONLY_VIEWER),
         ]
-        with self._get_connection() as conn:
+        conn = self._get_connection()
+        try:
             for username, full_name, email, raw_pwd, role in default_accounts:
                 cursor = conn.cursor()
                 cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
@@ -146,6 +152,8 @@ class SecurityAuthManager:
                         (username, full_name, email, pwd_hash, salt, role.value, time.time()),
                     )
             conn.commit()
+        finally:
+            conn.close()
 
     def create_user(
         self,

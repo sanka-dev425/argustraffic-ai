@@ -12,6 +12,7 @@ import sys
 import time
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import cv2
 import numpy as np
 import torch
 try:
@@ -27,6 +28,87 @@ except ImportError:
     ULTRALYTICS_AVAILABLE = False
 
 logger = logging.getLogger("argustraffic.detector")
+
+
+def apply_clahe_enhancement(
+    frame: np.ndarray,
+    clip_limit: float = 2.5,
+    tile_grid_size: Tuple[int, int] = (8, 8),
+) -> np.ndarray:
+    """
+    Applies Contrast Limited Adaptive Histogram Equalization (CLAHE) on the luminance (L) channel
+    of the LAB color space. Balances nighttime headlight glare, deep shadows, and foggy weather.
+    """
+    if frame is None or frame.size == 0:
+        return frame
+    try:
+        lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+        l_channel, a_channel, b_channel = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=tile_grid_size)
+        cl = clahe.apply(l_channel)
+        merged = cv2.merge((cl, a_channel, b_channel))
+        return cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+    except Exception as e:
+        logger.debug(f"CLAHE enhancement failed, returning raw frame: {e}")
+        return frame
+
+
+def check_optical_tampering(
+    frame: np.ndarray,
+    min_variance: float = 12.0,
+    dark_threshold: float = 14.0,
+    bright_threshold: float = 242.0,
+) -> Dict[str, Any]:
+    """
+    Anti-Tampering Watchdog: Inspects frame focus, luminance entropy, and sharpness variance
+    to instantly detect camera lens paint spraying, blackout covers, intentional disorientation,
+    or blinding high-intensity headlight/laser flares.
+    """
+    if frame is None or frame.size == 0:
+        return {"tampered": True, "reason": "empty_frame", "score": 0.0, "mean_brightness": 0.0}
+
+    try:
+        if len(frame.shape) == 3:
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = frame
+
+        mean_val = float(np.mean(gray))
+        laplacian_var = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+
+        # Check conditions
+        if mean_val < dark_threshold:
+            return {
+                "tampered": True,
+                "reason": "lens_covered_or_blackout",
+                "variance": laplacian_var,
+                "mean_brightness": mean_val,
+            }
+        elif mean_val > bright_threshold:
+            return {
+                "tampered": True,
+                "reason": "blinding_glare_or_laser",
+                "variance": laplacian_var,
+                "mean_brightness": mean_val,
+            }
+        elif laplacian_var < min_variance:
+            return {
+                "tampered": True,
+                "reason": "lens_spray_or_severe_defocus",
+                "variance": laplacian_var,
+                "mean_brightness": mean_val,
+            }
+
+        return {
+            "tampered": False,
+            "reason": "nominal",
+            "variance": laplacian_var,
+            "mean_brightness": mean_val,
+        }
+    except Exception as e:
+        logger.error(f"Error checking optical tampering: {e}")
+        return {"tampered": False, "reason": "inspection_error", "variance": 0.0, "mean_brightness": 0.0}
+
 
 
 @dataclass
@@ -68,12 +150,14 @@ class TrafficDetector:
         device: str = "auto",
         half_precision: bool = True,
         input_size: int = 640,
+        enable_clahe: bool = False,
     ):
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
         self.iou_threshold = iou_threshold
         self.target_classes = target_classes or [0, 1, 2, 3, 5, 7]  # COCO person, bike, car, moto, bus, truck
         self.input_size = input_size
+        self.enable_clahe = enable_clahe
 
         # Resolve compute device
         if device == "auto":
@@ -138,6 +222,8 @@ class TrafficDetector:
             Tuple of (List[Detection], inference_time_ms)
         """
         start_time = time.perf_counter()
+        if self.enable_clahe:
+            frame = apply_clahe_enhancement(frame)
 
         if self.model is None or not ULTRALYTICS_AVAILABLE:
             # Fallback mock detection for unit tests or fallback mode
