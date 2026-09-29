@@ -1061,7 +1061,7 @@ async def download_incident_clip(incident_id: str):
                 )
 
     # 3. Fallback: synthesize forensic sample clip if buffer was empty
-    dummy_frames = []
+    synthetic_frames = []
     now = time.time()
     for i in range(30):
         synth = np.zeros((360, 640, 3), dtype=np.uint8)
@@ -1074,11 +1074,11 @@ async def download_incident_clip(incident_id: str):
             (0, 229, 255),
             2,
         )
-        dummy_frames.append((now + i * 0.033, synth))
+        synthetic_frames.append((now + i * 0.033, synth))
 
     fallback_path = vault.lock_incident_clip(
         incident_id=incident_id,
-        frames=dummy_frames,
+        frames=synthetic_frames,
         metadata={"fallback": True, "incident_id": incident_id},
         fps=30.0,
     )

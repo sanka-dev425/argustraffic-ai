@@ -2,7 +2,7 @@
  * ARGUS TRAFFIC AI - Enterprise Client Engine & Autonomous Vision Hub
  * Handles real-time WebSocket telemetry, interactive spatial geofencing,
  * Zero-Trust RBAC authentication, device fleet switching, and executive reporting.
- * Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+ * Author: ArgusTraffic Autonomous Systems Engineering Team
  */
 
 let ws = null;
@@ -1218,7 +1218,7 @@ function setupDeviceFleet() {
     const mountingStructure = customStruct || selectStruct;
     const height = parseFloat(document.getElementById("new-cam-height")?.value || "6.5");
     const tilt = parseFloat(document.getElementById("new-cam-tilt")?.value || "25");
-    const division = document.getElementById("new-cam-division")?.value || "DIV_COLOMBO_CENTRAL";
+    const division = document.getElementById("new-cam-division")?.value || "DIV_METRO_HQ";
     const intersection = document.getElementById("new-cam-intersection")?.value.trim() || "Urban Corridor";
     const url = document.getElementById("new-cam-url")?.value.trim() || "rtsp://192.168.1.150:554/stream1";
     const ip = document.getElementById("new-cam-ip")?.value.trim() || "192.168.1.150";
@@ -1240,7 +1240,7 @@ function setupDeviceFleet() {
           mounting_height_m: height,
           tilt_angle_deg: tilt,
           division_id: division,
-          station_name: division === "DIV_KANDY" ? "North District Command" : (division === "DIV_GALLE" ? "South District Command" : "Metropolitan Command HQ"),
+          station_name: (division === "DIV_NORTH_DISTRICT" || division === "DIV_KANDY") ? "North District Command" : ((division === "DIV_SOUTH_DISTRICT" || division === "DIV_GALLE") ? "South District Command" : (division === "DIV_EAST_DISTRICT" ? "Eastern District Command" : "Metropolitan Command HQ")),
           intersection_or_corridor: intersection,
           rtsp_main_url: url,
           ip_address: ip,

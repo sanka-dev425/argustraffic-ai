@@ -136,9 +136,9 @@ class YOLODetectorAdapter(DetectorBackend):
         return detections, latency
 
     def warmup(self, iterations: int = 1) -> bool:
-        dummy = np.zeros((self.input_size, self.input_size, 3), dtype=np.uint8)
+        warmup_tensor = np.zeros((self.input_size, self.input_size, 3), dtype=np.uint8)
         for _ in range(iterations):
-            self.infer(dummy)
+            self.infer(warmup_tensor)
         return True
 
     def health(self) -> Dict[str, Any]:

@@ -4,7 +4,7 @@ Provides:
 1. Sub-millisecond plate lookup with OCR optical noise tolerance (Fuzzy Levenshtein matching).
 2. Multi-tier classification: STOLEN_VEHICLE, WANTED_FELON, AMBER_ALERT, EXPIRED_REVENUE.
 3. Automated Interception alert generator with GPS coordinates, camera ID, and tactical dispatch.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 import datetime

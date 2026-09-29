@@ -2,7 +2,7 @@
 ArgusTraffic AI - Automated Incident SLA Escalation & Operator Accountability Workflow
 Enforces control room operator response times, audit compliance, and supervisory escalation.
 Conforms to ISO/IEC 27037 non-repudiation logging for police incident dispatch.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 import datetime

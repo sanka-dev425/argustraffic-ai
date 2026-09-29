@@ -4,7 +4,7 @@ Provides:
 1. Rolling circular frame buffer in memory for instantaneous pre/post incident capture.
 2. Segmented disk chunk writer with FIFO quota management (prevents disk saturation).
 3. Offline Incident Vault with Store-and-Forward synchronization when network restores.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 from collections import deque

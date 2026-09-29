@@ -2,7 +2,7 @@
 ArgusTraffic AI - Remote PoE Camera Self-Healing & Watchdog Engine
 Automates diagnostic probing, ONVIF system reboots, and SNMP PoE port power cycling
 for unattended highway CCTV cameras without sending field technicians to physical poles.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 import datetime

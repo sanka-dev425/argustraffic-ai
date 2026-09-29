@@ -4,7 +4,7 @@ Provides:
 1. Fast Dark-Channel Prior De-hazing for fog, dense smoke, and tropical monsoon downpours.
 2. Specular Headlight Anti-Glare bloom suppressor for night-time vehicle ANPR recovery.
 3. Adaptive Multi-Scale Retinex / CLAHE dynamic range balance for low-illumination corridors.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 import enum

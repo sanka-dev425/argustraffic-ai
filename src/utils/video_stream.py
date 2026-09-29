@@ -3,7 +3,7 @@ ArgusTraffic AI - Ultra-HD Photorealistic CCTV Traffic Scene Engine
 Renders realistic multi-lane industrial CCTV camera footage with textured asphalt,
 specular metallic vehicle shading, projector headlight cones, brake lights,
 emergency strobe lights, pedestrians, optical ANPR plates, and OSD telemetry.
-Author: Saptha Sanka (ArgusTraffic Autonomous Systems)
+Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 import datetime

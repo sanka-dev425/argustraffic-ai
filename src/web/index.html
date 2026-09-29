@@ -127,7 +127,7 @@
               <input type="checkbox" id="remember-session" checked />
               <span>Trust this managed device for 12 hours</span>
             </label>
-            <a href="javascript:void(0)" class="link-forgot-pwd" onclick="alert('For credential recovery, contact Enterprise IT Security Operations.')">Forgot password?</a>
+            <a href="javascript:void(0)" class="link-forgot-pwd" onclick="showToast({ incident_type: 'INFO', description: 'For credential recovery, contact Enterprise IT Security Operations.' })">Forgot password?</a>
           </div>
 
           <button type="submit" class="btn-figma-primary" id="btn-login-submit">
@@ -1034,8 +1034,8 @@
               <p class="view-subheading">Generate, verify, and export court-admissible forensic dossiers and municipal safety reports.</p>
             </div>
             <div class="report-actions">
-              <button class="btn btn-outline">Export All Ledgers</button>
-              <button class="btn btn-primary" onclick="generateExecutiveReport()">+ Generate New Report</button>
+              <button class="btn btn-outline" onclick="generateExecutiveReport()">Export All Ledgers</button>
+              <button id="btn-export-exec-report" class="btn btn-primary" onclick="generateExecutiveReport()">+ Generate New Report</button>
             </div>
           </div>
 
@@ -1138,6 +1138,34 @@
               <div class="active-user-sub">Active Session Token: <code id="sec-token-preview">argus_sec_tok_admin... (SHA-256 Validated)</code></div>
               <div class="perms-chips"><span class="perm-chip">system:manage</span><span class="perm-chip">cameras:manage</span><span class="perm-chip">incidents:export</span><span class="perm-chip">dossier:verify</span></div>
             </div>
+          </div>
+          <div class="panel-card" style="margin-top: 20px;">
+            <div style="font-size: 13px; font-weight: 700; color: #f8fafc; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+              <span>AUTHORIZED OPERATOR ROSTER & ROLE-BASED ACCESS CONTROL (RBAC)</span>
+              <span style="font-size: 11px; color: #64748b; font-weight: 500;">ZERO-TRUST POLICY ENFORCED</span>
+            </div>
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Full Name / Title</th>
+                  <th>RBAC Role</th>
+                  <th>Official Email</th>
+                  <th>Status</th>
+                  <th>Operations</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body">
+                <tr>
+                  <td><code>admin</code></td>
+                  <td>System Administrator</td>
+                  <td><span class="badge-role super">SUPER_ADMIN</span></td>
+                  <td>admin@argustraffic.internal</td>
+                  <td><span class="badge-status active">ACTIVE</span></td>
+                  <td><span style="color: #64748b; font-size: 11px;">PROTECTED</span></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </main>

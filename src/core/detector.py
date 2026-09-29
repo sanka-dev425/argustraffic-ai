@@ -193,8 +193,8 @@ class TrafficDetector:
             self.class_names = self.model.names if hasattr(self.model, "names") else {}
 
             # Perform warm-up inference
-            dummy_frame = np.zeros((self.input_size, self.input_size, 3), dtype=np.uint8)
-            predict_kwargs = {"source": dummy_frame, "device": self.device, "verbose": False}
+            warmup_tensor = np.zeros((self.input_size, self.input_size, 3), dtype=np.uint8)
+            predict_kwargs = {"source": warmup_tensor, "device": self.device, "verbose": False}
             if self.half:
                 predict_kwargs["half"] = True
             self.model.predict(**predict_kwargs)
