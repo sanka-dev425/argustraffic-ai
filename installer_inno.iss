@@ -36,11 +36,13 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "dist\ArgusTraffic\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "assets\app_icon.ico"; DestDir: "{app}\assets"; Flags: ignoreversion
+Source: "assets\logo.png"; DestDir: "{app}\assets"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; IconFilename: "{app}\assets\app_icon.ico"
+Name: "{group}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; IconFilename: "{app}\ArgusTraffic.exe"
 Name: "{group}\{cm:UninstallProgram,ArgusTraffic AI}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; Tasks: desktopicon; IconFilename: "{app}\assets\app_icon.ico"
+Name: "{autodesktop}\ArgusTraffic AI"; Filename: "{app}\ArgusTraffic.exe"; Tasks: desktopicon; IconFilename: "{app}\ArgusTraffic.exe"
 
 [Run]
 Filename: "{app}\ArgusTraffic.exe"; Description: "{cm:LaunchProgram,ArgusTraffic AI}"; Flags: nowait postinstall skipifsilent
