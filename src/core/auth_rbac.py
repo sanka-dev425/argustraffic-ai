@@ -160,11 +160,12 @@ class SecurityAuthManager:
 
     def _seed_default_users(self):
         default_accounts = [
-            ("admin", "Chief Traffic Supervisor", "admin@argustraffic.internal", "ArgusAdmin2026!", Role.SUPER_ADMIN, "ALL_DIVISIONS"),
-            ("oic_colombo", "OIC Colombo Central Traffic", "oic.colombo@police.gov.lk", "stationAdmin123", Role.STATION_ADMIN, "DIV_COLOMBO_CENTRAL"),
-            ("operator_01", "Arterial Patrol Officer", "patrol01@argustraffic.internal", "operator123", Role.TRAFFIC_OPERATOR, "DIV_COLOMBO_CENTRAL"),
-            ("auditor_lead", "Legal Forensic Examiner", "forensics@legal-audit.gov", "auditor123", Role.FORENSIC_AUDITOR, "DIV_COLOMBO_CENTRAL"),
-            ("viewer", "Public Traffic Observer", "viewer@city-traffic.gov", "viewer123", Role.READONLY_VIEWER, "DIV_COLOMBO_CENTRAL"),
+            ("admin", "Enterprise System Administrator", "admin@argustraffic.internal", "ArgusAdmin2026!", Role.SUPER_ADMIN, "ALL_DIVISIONS"),
+            ("station_admin", "Station Operations Commander", "station.commander@argustraffic.internal", "stationAdmin123", Role.STATION_ADMIN, "DIV_COLOMBO_CENTRAL"),
+            ("oic_colombo", "Station Operations Commander", "oic.colombo@argustraffic.internal", "stationAdmin123", Role.STATION_ADMIN, "DIV_COLOMBO_CENTRAL"),
+            ("operator_01", "Traffic Operations Specialist", "patrol01@argustraffic.internal", "operator123", Role.TRAFFIC_OPERATOR, "DIV_COLOMBO_CENTRAL"),
+            ("auditor_lead", "Forensic Compliance Officer", "forensics@argustraffic.internal", "auditor123", Role.FORENSIC_AUDITOR, "DIV_COLOMBO_CENTRAL"),
+            ("viewer", "Read-Only Traffic Observer", "viewer@argustraffic.internal", "viewer123", Role.READONLY_VIEWER, "DIV_COLOMBO_CENTRAL"),
         ]
         conn = self._get_connection()
         try:

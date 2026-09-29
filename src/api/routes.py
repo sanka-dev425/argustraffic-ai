@@ -1071,12 +1071,12 @@ async def get_corridor_network():
     """Returns spatial network nodes, camera GPS anchors, corridor digital twin lines, and section radars."""
     return {
         "network_id": "METRO_HIGHWAY_GRID_01",
-        "city": "Colombo & Western Province Transport Grid",
+        "city": "Metropolitan Autonomous Transport Grid",
         "center_coordinates": {"lat": 6.9271, "lng": 79.8612},
         "camera_nodes": [
             {
                 "camera_id": "CAM-042",
-                "name": "Canal St / Expressway Ingress",
+                "name": "North Ingress Highway Gantry 01",
                 "lat": 6.9319,
                 "lng": 79.8478,
                 "status": "ONLINE",
@@ -1086,7 +1086,7 @@ async def get_corridor_network():
             },
             {
                 "camera_id": "CAM-118",
-                "name": "Broadway / Main Artery Gantry",
+                "name": "Central Arterial Signal Mast 01",
                 "lat": 6.9147,
                 "lng": 79.8653,
                 "status": "ONLINE",
@@ -1096,7 +1096,7 @@ async def get_corridor_network():
             },
             {
                 "camera_id": "CAM-089",
-                "name": "Southern Expressway E01 Interchange Gantry A",
+                "name": "South Expressway Section Entry Gantry A",
                 "lat": 6.8400,
                 "lng": 79.9400,
                 "status": "ONLINE",
@@ -1106,7 +1106,7 @@ async def get_corridor_network():
             },
             {
                 "camera_id": "CAM-090",
-                "name": "Southern Expressway E01 Exit Gantry B",
+                "name": "South Expressway Section Exit Gantry B",
                 "lat": 6.7900,
                 "lng": 79.9700,
                 "status": "ONLINE",
@@ -1118,7 +1118,7 @@ async def get_corridor_network():
         "corridors": [
             {
                 "corridor_id": "CORRIDOR_E01_SOUTHERN",
-                "name": "Southern Expressway Express Corridor",
+                "name": "Southbound Expressway Express Corridor",
                 "length_km": 5.8,
                 "speed_limit_kmh": 100.0,
                 "congestion_level": "FREE_FLOW",
@@ -1126,7 +1126,7 @@ async def get_corridor_network():
             },
             {
                 "corridor_id": "CORRIDOR_GALLE_ROAD",
-                "name": "Marine Drive / Galle Road Corridor",
+                "name": "Metropolitan Arterial Ring Corridor",
                 "length_km": 4.2,
                 "speed_limit_kmh": 60.0,
                 "congestion_level": "MODERATE",

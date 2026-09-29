@@ -57,10 +57,10 @@ class NationalStationMeshAggregator:
     def _init_national_mesh(self) -> None:
         """Initializes default municipal division nodes across Sri Lanka."""
         defaults = [
-            PoliceDivisionNode("DIV_COLOMBO_CENTRAL", "Colombo Central Division", "Western Province / Capital Corridor", "10.0.1.10"),
-            PoliceDivisionNode("DIV_KANDY", "Kandy Municipal Division", "Central Province / Hill Country", "10.0.2.10"),
-            PoliceDivisionNode("DIV_GALLE", "Galle Coastal Division", "Southern Province / Coastal Corridor", "10.0.3.10"),
-            PoliceDivisionNode("DIV_JAFFNA", "Jaffna Northern Division", "Northern Province / A9 Highway Hub", "10.0.4.10"),
+            PoliceDivisionNode("DIV_COLOMBO_CENTRAL", "Metropolitan Command HQ", "Capital Metropolitan Sector", "10.0.1.10"),
+            PoliceDivisionNode("DIV_KANDY", "North District Command", "Northern Expressway Sector", "10.0.2.10"),
+            PoliceDivisionNode("DIV_GALLE", "South District Command", "Southern Coastal Sector", "10.0.3.10"),
+            PoliceDivisionNode("DIV_JAFFNA", "Eastern District Command", "Eastern Intermodal Sector", "10.0.4.10"),
         ]
         defaults[0].camera_count = 14
         defaults[0].total_traffic_flow_vph = 2450

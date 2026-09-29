@@ -576,14 +576,14 @@ async function setWeatherFilter(mode) {
 
 function switchPoliceDivision(divId) {
   const divNames = {
-    "ALL": "National Police HQ (All Divisions)",
-    "DIV_COLOMBO_CENTRAL": "Colombo Central Division",
-    "DIV_KANDY": "Kandy Municipal Division",
-    "DIV_GALLE": "Galle Coastal Division",
-    "DIV_JAFFNA": "Jaffna Northern Division",
+    "ALL": "National Tactical Grid (All Sectors)",
+    "DIV_COLOMBO_CENTRAL": "Metropolitan Command HQ",
+    "DIV_KANDY": "North District Command",
+    "DIV_GALLE": "South District Command",
+    "DIV_JAFFNA": "Eastern District Command",
   };
   const name = divNames[divId] || divId;
-  showToast({ incident_type: "POLICE_MESH", description: `Switched operational view to: ${name}` });
+  showToast({ incident_type: "POLICE_MESH", description: `Switched operational sector to: ${name}` });
 }
 
 /* ==========================================================================
@@ -995,7 +995,7 @@ function setupDeviceFleet() {
           mounting_height_m: height,
           tilt_angle_deg: tilt,
           division_id: division,
-          station_name: division === "DIV_KANDY" ? "Kandy Municipal Division" : "Colombo Central Traffic HQ",
+          station_name: division === "DIV_KANDY" ? "North District Command" : (division === "DIV_GALLE" ? "South District Command" : "Metropolitan Command HQ"),
           intersection_or_corridor: intersection,
           rtsp_main_url: url,
           ip_address: ip,

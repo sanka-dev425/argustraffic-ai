@@ -287,11 +287,11 @@
           <div class="jurisdiction-pill">
             <span class="pill-dot"></span>
             <select id="division-mesh-selector" class="division-select" onchange="switchPoliceDivision(this.value)">
-              <option value="ALL">National Police HQ (All Divisions)</option>
-              <option value="DIV_COLOMBO_CENTRAL" selected>Colombo Central Division</option>
-              <option value="DIV_KANDY">Kandy Municipal Division</option>
-              <option value="DIV_GALLE">Galle Coastal Division</option>
-              <option value="DIV_JAFFNA">Jaffna Northern Division</option>
+              <option value="ALL">National Tactical Grid (All Sectors)</option>
+              <option value="DIV_COLOMBO_CENTRAL" selected>Metropolitan Command HQ</option>
+              <option value="DIV_KANDY">North District Command</option>
+              <option value="DIV_GALLE">South District Command</option>
+              <option value="DIV_JAFFNA">Eastern District Command</option>
             </select>
           </div>
         </div>
@@ -417,7 +417,7 @@
 
                 <div class="wall-node" onclick="switchStreamSource('0')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-118: BROADWAY / 42ND ST</span>
+                    <span class="node-tag">CAM-002: CENTRAL ARTERIAL SIGNAL MAST</span>
                     <span class="node-status live">LIVE</span>
                   </div>
                   <div class="wall-node-feed">
@@ -426,25 +426,25 @@
                   </div>
                 </div>
 
-                <div class="wall-node" onclick="switchStreamSource('demo_traffic.mp4')">
+                <div class="wall-node" onclick="switchStreamSource('synthetic')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-027: FDR DRIVE SOUTH</span>
-                    <span class="node-status playback">PLAYBACK</span>
+                    <span class="node-tag">CAM-003: PERIMETER ARTERIAL MAST</span>
+                    <span class="node-status live">LIVE</span>
                   </div>
                   <div class="wall-node-feed">
                     <img id="wall-stream-3" class="wall-stream-img" alt="Cam 03 Feed" />
-                    <div class="stream-overlay-tag">MP4 &bull; 30 FPS</div>
+                    <div class="stream-overlay-tag">PRIMARY SENSOR &bull; 30 FPS</div>
                   </div>
                 </div>
 
                 <div class="wall-node alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-089: LINCOLN TUNNEL APPROACH</span>
-                    <span class="node-status alert">INCIDENT</span>
+                    <span class="node-tag">CAM-004: SOUTH EXPRESSWAY OVERPASS</span>
+                    <span class="node-status live">ONLINE</span>
                   </div>
                   <div class="wall-node-feed">
                     <img id="wall-stream-4" class="wall-stream-img" alt="Cam 04 Feed" />
-                    <div class="stream-overlay-tag alert">WRONG-WAY &bull; 48 mph</div>
+                    <div class="stream-overlay-tag">RTSP SENSOR &bull; 1080p</div>
                   </div>
                 </div>
               </div>
@@ -479,7 +479,7 @@
             <div class="panel-card gis-card">
               <div class="panel-header">
                 <div class="panel-title">GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY</div>
-                <div class="panel-sub">Metro City Municipal Nodes & Live Congestion Vectors</div>
+                <div class="panel-sub">Metropolitan Municipal Grid & Live Congestion Vectors</div>
               </div>
               <div class="gis-map-viewport" id="gis-map-viewport">
                 <svg class="gis-svg" viewBox="0 0 800 240" preserveAspectRatio="none">
@@ -498,22 +498,22 @@
                   <g transform="translate(180, 95)" class="gis-marker" onclick="switchStreamSource('synthetic')">
                     <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
                     <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-042 (Canal St)</text>
+                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-001 (Main Gantry)</text>
                   </g>
                   <g transform="translate(400, 120)" class="gis-marker" onclick="switchStreamSource('0')">
                     <circle cx="0" cy="0" r="14" fill="rgba(0, 230, 118, 0.2)" stroke="#00e676" stroke-width="2"/>
                     <circle cx="0" cy="0" r="5" fill="#00e676"/>
-                    <text x="18" y="4" fill="#00e676" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-118 (Broadway)</text>
+                    <text x="18" y="4" fill="#00e676" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-002 (Signal Mast)</text>
                   </g>
-                  <g transform="translate(400, 50)" class="gis-marker" onclick="switchStreamSource('demo_traffic.mp4')">
+                  <g transform="translate(400, 50)" class="gis-marker" onclick="switchStreamSource('synthetic')">
                     <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
                     <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-027 (FDR Drive)</text>
+                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-003 (Highway Mast)</text>
                   </g>
-                  <g transform="translate(620, 120)" class="gis-marker alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
-                    <circle cx="0" cy="0" r="18" fill="rgba(239, 68, 68, 0.3)" stroke="#ef4444" stroke-width="2" class="pulse-marker"/>
-                    <circle cx="0" cy="0" r="6" fill="#ef4444"/>
-                    <text x="22" y="4" fill="#ef4444" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-089 [INCIDENT ALERT]</text>
+                  <g transform="translate(620, 120)" class="gis-marker" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
+                    <circle cx="0" cy="0" r="18" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
+                    <circle cx="0" cy="0" r="6" fill="#00e5ff"/>
+                    <text x="22" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-004 [OVERPASS RTSP]</text>
                   </g>
                 </svg>
               </div>
@@ -598,10 +598,10 @@
               <div class="ops-stream-selector">
                 <span class="ops-label">Active Node:</span>
                 <select id="source-select" class="ops-select" onchange="handleSourceChange(this.value)">
-                  <option value="synthetic">CAM-042: Canal St / 8th Ave (Simulator)</option>
-                  <option value="0">CAM-118: Broadway / 42nd St (USB UVC)</option>
-                  <option value="demo_traffic.mp4">CAM-027: FDR Drive South (MP4)</option>
-                  <option value="rtsp://admin:password@192.168.1.100:554/live">CAM-089: Lincoln Tunnel (RTSP)</option>
+                  <option value="synthetic">CAM-001: Main Highway Gantry 01 (Digital Twin HD)</option>
+                  <option value="0">CAM-002: Central Corridor Signal Mast (Local Sensor)</option>
+                  <option value="synthetic">CAM-003: Perimeter Observation Mast (Primary Stream)</option>
+                  <option value="rtsp://admin:password@192.168.1.100:554/live">CAM-004: Southbound Expressway Overpass (RTSP)</option>
                 </select>
               </div>
 
@@ -1323,11 +1323,11 @@
         </div>
         <div class="form-group" style="margin-top: 10px;">
           <label>Vehicle Description / Model</label>
-          <input type="text" id="new-hotlist-desc" class="form-input" placeholder="e.g. Dark Grey Nissan Leaf Electric" />
+          <input type="text" id="new-hotlist-desc" class="form-input" placeholder="e.g. Utility Commercial Van (Grey)" />
         </div>
         <div class="form-group" style="margin-top: 10px;">
-          <label>Flagged By / Reporting Police Unit</label>
-          <input type="text" id="new-hotlist-flagged" class="form-input" placeholder="e.g. Colombo Central Police Station" value="Sri Lanka Police Crime Division" />
+          <label>Flagged By / Reporting Unit</label>
+          <input type="text" id="new-hotlist-flagged" class="form-input" placeholder="e.g. Regional Traffic Enforcement Unit" value="Metropolitan Highway Patrol" />
         </div>
       </div>
       <div class="modal-footer">
@@ -1337,7 +1337,6 @@
     </div>
   </div>
 
-  <!-- Register Camera Modal -->
   <!-- Register Camera Modal -->
   <div id="camera-modal" class="modal-backdrop hidden">
     <div class="modal-card modal-lg">
@@ -1349,11 +1348,11 @@
         <div class="form-row">
           <div class="form-group flex-1">
             <label>Hardware Camera ID (UUID / Serial)</label>
-            <input type="text" id="new-cam-id" class="form-input font-mono" placeholder="e.g. CAM-COL-088" />
+            <input type="text" id="new-cam-id" class="form-input font-mono" placeholder="e.g. CAM-HQ-GAN-088" />
           </div>
           <div class="form-group flex-2">
             <label>Display Alias / Camera Name</label>
-            <input type="text" id="new-cam-name" class="form-input" placeholder="e.g. Town Hall Southbound Approach" />
+            <input type="text" id="new-cam-name" class="form-input" placeholder="e.g. North Expressway Toll Ingress Gantry" />
           </div>
         </div>
 
@@ -1383,17 +1382,17 @@
           <div class="form-group flex-1">
             <label>Jurisdiction Division</label>
             <select id="new-cam-division" class="form-input">
-              <option value="DIV_COLOMBO_CENTRAL">Colombo Central Traffic HQ</option>
-              <option value="DIV_KANDY">Kandy Municipal Division</option>
-              <option value="DIV_GALLE">Galle Coastal Division</option>
-              <option value="DIV_JAFFNA">Jaffna Northern Division</option>
+              <option value="DIV_COLOMBO_CENTRAL">Metropolitan Command HQ</option>
+              <option value="DIV_KANDY">North District Command</option>
+              <option value="DIV_GALLE">South District Command</option>
+              <option value="DIV_JAFFNA">Eastern District Command</option>
             </select>
           </div>
         </div>
 
         <div class="form-group">
           <label>Location / Intersection Description</label>
-          <input type="text" id="new-cam-intersection" class="form-input" placeholder="e.g. Galle Road / Bambalapitiya Junction Corridor" />
+          <input type="text" id="new-cam-intersection" class="form-input" placeholder="e.g. Central Highway / North Intermodal Corridor" />
         </div>
 
         <div class="form-row">
