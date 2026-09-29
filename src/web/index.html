@@ -263,9 +263,9 @@
       <!-- Sidebar Footer User Profile -->
       <div class="sidebar-footer">
         <div class="user-profile-box">
-          <div class="user-avatar">SS</div>
+          <div class="user-avatar" id="sidebar-user-avatar">AO</div>
           <div class="user-info">
-            <div class="user-name" id="sidebar-user-name">Saptha Sanka</div>
+            <div class="user-name" id="sidebar-user-name">Authorized Operator</div>
             <div class="user-role" id="sidebar-user-role">SUPER_ADMIN</div>
           </div>
           <button class="btn-sidebar-lock" id="btn-logout" title="Lock Session"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
@@ -288,10 +288,10 @@
             <span class="pill-dot"></span>
             <select id="division-mesh-selector" class="division-select" onchange="switchPoliceDivision(this.value)">
               <option value="ALL">National Tactical Grid (All Sectors)</option>
-              <option value="DIV_COLOMBO_CENTRAL" selected>Metropolitan Command HQ</option>
-              <option value="DIV_KANDY">North District Command</option>
-              <option value="DIV_GALLE">South District Command</option>
-              <option value="DIV_JAFFNA">Eastern District Command</option>
+              <option value="DIV_METRO_HQ" selected>Metropolitan Command HQ (Capital Corridor)</option>
+              <option value="DIV_NORTH_DISTRICT">North District Command (Northern Expressway)</option>
+              <option value="DIV_SOUTH_DISTRICT">South District Command (Southern Coastal Expressway)</option>
+              <option value="DIV_EAST_DISTRICT">Eastern District Command (Eastern Intermodal Sector)</option>
             </select>
             <button id="btn-open-division-mgr" type="button" class="btn-link text-xs ml-2" style="color: #00e5ff; margin-left: 8px; font-size: 11px; cursor: pointer; background: none; border: none;" onclick="openDivisionManagerModal()" title="Configure Custom Sectors & Jurisdictions">⚙ Sectors</button>
           </div>
@@ -778,22 +778,22 @@
           <div class="kpi-grid-4">
             <div class="kpi-card">
               <div class="kpi-title">CRITICAL ACTIVE</div>
-              <div class="kpi-val val-red">3</div>
+              <div class="kpi-val val-red" id="kpi-critical-count">0</div>
               <div class="kpi-sub-alert">Wrong-Way & Collision Risks</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-title">UNACKNOWLEDGED</div>
-              <div class="kpi-val val-amber">2</div>
+              <div class="kpi-val val-amber" id="kpi-unack-count">0</div>
               <div class="kpi-sub-text">Awaiting Supervisor Assessment</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-title">DISPATCHED UNITS</div>
-              <div class="kpi-val val-cyan">5</div>
+              <div class="kpi-val val-cyan" id="kpi-dispatched-count">0</div>
               <div class="kpi-sub-text">Police & Highway Patrol</div>
             </div>
             <div class="kpi-card">
               <div class="kpi-title">RESOLVED TODAY</div>
-              <div class="kpi-val val-emerald">28</div>
+              <div class="kpi-val val-emerald" id="kpi-resolved-count">0</div>
               <div class="kpi-sub-text">100% SLA Adherence</div>
             </div>
           </div>
@@ -801,10 +801,10 @@
           <!-- Incidents & Hotlist Sub-Navigation Tabs -->
           <div class="sub-tabs-bar">
             <button class="sub-tab-btn active" id="tab-btn-incidents" onclick="switchIncidentsTab('incidents')">
-              Active Traffic Hazards &amp; Incidents (3)
+              Active Traffic Hazards &amp; Incidents (0)
             </button>
             <button class="sub-tab-btn" id="tab-btn-hotlist" onclick="switchIncidentsTab('hotlist')">
-              Wanted Vehicles &amp; Blacklist Hotlist (3)
+              Wanted Vehicles &amp; Blacklist Hotlist (0)
             </button>
           </div>
 
@@ -878,31 +878,13 @@
               </thead>
               <tbody id="hotlist-table-body">
                 <tr>
-                  <td><code>CP-HVY-3012</code></td>
-                  <td><span class="badge-critical">STOLEN_VEHICLE</span></td>
-                  <td><span class="badge-critical">CRITICAL</span></td>
-                  <td>Toyota HiAce Red Commercial Van</td>
-                  <td>Sri Lanka Police Crime Division</td>
-                  <td>2026-09-27T08:30Z</td>
-                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('CP-HVY-3012')">Dispatch APB</button></td>
-                </tr>
-                <tr>
-                  <td><code>NW-SUV-9014</code></td>
-                  <td><span class="badge-critical">WANTED_FELON</span></td>
-                  <td><span class="badge-critical">CRITICAL</span></td>
-                  <td>Dark Blue Mitsubishi Pajero</td>
-                  <td>Special Task Force HQ</td>
-                  <td>2026-09-28T14:15Z</td>
-                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('NW-SUV-9014')">Dispatch APB</button></td>
-                </tr>
-                <tr>
-                  <td><code>WP-CAR-7821</code></td>
-                  <td><span class="badge-warning">EXPIRED_REVENUE</span></td>
-                  <td><span class="badge-info">MEDIUM</span></td>
-                  <td>Silver Honda Civic Sedan</td>
-                  <td>Dept of Motor Traffic (RMV)</td>
-                  <td>2026-09-01T00:00Z</td>
-                  <td><button class="btn btn-sm btn-outline" onclick="testPlateInterception('WP-CAR-7821')">Issue Citation</button></td>
+                  <td colspan="7" class="text-center py-8 text-dim">
+                    <div style="padding: 28px; text-align: center; color: #64748b;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">ZERO BLACKLISTED / WANTED VEHICLES REGISTERED</div>
+                      <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Register Wanted Plate</strong> above to register stolen or APB vehicles for instant OCR optical interception.</div>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1152,7 +1134,7 @@
           <div class="active-user-card">
             <div class="active-user-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <div>
-              <div class="active-user-title">Saptha Sanka &bull; <span class="badge-role super">SUPER_ADMIN</span></div>
+              <div class="active-user-title" id="sec-active-user-title">Authorized Administrator &bull; <span class="badge-role super">SUPER_ADMIN</span></div>
               <div class="active-user-sub">Active Session Token: <code id="sec-token-preview">argus_sec_tok_admin... (SHA-256 Validated)</code></div>
               <div class="perms-chips"><span class="perm-chip">system:manage</span><span class="perm-chip">cameras:manage</span><span class="perm-chip">incidents:export</span><span class="perm-chip">dossier:verify</span></div>
             </div>
@@ -1347,10 +1329,10 @@
           <div class="form-group flex-1">
             <label>Jurisdiction Division</label>
             <select id="new-cam-division" class="form-input">
-              <option value="DIV_COLOMBO_CENTRAL">Metropolitan Command HQ</option>
-              <option value="DIV_KANDY">North District Command</option>
-              <option value="DIV_GALLE">South District Command</option>
-              <option value="DIV_JAFFNA">Eastern District Command</option>
+              <option value="DIV_METRO_HQ">Metropolitan Command HQ (Capital Corridor)</option>
+              <option value="DIV_NORTH_DISTRICT">North District Command (Northern Expressway)</option>
+              <option value="DIV_SOUTH_DISTRICT">South District Command (Southern Coastal Expressway)</option>
+              <option value="DIV_EAST_DISTRICT">Eastern District Command (Eastern Intermodal Sector)</option>
             </select>
           </div>
         </div>

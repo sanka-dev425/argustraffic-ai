@@ -495,7 +495,7 @@ class CameraInventoryManager:
                 name="Central Corridor Signal Mast 01",
                 mounting_structure=CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value,
                 mounting_height_m=6.2,
-                division_id="DIV_COLOMBO_CENTRAL",
+                division_id="DIV_METRO_HQ",
                 station_name="Metropolitan Command HQ",
                 intersection_or_corridor="Central Avenue / Northbound Arterial Junction",
                 latitude=6.9147,
@@ -517,7 +517,7 @@ class CameraInventoryManager:
                 name="Primary Arterial Smart Luminaire 14",
                 mounting_structure=CameraMountingStructure.STREET_LIGHT_POLE.value,
                 mounting_height_m=9.5,
-                division_id="DIV_COLOMBO_CENTRAL",
+                division_id="DIV_METRO_HQ",
                 station_name="Metropolitan Command HQ",
                 intersection_or_corridor="Primary Arterial Southbound Corridor",
                 latitude=6.9080,
@@ -539,7 +539,7 @@ class CameraInventoryManager:
                 name="Metropolitan Facility Rooftop Optical Unit",
                 mounting_structure=CameraMountingStructure.BUILDING_FACADE.value,
                 mounting_height_m=24.0,
-                division_id="DIV_COLOMBO_CENTRAL",
+                division_id="DIV_METRO_HQ",
                 station_name="Metropolitan Command HQ",
                 intersection_or_corridor="Central Business District Rooftop Node",
                 latitude=6.9329,
@@ -638,7 +638,7 @@ class CameraInventoryManager:
             return False, "Camera ID cannot be empty.", None
 
         # Enforce Station Admin division boundary
-        target_division = camera_data.get("division_id", "DIV_COLOMBO_CENTRAL")
+        target_division = camera_data.get("division_id", "DIV_METRO_HQ")
         if operator_role == Role.STATION_ADMIN and operator_division:
             target_division = operator_division
 
@@ -701,6 +701,28 @@ class CameraInventoryManager:
             except sqlite3.IntegrityError:
                 return False, f"Camera with ID {cam_id} already exists.", None
 
+    @staticmethod
+    def _is_same_division(div1: Optional[str], div2: Optional[str]) -> bool:
+        if not div1 or not div2:
+            return True
+        d1 = div1.strip().upper()
+        d2 = div2.strip().upper()
+        if d1 == d2:
+            return True
+        metro_aliases = {"DIV_METRO_HQ", "DIV_COLOMBO_CENTRAL"}
+        if d1 in metro_aliases and d2 in metro_aliases:
+            return True
+        north_aliases = {"DIV_NORTH_DISTRICT", "DIV_KANDY"}
+        if d1 in north_aliases and d2 in north_aliases:
+            return True
+        south_aliases = {"DIV_SOUTH_DISTRICT", "DIV_GALLE"}
+        if d1 in south_aliases and d2 in south_aliases:
+            return True
+        east_aliases = {"DIV_EAST_DISTRICT", "DIV_JAFFNA"}
+        if d1 in east_aliases and d2 in east_aliases:
+            return True
+        return False
+
     def update_camera(
         self,
         camera_id: str,
@@ -724,7 +746,7 @@ class CameraInventoryManager:
 
                 # Multi-tenant boundary check: Station Admin can only modify cameras in their division
                 if operator_role == Role.STATION_ADMIN and operator_division:
-                    if cam_dict.get("division_id") != operator_division:
+                    if not self._is_same_division(cam_dict.get("division_id"), operator_division):
                         return False, f"Access denied: Camera {camera_id} is outside station division boundary.", None
 
                 # Editable fields
@@ -790,7 +812,7 @@ class CameraInventoryManager:
                     return False, f"Camera {camera_id} not found."
 
                 if operator_role == Role.STATION_ADMIN and operator_division:
-                    if row["division_id"] != operator_division:
+                    if not self._is_same_division(row["division_id"], operator_division):
                         return False, f"Access denied: Camera {camera_id} is outside station division boundary."
 
                 conn.execute("DELETE FROM cameras WHERE camera_id = ?", (camera_id,))
@@ -812,7 +834,7 @@ class CameraInventoryManager:
                 return None
             cam_dict = dict(row)
             if operator_role != Role.SUPER_ADMIN and operator_division:
-                if cam_dict.get("division_id") != operator_division:
+                if not self._is_same_division(cam_dict.get("division_id"), operator_division):
                     return None
             return cam_dict
 

@@ -61,7 +61,7 @@ class NationalStationMeshAggregator:
     Supports dynamic runtime creation, modification, and deletion of custom sectors.
     """
 
-    def __init__(self, local_division_id: str = "DIV_COLOMBO_CENTRAL", db_path: Optional[Path] = None):
+    def __init__(self, local_division_id: str = "DIV_METRO_HQ", db_path: Optional[Path] = None):
         self.local_division_id = local_division_id
         self.db_path = db_path or (get_data_dir() / "station_mesh.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -108,10 +108,10 @@ class NationalStationMeshAggregator:
         if cursor.fetchone()[0] == 0:
             now = time.time()
             defaults = [
-                ("DIV_COLOMBO_CENTRAL", "Metropolitan Command HQ", "Capital Metropolitan Sector", "10.0.1.10", 0),
-                ("DIV_KANDY", "North District Command", "Northern Expressway Sector", "10.0.2.10", 0),
-                ("DIV_GALLE", "South District Command", "Southern Coastal Sector", "10.0.3.10", 0),
-                ("DIV_JAFFNA", "Eastern District Command", "Eastern Intermodal Sector", "10.0.4.10", 0),
+                ("DIV_METRO_HQ", "Metropolitan Command HQ", "Capital Corridor Sector", "10.0.1.10", 0),
+                ("DIV_NORTH_DISTRICT", "North District Command", "Northern Expressway Corridor", "10.0.2.10", 0),
+                ("DIV_SOUTH_DISTRICT", "South District Command", "Southern Coastal Expressway", "10.0.3.10", 0),
+                ("DIV_EAST_DISTRICT", "Eastern District Command", "Eastern Intermodal Sector", "10.0.4.10", 0),
             ]
             for row in defaults:
                 conn.execute(
@@ -138,16 +138,16 @@ class NationalStationMeshAggregator:
                         ip_address=row["ip_address"],
                         is_custom=bool(row["is_custom"]),
                     )
-                    if node.division_id == "DIV_COLOMBO_CENTRAL":
+                    if node.division_id == "DIV_METRO_HQ" or node.division_id == "DIV_COLOMBO_CENTRAL":
                         node.camera_count = 14
                         node.total_traffic_flow_vph = 2450
-                    elif node.division_id == "DIV_KANDY":
+                    elif node.division_id == "DIV_NORTH_DISTRICT" or node.division_id == "DIV_KANDY":
                         node.camera_count = 8
                         node.total_traffic_flow_vph = 1120
-                    elif node.division_id == "DIV_GALLE":
+                    elif node.division_id == "DIV_SOUTH_DISTRICT" or node.division_id == "DIV_GALLE":
                         node.camera_count = 6
                         node.total_traffic_flow_vph = 890
-                    elif node.division_id == "DIV_JAFFNA":
+                    elif node.division_id == "DIV_EAST_DISTRICT" or node.division_id == "DIV_JAFFNA":
                         node.camera_count = 5
                         node.total_traffic_flow_vph = 640
 
@@ -264,7 +264,7 @@ class NationalStationMeshAggregator:
     def delete_division(self, division_id: str) -> Tuple[bool, str]:
         """Deletes a custom division."""
         clean_id = division_id.strip().upper()
-        if clean_id == "DIV_COLOMBO_CENTRAL":
+        if clean_id in ("DIV_METRO_HQ", "DIV_COLOMBO_CENTRAL"):
             return False, "Cannot delete primary root division."
 
         conn = self._get_connection()

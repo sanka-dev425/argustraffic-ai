@@ -197,7 +197,7 @@ class WantedVehicleHotlistEngine:
             "description": hit.get("description", ""),
             "owner_name": hit.get("owner_name", ""),
             "flagged_by": hit.get("flagged_by", "National Police Central"),
-            "gps_location": gps_coords or (6.9271, 79.8612),  # Default Colombo Central
+            "gps_location": gps_coords or (6.9271, 79.8612),  # Default Metropolitan Command Sector
             "speed_kmh": round(speed_kmh, 1) if speed_kmh else None,
             "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
             "interception_priority": "PRIORITY_1_HIGH_IMPACT",

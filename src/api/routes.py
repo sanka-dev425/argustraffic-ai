@@ -304,7 +304,7 @@ class CreateUserRequest(BaseModel):
     full_name: str
     email: str
     role: str = "TRAFFIC_OPERATOR"
-    division_id: Optional[str] = "DIV_COLOMBO_CENTRAL"
+    division_id: Optional[str] = "DIV_METRO_HQ"
 
 
 class CameraRegistrationRequest(BaseModel):
@@ -312,8 +312,8 @@ class CameraRegistrationRequest(BaseModel):
     name: str
     mounting_structure: str = "TRAFFIC_SIGNAL_POLE"
     mounting_height_m: float = 6.0
-    division_id: Optional[str] = "DIV_COLOMBO_CENTRAL"
-    station_name: Optional[str] = "Colombo Central Traffic HQ"
+    division_id: Optional[str] = "DIV_METRO_HQ"
+    station_name: Optional[str] = "Metropolitan Command HQ"
     intersection_or_corridor: Optional[str] = "Urban Corridor"
     latitude: float = 6.9271
     longitude: float = 79.8612
@@ -370,7 +370,7 @@ def _resolve_caller_identity(token: Optional[str] = None, auth_header: Optional[
                 role = Role(session["role"])
             except Exception:
                 role = Role.READONLY_VIEWER
-            division = session.get("division_id") or "DIV_COLOMBO_CENTRAL"
+            division = session.get("division_id") or "DIV_METRO_HQ"
             username = session.get("username", "anonymous")
             return role, division, username
 
@@ -1175,7 +1175,7 @@ async def get_corridor_network():
                 "status": "ONLINE",
                 "type": "FIXED_ANPR_RADAR",
                 "speed_limit_kmh": 60.0,
-                "division": "DIV_COLOMBO_CENTRAL",
+                "division": "DIV_METRO_HQ",
             },
             {
                 "camera_id": "CAM-118",
@@ -1185,7 +1185,7 @@ async def get_corridor_network():
                 "status": "ONLINE",
                 "type": "PTZ_DOME_MONITOR",
                 "speed_limit_kmh": 50.0,
-                "division": "DIV_COLOMBO_CENTRAL",
+                "division": "DIV_METRO_HQ",
             },
             {
                 "camera_id": "CAM-089",
@@ -1195,7 +1195,7 @@ async def get_corridor_network():
                 "status": "ONLINE",
                 "type": "SECTION_CONTROL_ENTRY",
                 "speed_limit_kmh": 100.0,
-                "division": "DIV_GALLE",
+                "division": "DIV_SOUTH_DISTRICT",
             },
             {
                 "camera_id": "CAM-090",
@@ -1205,7 +1205,7 @@ async def get_corridor_network():
                 "status": "ONLINE",
                 "type": "SECTION_CONTROL_EXIT",
                 "speed_limit_kmh": 100.0,
-                "division": "DIV_GALLE",
+                "division": "DIV_SOUTH_DISTRICT",
             },
         ],
         "corridors": [

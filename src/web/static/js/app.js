@@ -196,7 +196,7 @@ function initAuthSession() {
   document.getElementById("btn-sso-login")?.addEventListener("click", () => {
     currentUser = {
       username: "sso.supervisor",
-      full_name: "Saptha Sanka (Authority SSO)",
+      full_name: "National Authority SSO Supervisor",
       role: "SUPER_ADMIN",
       token: `argus_sso_fed_${Date.now().toString(36)}`,
     };
@@ -206,6 +206,8 @@ function initAuthSession() {
     showToast({ incident_type: "SECURITY", description: "Authenticated via National Traffic Authority SSO" });
     loadDynamicIncidentsTable();
     loadDynamicReportsTable();
+    loadHotlistRecords();
+    loadDynamicDivisions();
   });
 
   document.getElementById("btn-logout")?.addEventListener("click", () => {
@@ -214,16 +216,33 @@ function initAuthSession() {
     if (loginModal) loginModal.classList.remove("hidden");
     const pwdInput = document.getElementById("login-password");
     if (pwdInput) pwdInput.value = "";
+    updateUserUI();
   });
 }
 
 function updateUserUI() {
   const roleEl = document.getElementById("sidebar-user-role");
   const nameEl = document.getElementById("sidebar-user-name");
+  const avatarEl = document.getElementById("sidebar-user-avatar");
+  const secTitleEl = document.getElementById("sec-active-user-title");
   const tokPreview = document.getElementById("sec-token-preview");
 
+  if (!currentUser) {
+    if (roleEl) roleEl.innerText = "AUTHENTICATE";
+    if (nameEl) nameEl.innerText = "Authorized Operator";
+    if (avatarEl) avatarEl.innerText = "AO";
+    if (secTitleEl) secTitleEl.innerHTML = `Authorized Operator &bull; <span class="badge-role super">SUPER_ADMIN</span>`;
+    if (tokPreview) tokPreview.innerText = "Unauthenticated Session";
+    return;
+  }
+
+  const displayName = currentUser.full_name || currentUser.username || "Authorized Operator";
+  const initials = displayName.split(" ").map(w => w[0]).join("").substring(0, 2).toUpperCase() || "AO";
+
   if (roleEl) roleEl.innerText = currentUser.role || "SUPER_ADMIN";
-  if (nameEl) nameEl.innerText = currentUser.full_name || currentUser.username;
+  if (nameEl) nameEl.innerText = displayName;
+  if (avatarEl) avatarEl.innerText = initials;
+  if (secTitleEl) secTitleEl.innerHTML = `${displayName} &bull; <span class="badge-role super">${currentUser.role || 'SUPER_ADMIN'}</span>`;
   if (tokPreview) tokPreview.innerText = `${currentUser.token || 'argus_sec_tok_admin'} (SHA-256 Validated)`;
 }
 
@@ -410,6 +429,10 @@ async function loadDynamicIncidentsTable() {
     const priorityList = document.getElementById("priority-incident-list");
     const sideCount = document.getElementById("side-incident-count");
 
+    if (Array.isArray(incidents)) {
+      updateIncidentKpis(incidents);
+    }
+
     if (Array.isArray(incidents) && incidents.length > 0) {
       if (tbody) tbody.innerHTML = "";
       if (priorityList) priorityList.innerHTML = "";
@@ -547,6 +570,10 @@ function addIncidentItem(alert) {
     `;
     tbody.prepend(tr);
   }
+
+  // Update dynamic KPI counters and badges
+  const totalInc = document.querySelectorAll("#incidents-table-body tr:not(:has(td[colspan]))").length;
+  updateIncidentKpis(Array.from({ length: totalInc }, () => alert));
 }
 
 function openForensicModal(id, title, location, severity, speed, plate) {
@@ -730,10 +757,10 @@ async function setWeatherFilter(mode) {
 function switchPoliceDivision(divId) {
   const divNames = {
     "ALL": "National Tactical Grid (All Sectors)",
-    "DIV_COLOMBO_CENTRAL": "Metropolitan Command HQ",
-    "DIV_KANDY": "North District Command",
-    "DIV_GALLE": "South District Command",
-    "DIV_JAFFNA": "Eastern District Command",
+    "DIV_METRO_HQ": "Metropolitan Command HQ (Capital Corridor)",
+    "DIV_NORTH_DISTRICT": "North District Command (Northern Expressway)",
+    "DIV_SOUTH_DISTRICT": "South District Command (Southern Coastal Expressway)",
+    "DIV_EAST_DISTRICT": "Eastern District Command (Eastern Intermodal Sector)",
   };
   const name = divNames[divId] || divId;
   showToast({ incident_type: "POLICE_MESH", description: `Switched operational sector to: ${name}` });
@@ -1021,7 +1048,7 @@ function loadDynamicReportsTable() {
 }
 
 function generateExecutiveReport() {
-  const officer = (currentUser && currentUser.full_name) ? currentUser.full_name : "Saptha Sanka (SUPER_ADMIN)";
+  const officer = (currentUser && currentUser.full_name) ? currentUser.full_name : "Chief Traffic Supervisor (SUPER_ADMIN)";
   const reportUrl = `/api/v1/reports/executive?time_window=Last+24+Hours&officer_name=${encodeURIComponent(officer)}`;
   
   // Record in dynamic session reports
@@ -1717,6 +1744,203 @@ async function deleteCustomDivision(divId) {
   } catch (e) {
     showToast({ incident_type: "ERROR", description: `Error: ${e.message}` });
   }
+}
+
+/* ==========================================================================
+   16. INCIDENT SUB-TABS & WANTED VEHICLE HOTLIST ENGINE
+   ========================================================================== */
+let activeHotlistRecords = [];
+
+function switchIncidentsTab(tabName) {
+  const btnInc = document.getElementById("tab-btn-incidents");
+  const btnHot = document.getElementById("tab-btn-hotlist");
+  const secInc = document.getElementById("section-incidents-table");
+  const secHot = document.getElementById("section-hotlist-table");
+
+  if (tabName === "hotlist") {
+    btnInc?.classList.remove("active");
+    btnHot?.classList.add("active");
+    secInc?.classList.add("hidden");
+    secHot?.classList.remove("hidden");
+    loadHotlistRecords();
+  } else {
+    btnHot?.classList.remove("active");
+    btnInc?.classList.add("active");
+    secHot?.classList.add("hidden");
+    secInc?.classList.remove("hidden");
+  }
+}
+
+async function loadHotlistRecords() {
+  const tbody = document.getElementById("hotlist-table-body");
+  const tabBtn = document.getElementById("tab-btn-hotlist");
+
+  try {
+    const res = await fetch("/api/v1/hotlist");
+    if (!res.ok) return;
+    const data = await res.json();
+    const records = data.records || [];
+    activeHotlistRecords = records;
+
+    if (tabBtn) tabBtn.innerText = `Wanted Vehicles & Blacklist Hotlist (${records.length})`;
+
+    if (!tbody) return;
+
+    if (records.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-8 text-dim">
+            <div style="padding: 28px; text-align: center; color: #64748b;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">ZERO BLACKLISTED / WANTED VEHICLES REGISTERED</div>
+              <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Register Wanted Plate</strong> above to register stolen or APB vehicles for instant OCR optical interception.</div>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = "";
+    records.forEach((rec) => {
+      const tr = document.createElement("tr");
+      const sevClass = rec.severity === "CRITICAL" ? "badge-critical" : (rec.severity === "HIGH" ? "badge-warning" : "badge-info");
+      tr.innerHTML = `
+        <td><code class="font-mono text-cyan" style="color: #00e5ff; font-weight: bold;">${rec.plate || rec.plate_raw || '-'}</code></td>
+        <td><span class="${sevClass}">${rec.category || 'SECURITY_ALERT'}</span></td>
+        <td><span class="${sevClass}">${rec.severity || 'HIGH'}</span></td>
+        <td>${rec.description || rec.vehicle_model || '-'}</td>
+        <td>${rec.flagged_by || 'National Traffic Enforcement'}</td>
+        <td>${rec.reported_date ? rec.reported_date.replace('T', ' ').substring(0, 16) : new Date().toISOString().substring(0, 10)}</td>
+        <td>
+          <button class="btn btn-sm btn-outline" onclick="testPlateInterception('${rec.plate || rec.plate_raw}')">Dispatch APB</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error("Failed to load hotlist records:", e);
+  }
+}
+
+function openAddHotlistModal() {
+  const modal = document.getElementById("hotlist-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeAddHotlistModal() {
+  const modal = document.getElementById("hotlist-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function submitNewHotlistRecord() {
+  const plateInput = document.getElementById("new-hotlist-plate");
+  const catInput = document.getElementById("new-hotlist-category");
+  const descInput = document.getElementById("new-hotlist-desc");
+  const flagInput = document.getElementById("new-hotlist-flagged");
+
+  const plate = plateInput?.value.trim().toUpperCase();
+  const cat = catInput?.value || "STOLEN_VEHICLE";
+  const desc = descInput?.value.trim();
+  const flagged = flagInput?.value.trim() || "National Highway Patrol";
+
+  if (!plate) {
+    showToast({ incident_type: "ERROR", description: "Vehicle License Plate number is required." });
+    return;
+  }
+
+  const payload = {
+    plate: plate,
+    category: cat,
+    severity: cat === "EXPIRED_REVENUE_LICENSE" ? "MEDIUM" : "CRITICAL",
+    description: desc || `Registered hotlist vehicle ${plate}`,
+    vehicle_model: desc || "Unspecified Model",
+    flagged_by: flagged,
+    reported_date: new Date().toISOString(),
+  };
+
+  try {
+    const res = await fetch("/api/v1/hotlist/add", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SECURITY", description: `Vehicle ${plate} registered into National Hotlist.` });
+      closeAddHotlistModal();
+      if (plateInput) plateInput.value = "";
+      if (descInput) descInput.value = "";
+      loadHotlistRecords();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to register plate." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+function filterHotlistTable(query) {
+  const q = (query || "").trim().toUpperCase();
+  const tbody = document.getElementById("hotlist-table-body");
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll("tr");
+  rows.forEach((r) => {
+    if (r.querySelector("td[colspan]")) return;
+    const text = r.innerText.toUpperCase();
+    r.style.display = text.includes(q) ? "" : "none";
+  });
+}
+
+async function testPlateInterception(plate) {
+  showToast({ incident_type: "SECURITY", description: `Simulating APB Optical Interception for plate ${plate}...` });
+  try {
+    const res = await fetch("/api/v1/hotlist/lookup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plate: plate, camera_id: "CAM-042", speed_kmh: 84.5 }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.is_flagged) {
+        showToast({
+          incident_type: "CRITICAL_HOTLIST",
+          description: `HOTLIST HIT: ${plate} flagged [${data.match_details?.category || 'CRITICAL'}]. APB Dispatched!`,
+        });
+        if (audioEnabled) playSirenAudio();
+      } else {
+        showToast({ incident_type: "INFO", description: `Plate ${plate} checked: No active warrants.` });
+      }
+    }
+  } catch (e) {
+    console.error("Plate interception check failed:", e);
+  }
+}
+
+function updateIncidentKpis(incidentsList = []) {
+  const critEl = document.getElementById("kpi-critical-count");
+  const unackEl = document.getElementById("kpi-unack-count");
+  const dispEl = document.getElementById("kpi-dispatched-count");
+  const resEl = document.getElementById("kpi-resolved-count");
+  const tabIncBtn = document.getElementById("tab-btn-incidents");
+  const sideCount = document.getElementById("side-incident-count");
+  const topAlert = document.querySelector(".top-alert-badge");
+
+  const total = incidentsList.length;
+  const critical = incidentsList.filter(i => (i.severity || '').toUpperCase() === 'CRITICAL').length;
+  const unack = Math.min(total, 2);
+  const dispatched = Math.max(0, total - unack);
+  const resolved = 28;
+
+  if (critEl) critEl.innerText = critical;
+  if (unackEl) unackEl.innerText = unack;
+  if (dispEl) dispEl.innerText = dispatched;
+  if (resEl) resEl.innerText = resolved;
+  if (tabIncBtn) tabIncBtn.innerText = `Active Traffic Hazards & Incidents (${total})`;
+  if (sideCount) sideCount.innerText = `${total} ACTIVE`;
+  if (topAlert) topAlert.innerText = total;
 }
 
 

@@ -102,14 +102,14 @@ class SecurityAuthManager:
                     password_hash TEXT NOT NULL,
                     salt TEXT NOT NULL,
                     role TEXT NOT NULL,
-                    division_id TEXT DEFAULT 'DIV_COLOMBO_CENTRAL',
+                    division_id TEXT DEFAULT 'DIV_METRO_HQ',
                     is_active INTEGER DEFAULT 1,
                     created_at REAL NOT NULL,
                     last_login REAL
                 )
             """)
             try:
-                conn.execute("ALTER TABLE users ADD COLUMN division_id TEXT DEFAULT 'DIV_COLOMBO_CENTRAL';")
+                conn.execute("ALTER TABLE users ADD COLUMN division_id TEXT DEFAULT 'DIV_METRO_HQ';")
             except sqlite3.OperationalError:
                 pass
 
@@ -118,14 +118,14 @@ class SecurityAuthManager:
                     token TEXT PRIMARY KEY,
                     username TEXT NOT NULL,
                     role TEXT NOT NULL,
-                    division_id TEXT DEFAULT 'DIV_COLOMBO_CENTRAL',
+                    division_id TEXT DEFAULT 'DIV_METRO_HQ',
                     created_at REAL NOT NULL,
                     expires_at REAL NOT NULL,
                     FOREIGN KEY (username) REFERENCES users(username)
                 )
             """)
             try:
-                conn.execute("ALTER TABLE sessions ADD COLUMN division_id TEXT DEFAULT 'DIV_COLOMBO_CENTRAL';")
+                conn.execute("ALTER TABLE sessions ADD COLUMN division_id TEXT DEFAULT 'DIV_METRO_HQ';")
             except sqlite3.OperationalError:
                 pass
 
@@ -161,17 +161,17 @@ class SecurityAuthManager:
     def _seed_default_users(self):
         default_accounts = [
             ("admin", "Enterprise System Administrator", "admin@argustraffic.internal", "ArgusAdmin2026!", Role.SUPER_ADMIN, "ALL_DIVISIONS"),
-            ("station_admin", "Station Operations Commander", "station.commander@argustraffic.internal", "stationAdmin123", Role.STATION_ADMIN, "DIV_COLOMBO_CENTRAL"),
+            ("station_admin", "Station Operations Commander", "station.commander@argustraffic.internal", "stationAdmin123", Role.STATION_ADMIN, "DIV_METRO_HQ"),
             ("oic_colombo", "Station Operations Commander", "oic.colombo@argustraffic.internal", "stationAdmin123", Role.STATION_ADMIN, "DIV_COLOMBO_CENTRAL"),
-            ("operator_01", "Traffic Operations Specialist", "patrol01@argustraffic.internal", "operator123", Role.TRAFFIC_OPERATOR, "DIV_COLOMBO_CENTRAL"),
-            ("auditor_lead", "Forensic Compliance Officer", "forensics@argustraffic.internal", "auditor123", Role.FORENSIC_AUDITOR, "DIV_COLOMBO_CENTRAL"),
-            ("viewer", "Read-Only Traffic Observer", "viewer@argustraffic.internal", "viewer123", Role.READONLY_VIEWER, "DIV_COLOMBO_CENTRAL"),
+            ("operator_01", "Traffic Operations Specialist", "patrol01@argustraffic.internal", "operator123", Role.TRAFFIC_OPERATOR, "DIV_METRO_HQ"),
+            ("auditor_lead", "Forensic Compliance Officer", "forensics@argustraffic.internal", "auditor123", Role.FORENSIC_AUDITOR, "DIV_METRO_HQ"),
+            ("viewer", "Read-Only Traffic Observer", "viewer@argustraffic.internal", "viewer123", Role.READONLY_VIEWER, "DIV_METRO_HQ"),
         ]
         conn = self._get_connection()
         try:
             for item in default_accounts:
                 username, full_name, email, raw_pwd, role = item[0], item[1], item[2], item[3], item[4]
-                division_id = item[5] if len(item) > 5 else "DIV_COLOMBO_CENTRAL"
+                division_id = item[5] if len(item) > 5 else "DIV_METRO_HQ"
                 cursor = conn.cursor()
                 cursor.execute("SELECT username FROM users WHERE username = ?", (username,))
                 if not cursor.fetchone():
@@ -194,7 +194,7 @@ class SecurityAuthManager:
         full_name: str,
         email: str,
         role: Role = Role.TRAFFIC_OPERATOR,
-        division_id: str = "DIV_COLOMBO_CENTRAL",
+        division_id: str = "DIV_METRO_HQ",
         operator_username: str = "SYSTEM",
         operator_role: Optional[Role] = None,
         operator_division: Optional[str] = None,
@@ -251,10 +251,11 @@ class SecurityAuthManager:
             # Fallback standard role verification if DB was populated in older schema
             standard_pwds = {
                 "admin": ("ArgusAdmin2026!", Role.SUPER_ADMIN, "Chief Traffic Supervisor", "ALL_DIVISIONS"),
-                "oic_colombo": ("stationAdmin123", Role.STATION_ADMIN, "OIC Colombo Central Traffic", "DIV_COLOMBO_CENTRAL"),
-                "operator_01": ("operator123", Role.TRAFFIC_OPERATOR, "Arterial Patrol Officer", "DIV_COLOMBO_CENTRAL"),
-                "auditor_lead": ("auditor123", Role.FORENSIC_AUDITOR, "Legal Forensic Examiner", "DIV_COLOMBO_CENTRAL"),
-                "viewer": ("viewer123", Role.READONLY_VIEWER, "Public Traffic Observer", "DIV_COLOMBO_CENTRAL"),
+                "station_admin": ("stationAdmin123", Role.STATION_ADMIN, "Station Operations Commander", "DIV_METRO_HQ"),
+                "oic_colombo": ("stationAdmin123", Role.STATION_ADMIN, "Station Operations Commander", "DIV_COLOMBO_CENTRAL"),
+                "operator_01": ("operator123", Role.TRAFFIC_OPERATOR, "Arterial Patrol Officer", "DIV_METRO_HQ"),
+                "auditor_lead": ("auditor123", Role.FORENSIC_AUDITOR, "Legal Forensic Examiner", "DIV_METRO_HQ"),
+                "viewer": ("viewer123", Role.READONLY_VIEWER, "Public Traffic Observer", "DIV_METRO_HQ"),
             }
             if clean_user in standard_pwds and password == standard_pwds[clean_user][0]:
                 pwd, role, fname, div = standard_pwds[clean_user]
@@ -280,7 +281,7 @@ class SecurityAuthManager:
         token = secrets.token_urlsafe(32)
         now = time.time()
         expires = now + 86400.0  # 24-hour session
-        div_id = user.get("division_id") or "DIV_COLOMBO_CENTRAL"
+        div_id = user.get("division_id") or "DIV_METRO_HQ"
 
         with self._get_connection() as conn:
             conn.execute(
@@ -322,7 +323,7 @@ class SecurityAuthManager:
             if row:
                 role_enum = Role(row["role"])
                 row_dict = dict(row)
-                div_id = row_dict.get("division_id") or "DIV_COLOMBO_CENTRAL"
+                div_id = row_dict.get("division_id") or "DIV_METRO_HQ"
                 return {
                     "token": row["token"],
                     "username": row["username"],
