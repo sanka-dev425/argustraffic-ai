@@ -881,6 +881,99 @@ async def acknowledge_incident(payload: Dict[str, Any]):
 # ==============================================================================
 # 3. National Police HQ & Multi-Station Mesh Aggregator
 # ==============================================================================
+class DivisionCreateRequest(BaseModel):
+    division_id: str
+    division_name: str
+    jurisdiction: str
+    ip_address: Optional[str] = "127.0.0.1"
+
+
+class DivisionUpdateRequest(BaseModel):
+    division_name: Optional[str] = None
+    jurisdiction: Optional[str] = None
+    ip_address: Optional[str] = None
+
+
+@router.get("/divisions", tags=["Enterprise Sectors & Divisions"])
+async def list_enterprise_divisions():
+    """Lists all configured municipal divisions / operational sectors."""
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    return {"divisions": mesh.list_divisions()}
+
+
+@router.post("/divisions", tags=["Enterprise Sectors & Divisions"])
+async def create_enterprise_division(
+    req: DivisionCreateRequest,
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Registers a new custom municipal division or command sector."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Admin permissions required to create divisions.")
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    ok, msg = mesh.add_division(
+        division_id=req.division_id,
+        division_name=req.division_name,
+        jurisdiction=req.jurisdiction,
+        ip_address=req.ip_address or "127.0.0.1",
+        is_custom=True,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg, "division": mesh.get_division(req.division_id)}
+
+
+@router.put("/divisions/{division_id}", tags=["Enterprise Sectors & Divisions"])
+async def update_enterprise_division(
+    division_id: str,
+    req: DivisionUpdateRequest,
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Updates an existing operational sector or division."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Admin permissions required to update divisions.")
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    ok, msg = mesh.update_division(division_id, req.model_dump(exclude_unset=True))
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg, "division": mesh.get_division(division_id)}
+
+
+@router.delete("/divisions/{division_id}", tags=["Enterprise Sectors & Divisions"])
+async def delete_enterprise_division(
+    division_id: str,
+    token: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
+):
+    """Deletes a custom division/sector."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role != Role.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="SuperAdmin privileges required to delete divisions.")
+    state = get_components()
+    mesh = state.get("station_mesh")
+    if not mesh:
+        raise HTTPException(status_code=503, detail="Station Mesh offline")
+    ok, msg = mesh.delete_division(division_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg}
+
+
 @router.get("/mesh/national-overview", tags=["National Police HQ Mesh"])
 async def get_mesh_overview():
     """Aggregates multi-division traffic telemetry nationwide for Police HQ."""

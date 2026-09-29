@@ -40,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   runBootSequence();
   initAuthSession();
   initWebSocket();
+  loadDynamicDivisions();
   setupControls();
   setupDrawingCanvas();
   setupIncidentModal();
@@ -1343,4 +1344,162 @@ function savePlatformSettings() {
 
   showToast({ incident_type: "SETTINGS", description: "Platform configuration successfully persisted to local encrypted store." });
 }
+
+/* ==========================================================================
+   15. DYNAMIC SECTOR & DIVISION MANAGEMENT
+   ========================================================================== */
+let activeDivisionsCache = [];
+
+async function loadDynamicDivisions() {
+  try {
+    const res = await fetch("/api/v1/divisions");
+    if (!res.ok) return;
+    const data = await res.json();
+    const divs = data.divisions || [];
+    activeDivisionsCache = divs;
+
+    // 1. Populate topbar header dropdown
+    const headerSel = document.getElementById("division-mesh-selector");
+    if (headerSel) {
+      const currentVal = headerSel.value;
+      headerSel.innerHTML = '<option value="ALL">National Tactical Grid (All Sectors)</option>';
+      divs.forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d.division_id;
+        opt.innerText = d.division_name;
+        headerSel.appendChild(opt);
+      });
+      if (currentVal && Array.from(headerSel.options).some((o) => o.value === currentVal)) {
+        headerSel.value = currentVal;
+      }
+    }
+
+    // 2. Populate camera modal division dropdown
+    const camDivSel = document.getElementById("new-cam-division");
+    if (camDivSel) {
+      camDivSel.innerHTML = "";
+      divs.forEach((d) => {
+        const opt = document.createElement("option");
+        opt.value = d.division_id;
+        opt.innerText = `${d.division_name} (${d.jurisdiction})`;
+        camDivSel.appendChild(opt);
+      });
+    }
+
+    // 3. Render divisions table if modal is open
+    renderDivisionsTable(divs);
+  } catch (e) {
+    console.error("Failed to load divisions:", e);
+  }
+}
+
+function renderDivisionsTable(divs) {
+  const tbody = document.getElementById("divisions-table-body");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  divs.forEach((d) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><code class="font-mono text-cyan" style="color: #00e5ff;">${d.division_id}</code></td>
+      <td><strong>${d.division_name}</strong></td>
+      <td><span class="text-xs text-muted">${d.jurisdiction}</span></td>
+      <td><code class="text-xs font-mono">${d.ip_address}</code></td>
+      <td><span class="badge ${d.is_custom ? "badge-info" : "badge-outline"}">${d.is_custom ? "CUSTOM" : "SYSTEM"}</span></td>
+      <td>
+        ${
+          d.is_custom
+            ? `<button class="btn btn-xs btn-outline-danger" onclick="deleteCustomDivision('${d.division_id}')" style="color: #ef4444; border-color: #ef4444;">Delete</button>`
+            : `<span class="text-xs text-muted">Core</span>`
+        }
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function openDivisionManagerModal() {
+  const modal = document.getElementById("division-manager-modal");
+  if (modal) {
+    modal.classList.remove("hidden");
+    loadDynamicDivisions();
+  }
+}
+
+function closeDivisionManagerModal() {
+  const modal = document.getElementById("division-manager-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+async function submitNewDivision() {
+  const idInput = document.getElementById("new-div-id");
+  const nameInput = document.getElementById("new-div-name");
+  const jurInput = document.getElementById("new-div-jurisdiction");
+  const ipInput = document.getElementById("new-div-ip");
+
+  const divId = idInput?.value.trim().toUpperCase();
+  const name = nameInput?.value.trim();
+  const jur = jurInput?.value.trim();
+  const ip = ipInput?.value.trim() || "127.0.0.1";
+
+  if (!divId || !name || !jur) {
+    showToast({ incident_type: "ERROR", description: "Division Code, Name, and Jurisdiction are required." });
+    return;
+  }
+
+  try {
+    const token = localStorage.getItem("argus_token") || "";
+    const res = await fetch("/api/v1/divisions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        division_id: divId,
+        division_name: name,
+        jurisdiction: jur,
+        ip_address: ip,
+      }),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "POLICE_MESH", description: `Sector '${name}' registered successfully.` });
+      if (idInput) idInput.value = "";
+      if (nameInput) nameInput.value = "";
+      if (jurInput) jurInput.value = "";
+      loadDynamicDivisions();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to register sector." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+async function deleteCustomDivision(divId) {
+  if (!confirm(`Are you sure you want to remove sector ${divId}?`)) return;
+
+  try {
+    const token = localStorage.getItem("argus_token") || "";
+    const res = await fetch(`/api/v1/divisions/${encodeURIComponent(divId)}`, {
+      method: "DELETE",
+      headers: {
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "POLICE_MESH", description: `Sector ${divId} removed.` });
+      loadDynamicDivisions();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to delete sector." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Error: ${e.message}` });
+  }
+}
+
 

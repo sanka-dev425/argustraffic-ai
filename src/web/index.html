@@ -293,6 +293,7 @@
               <option value="DIV_GALLE">South District Command</option>
               <option value="DIV_JAFFNA">Eastern District Command</option>
             </select>
+            <button id="btn-open-division-mgr" type="button" class="btn-link text-xs ml-2" style="color: #00e5ff; margin-left: 8px; font-size: 11px; cursor: pointer; background: none; border: none;" onclick="openDivisionManagerModal()" title="Configure Custom Sectors & Jurisdictions">⚙ Sectors</button>
           </div>
         </div>
 
@@ -1490,6 +1491,67 @@
       </div>
       <div class="modal-footer">
         <button id="btn-close-struct-mgr" class="btn btn-outline">Close Configurator</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Operational Sector & Division Manager Modal -->
+  <div id="division-manager-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">OPERATIONAL SECTOR & JURISDICTION CONFIGURATOR</div>
+        <button id="btn-close-div-mgr-x" class="modal-close-btn" onclick="closeDivisionManagerModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-xs text-muted mb-3">
+          Configure regional command sectors, municipal divisions, and edge gateway routing for multi-tenant isolation.
+        </p>
+
+        <div class="table-responsive max-h-60 overflow-y-auto mb-4 border border-glass rounded">
+          <table class="data-table" id="divisions-table">
+            <thead>
+              <tr>
+                <th>Division ID</th>
+                <th>Sector Name</th>
+                <th>Jurisdiction Corridor</th>
+                <th>Gateway IP</th>
+                <th>Type</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="divisions-table-body"></tbody>
+          </table>
+        </div>
+
+        <div class="panel-section border-t border-glass pt-3">
+          <div class="text-xs font-bold text-accent mb-2">REGISTER NEW JURISDICTION / COMMAND SECTOR</div>
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label>Division / Sector Code</label>
+              <input type="text" id="new-div-id" class="form-input font-mono" placeholder="e.g. DIV_DUBAI_CENTRAL" />
+            </div>
+            <div class="form-group flex-2">
+              <label>Display / Sector Name</label>
+              <input type="text" id="new-div-name" class="form-input" placeholder="e.g. Dubai Central Traffic Command" />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group flex-2">
+              <label>Jurisdiction / Regional Corridor</label>
+              <input type="text" id="new-div-jurisdiction" class="form-input" placeholder="e.g. Downtown & Financial District Corridor" />
+            </div>
+            <div class="form-group flex-1">
+              <label>Edge Gateway IP</label>
+              <input type="text" id="new-div-ip" class="form-input font-mono" placeholder="10.5.1.10" value="127.0.0.1" />
+            </div>
+          </div>
+          <div class="flex justify-end mt-2">
+            <button id="btn-save-custom-division" class="btn btn-primary btn-sm" onclick="submitNewDivision()">+ Register Command Sector</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeDivisionManagerModal()">Close Configurator</button>
       </div>
     </div>
   </div>
