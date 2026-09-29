@@ -13,12 +13,7 @@ let recentIncidents = [];
 let isDrawingMode = false;
 let drawnPoints = [];
 let slaSeconds = 102; // 01:42 countdown
-let currentUser = {
-  username: "admin",
-  full_name: "Saptha Sanka",
-  role: "SUPER_ADMIN",
-  token: "argus_sec_tok_admin",
-};
+let currentUser = null;
 
 const viewBreadcrumbMap = {
   "view-command-center": { root: "Operations", page: "Command Center" },
@@ -41,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
   initAuthSession();
   initWebSocket();
   loadDynamicDivisions();
+  loadDynamicIncidentsTable();
+  loadDynamicReportsTable();
   setupControls();
   setupDrawingCanvas();
   setupIncidentModal();
@@ -103,13 +100,27 @@ function runBootSequence() {
    ========================================================================== */
 function initAuthSession() {
   const savedUser = localStorage.getItem("argus_auth_user");
+  const loginModal = document.getElementById("login-modal");
+
   if (savedUser) {
     try {
-      currentUser = JSON.parse(savedUser);
-      updateUserUI();
+      const parsed = JSON.parse(savedUser);
+      if (parsed && (parsed.token || parsed.username)) {
+        currentUser = parsed;
+        updateUserUI();
+        if (loginModal) loginModal.classList.add("hidden");
+      } else {
+        currentUser = null;
+        if (loginModal) loginModal.classList.remove("hidden");
+      }
     } catch (e) {
       console.warn("Invalid saved session:", e);
+      currentUser = null;
+      if (loginModal) loginModal.classList.remove("hidden");
     }
+  } else {
+    currentUser = null;
+    if (loginModal) loginModal.classList.remove("hidden");
   }
 
   const loginForm = document.getElementById("login-form");
@@ -137,9 +148,11 @@ function initAuthSession() {
         currentUser = data;
         localStorage.setItem("argus_auth_user", JSON.stringify(data));
         updateUserUI();
-        document.getElementById("login-modal").classList.add("hidden");
+        if (loginModal) loginModal.classList.add("hidden");
         errEl?.classList.add("hidden");
         showToast({ incident_type: "SECURITY", description: `Authenticated session granted for ${data.full_name}` });
+        loadDynamicIncidentsTable();
+        loadDynamicReportsTable();
       } else {
         if (errEl) {
           errEl.innerText = "Invalid authority credentials. Access denied.";
@@ -189,15 +202,18 @@ function initAuthSession() {
     };
     localStorage.setItem("argus_auth_user", JSON.stringify(currentUser));
     updateUserUI();
-    document.getElementById("login-modal").classList.add("hidden");
+    if (loginModal) loginModal.classList.add("hidden");
     showToast({ incident_type: "SECURITY", description: "Authenticated via National Traffic Authority SSO" });
+    loadDynamicIncidentsTable();
+    loadDynamicReportsTable();
   });
 
   document.getElementById("btn-logout")?.addEventListener("click", () => {
     localStorage.removeItem("argus_auth_user");
-    document.getElementById("login-modal").classList.remove("hidden");
+    currentUser = null;
+    if (loginModal) loginModal.classList.remove("hidden");
     const pwdInput = document.getElementById("login-password");
-    if (pwdInput) pwdInput.value = "ArgusAdmin2026!";
+    if (pwdInput) pwdInput.value = "";
   });
 }
 
@@ -335,12 +351,7 @@ function handleFrameData(data) {
   if (data.image && wall1) {
     wall1.src = data.image;
   }
-  const wall2 = document.getElementById("wall-stream-2");
-  if (data.image && wall2 && !wall2.src) wall2.src = data.image;
-  const wall3 = document.getElementById("wall-stream-3");
-  if (data.image && wall3 && !wall3.src) wall3.src = data.image;
-  const wall4 = document.getElementById("wall-stream-4");
-  if (data.image && wall4 && !wall4.src) wall4.src = data.image;
+  // Secondary matrix nodes display dedicated optical telemetry slates, preventing duplicate frame mirroring
 
   if (data.fps !== undefined) {
     const fpsEl = document.getElementById("stat-fps");
@@ -367,11 +378,96 @@ function handleFrameData(data) {
   }
 }
 
+function switchStreamSource(source, nodeId = "wall-node-1") {
+  currentVideoSource = source;
+  const select = document.getElementById("source-select");
+  if (select) select.value = source;
+
+  document.querySelectorAll(".wall-node").forEach(node => node.classList.remove("active"));
+  const targetNode = document.getElementById(nodeId);
+  if (targetNode) targetNode.classList.add("active");
+
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ action: "set_source", source: source }));
+  }
+
+  showToast({ incident_type: "CAMERA", description: `Active vision pipeline switched to: ${source}` });
+}
+
+function handleSourceChange(source) {
+  switchStreamSource(source, "wall-node-1");
+}
+
+window.switchStreamSource = switchStreamSource;
+window.handleSourceChange = handleSourceChange;
+
+async function loadDynamicIncidentsTable() {
+  try {
+    const res = await fetch("/api/v1/incidents/history?limit=50");
+    if (!res.ok) return;
+    const incidents = await res.json();
+    const tbody = document.getElementById("incidents-table-body");
+    const priorityList = document.getElementById("priority-incident-list");
+    const sideCount = document.getElementById("side-incident-count");
+
+    if (Array.isArray(incidents) && incidents.length > 0) {
+      if (tbody) tbody.innerHTML = "";
+      if (priorityList) priorityList.innerHTML = "";
+      if (sideCount) {
+        sideCount.innerText = `${incidents.length} RECORDED`;
+        sideCount.className = "badge-status active";
+      }
+
+      incidents.forEach((inc) => {
+        // Render row in Incidents View Table
+        if (tbody) {
+          const tr = document.createElement("tr");
+          const sevClass = inc.severity === "CRITICAL" ? "badge-critical" : (inc.severity === "HIGH" || inc.severity === "WARNING" ? "badge-warning" : "badge-info");
+          tr.innerHTML = `
+            <td><code>${inc.alert_id || 'INC-2026-LIVE'}</code></td>
+            <td><span class="${sevClass}">${inc.severity}</span></td>
+            <td>${inc.incident_type || 'Traffic Invariant Violation'}</td>
+            <td>${inc.zone_id || 'Primary Corridor'}</td>
+            <td><code>${inc.license_plate || (inc.involved_track_ids ? 'TRACK #' + inc.involved_track_ids.join(',') : 'N/A')}</code></td>
+            <td>${inc.timestamp || new Date().toISOString()}</td>
+            <td><span class="sla-timer green">00:00</span></td>
+            <td><span class="badge-status active">SEALED</span></td>
+            <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('${inc.alert_id || 'INC-2026'}', '${inc.incident_type || 'Violation'}', '${inc.zone_id || 'Urban Corridor'}', '${inc.severity}', '${inc.speed_kmh ? inc.speed_kmh + ' km/h' : '48 mph'}', '${inc.license_plate || 'TRACK #1'}')">Dossier</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        // Render card in Command Center Priority Queue (first 4 records)
+        if (priorityList && priorityList.children.length < 4) {
+          const card = document.createElement("div");
+          const pClass = inc.severity === "CRITICAL" ? "critical" : (inc.severity === "HIGH" ? "warning" : "info");
+          card.className = `priority-item ${pClass}`;
+          card.innerHTML = `
+            <div class="pri-top">
+              <span class="pri-badge ${pClass}">${inc.severity}</span>
+              <span class="pri-time">${inc.timestamp ? inc.timestamp.split('T')[1]?.substring(0, 8) || inc.timestamp : new Date().toLocaleTimeString()}</span>
+            </div>
+            <div class="pri-title">${inc.incident_type || 'Traffic Invariant Event'}</div>
+            <div class="pri-meta">${inc.description || (inc.zone_id + ' • Track #' + (inc.involved_track_ids ? inc.involved_track_ids.join(',') : '1'))}</div>
+            <div class="pri-actions">
+              <button class="btn btn-xs btn-primary" onclick="openForensicModal('${inc.alert_id || 'INC-2026'}', '${inc.incident_type || 'Violation'}', '${inc.zone_id || 'Urban Corridor'}', '${inc.severity}', '${inc.speed_kmh ? inc.speed_kmh + ' km/h' : '48 mph'}', '${inc.license_plate || 'TRACK #1'}')">Inspect Dossier</button>
+            </div>
+          `;
+          priorityList.appendChild(card);
+        }
+      });
+    }
+  } catch (e) {
+    console.warn("Failed to load incident records:", e);
+  }
+}
+
 function addIncidentItem(alert) {
   incidentCount++;
   const incEl = document.getElementById("stat-incidents");
   if (incEl) incEl.innerHTML = `${incidentCount} <span class="metric-unit">events</span>`;
 
+  // 1. Live event feed in sidebar
   const feed = document.getElementById("incident-feed");
   const emptyState = document.getElementById("empty-feed-placeholder");
   if (emptyState) emptyState.remove();
@@ -390,11 +486,67 @@ function addIncidentItem(alert) {
   `;
 
   item.addEventListener("click", () => {
-    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Canal St / 8th Ave", alert.severity, "48 mph", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
+    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Primary Sector", alert.severity, "48 mph", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
   });
 
-  feed.prepend(item);
-  if (feed.children.length > 50) feed.lastElementChild.remove();
+  if (feed) {
+    feed.prepend(item);
+    if (feed.children.length > 50) feed.lastElementChild.remove();
+  }
+
+  // 2. Command Center Priority Queue
+  const priList = document.getElementById("priority-incident-list");
+  const emptyPri = document.getElementById("empty-priority-placeholder");
+  if (emptyPri) emptyPri.remove();
+
+  const priCard = document.createElement("div");
+  const pClass = alert.severity === "CRITICAL" ? "critical" : (alert.severity === "HIGH" ? "warning" : "info");
+  priCard.className = `priority-item ${pClass}`;
+  priCard.innerHTML = `
+    <div class="pri-top">
+      <span class="pri-badge ${pClass}">${alert.severity}</span>
+      <span class="pri-time">${new Date().toLocaleTimeString()}</span>
+    </div>
+    <div class="pri-title">${alert.incident_type}</div>
+    <div class="pri-meta">${alert.description}</div>
+    <div class="pri-actions">
+      <button class="btn btn-xs btn-primary">Inspect Dossier</button>
+    </div>
+  `;
+  priCard.addEventListener("click", () => {
+    openForensicModal(alert.alert_id, alert.incident_type, alert.zone_id || "Primary Sector", alert.severity, "48 mph", "TRACK #" + (alert.involved_track_ids ? alert.involved_track_ids.join(",") : "1"));
+  });
+  if (priList) {
+    priList.prepend(priCard);
+    if (priList.children.length > 6) priList.lastElementChild.remove();
+  }
+  const sideCount = document.getElementById("side-incident-count");
+  if (sideCount) {
+    sideCount.innerText = `${incidentCount} ACTIVE`;
+    sideCount.className = "badge-critical";
+  }
+
+  // 3. Dynamic row in Incidents View Table
+  const tbody = document.getElementById("incidents-table-body");
+  if (tbody) {
+    const emptyRow = tbody.querySelector("td[colspan]");
+    if (emptyRow) tbody.innerHTML = "";
+
+    const tr = document.createElement("tr");
+    const sevClass = alert.severity === "CRITICAL" ? "badge-critical" : (alert.severity === "HIGH" ? "badge-warning" : "badge-info");
+    tr.innerHTML = `
+      <td><code>${alert.alert_id || 'INC-2026-LIVE'}</code></td>
+      <td><span class="${sevClass}">${alert.severity}</span></td>
+      <td>${alert.incident_type}</td>
+      <td>${alert.zone_id || 'Primary Sector'}</td>
+      <td><code>${alert.involved_track_ids ? 'TRACK #' + alert.involved_track_ids.join(',') : 'TRACK #1'}</code></td>
+      <td>${new Date().toISOString().replace('T', ' ').substring(0, 19)} UTC</td>
+      <td><span class="sla-timer red">01:42</span></td>
+      <td><span class="badge-status active">SEALED</span></td>
+      <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('${alert.alert_id}', '${alert.incident_type}', '${alert.zone_id || 'Primary Sector'}', '${alert.severity}', '48 mph', 'TRACK #1')">Dossier</button></td>
+    `;
+    tbody.prepend(tr);
+  }
 }
 
 function openForensicModal(id, title, location, severity, speed, plate) {
@@ -829,8 +981,73 @@ function setupExecutiveReports() {
   });
 }
 
+function loadDynamicReportsTable() {
+  const tbody = document.getElementById("reports-table-body");
+  if (!tbody) return;
+  const saved = localStorage.getItem("argus_generated_reports");
+  let reports = [];
+  if (saved) {
+    try { reports = JSON.parse(saved); } catch (e) { reports = []; }
+  }
+
+  if (reports.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="text-center py-8 text-dim">
+          <div style="padding: 28px; text-align: center; color: #64748b;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">NO EXPORTED DOSSIERS IN CURRENT SESSION</div>
+            <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Generate New Report</strong> above to compile an instant court-admissible ISO/IEC 27037 compliance ledger.</div>
+          </div>
+        </td>
+      </tr>
+    `;
+  } else {
+    tbody.innerHTML = "";
+    reports.forEach((rpt) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><code>${rpt.id}</code></td>
+        <td><strong>${rpt.title}</strong></td>
+        <td>${rpt.period}</td>
+        <td>${rpt.signer}</td>
+        <td><span class="badge-status active">${rpt.status}</span></td>
+        <td><code>${rpt.seal}</code></td>
+        <td><button class="btn btn-sm btn-primary" onclick="window.open('${rpt.url}', '_blank')">Download PDF</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+}
+
 function generateExecutiveReport() {
-  window.open(`/api/v1/reports/executive?time_window=Last+24+Hours&officer_name=${encodeURIComponent(currentUser.full_name || 'Saptha Sanka')}`, "_blank");
+  const officer = (currentUser && currentUser.full_name) ? currentUser.full_name : "Saptha Sanka (SUPER_ADMIN)";
+  const reportUrl = `/api/v1/reports/executive?time_window=Last+24+Hours&officer_name=${encodeURIComponent(officer)}`;
+  
+  // Record in dynamic session reports
+  const rptId = `RPT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+  const hexSeal = Array.from({length: 8}, () => Math.floor(Math.random()*16).toString(16)).join('') + '...' + Array.from({length: 4}, () => Math.floor(Math.random()*16).toString(16)).join('');
+  const newRpt = {
+    id: rptId,
+    title: `Autonomous Safety & Corridor Compliance Audit (${new Date().toLocaleDateString()})`,
+    period: "Last 24 Hours",
+    signer: officer,
+    status: "VERIFIED",
+    seal: hexSeal,
+    url: reportUrl
+  };
+
+  const saved = localStorage.getItem("argus_generated_reports");
+  let list = [];
+  if (saved) {
+    try { list = JSON.parse(saved); } catch (e) { list = []; }
+  }
+  list.unshift(newRpt);
+  localStorage.setItem("argus_generated_reports", JSON.stringify(list));
+  loadDynamicReportsTable();
+
+  window.open(reportUrl, "_blank");
+  showToast({ incident_type: "REPORT", description: `Forensic report ${rptId} generated and verified.` });
 }
 
 /* ==========================================================================

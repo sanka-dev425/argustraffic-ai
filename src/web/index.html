@@ -35,7 +35,7 @@
   </div>
 
   <!-- Official Figma Split-Screen Zero-Trust Security Gateway -->
-  <div id="login-modal" class="figma-login-wrapper hidden">
+  <div id="login-modal" class="figma-login-wrapper">
     <!-- Left Hero Column: Brand & Security Overview -->
     <div class="figma-login-left">
       <div class="login-grid-bg"></div>
@@ -405,46 +405,61 @@
               </div>
 
               <div class="camera-wall-grid" id="camera-wall-grid">
-                <div class="wall-node active" onclick="switchStreamSource('synthetic')">
+                <div class="wall-node active" id="wall-node-1" onclick="switchStreamSource('synthetic', 'wall-node-1')">
                   <div class="wall-node-header">
                     <span class="node-tag">CAM-042: CANAL ST / 8TH AVE</span>
-                    <span class="node-status live">LIVE</span>
+                    <span class="node-status live">LIVE PRIMARY</span>
                   </div>
                   <div class="wall-node-feed">
                     <img id="wall-stream-1" class="wall-stream-img" alt="Cam 01 Feed" />
-                    <div class="stream-overlay-tag">30 FPS &bull; 11.4 ms</div>
+                    <div class="stream-overlay-tag">30 FPS &bull; 11.4 ms &bull; AI VISION</div>
                   </div>
                 </div>
 
-                <div class="wall-node" onclick="switchStreamSource('0')">
+                <div class="wall-node" id="wall-node-2" onclick="switchStreamSource('0', 'wall-node-2')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-002: CENTRAL ARTERIAL SIGNAL MAST</span>
-                    <span class="node-status live">LIVE</span>
+                    <span class="node-tag">CAM-002: CENTRAL ARTERIAL MAST</span>
+                    <span class="node-status live">READY</span>
                   </div>
                   <div class="wall-node-feed">
-                    <img id="wall-stream-2" class="wall-stream-img" alt="Cam 02 Feed" />
-                    <div class="stream-overlay-tag">USB UVC &bull; 30 FPS</div>
+                    <div class="matrix-standby-slate">
+                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                      <div class="matrix-standby-title">OPTICAL SENSOR #02</div>
+                      <div class="matrix-standby-meta">USB 3.0 UVC DIRECT &bull; 1080p @ 30 FPS</div>
+                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
+                    </div>
+                    <div class="stream-overlay-tag">USB SENSOR &bull; 30 FPS</div>
                   </div>
                 </div>
 
-                <div class="wall-node" onclick="switchStreamSource('synthetic')">
+                <div class="wall-node" id="wall-node-3" onclick="switchStreamSource('synthetic', 'wall-node-3')">
                   <div class="wall-node-header">
                     <span class="node-tag">CAM-003: PERIMETER ARTERIAL MAST</span>
-                    <span class="node-status live">LIVE</span>
+                    <span class="node-status live">READY</span>
                   </div>
                   <div class="wall-node-feed">
-                    <img id="wall-stream-3" class="wall-stream-img" alt="Cam 03 Feed" />
+                    <div class="matrix-standby-slate">
+                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
+                      <div class="matrix-standby-title">RADAR / OPTICAL SENSOR #03</div>
+                      <div class="matrix-standby-meta">GIGE VISION ENCODER &bull; BITRATE: 4096 KBPS</div>
+                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
+                    </div>
                     <div class="stream-overlay-tag">PRIMARY SENSOR &bull; 30 FPS</div>
                   </div>
                 </div>
 
-                <div class="wall-node alert" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
+                <div class="wall-node alert" id="wall-node-4" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live', 'wall-node-4')">
                   <div class="wall-node-header">
                     <span class="node-tag">CAM-004: SOUTH EXPRESSWAY OVERPASS</span>
                     <span class="node-status live">ONLINE</span>
                   </div>
                   <div class="wall-node-feed">
-                    <img id="wall-stream-4" class="wall-stream-img" alt="Cam 04 Feed" />
+                    <div class="matrix-standby-slate">
+                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                      <div class="matrix-standby-title">RTSP CORRIDOR NODE #04</div>
+                      <div class="matrix-standby-meta">rtsp://192.168.1.100:554/live &bull; H.264 1080p</div>
+                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
+                    </div>
                     <div class="stream-overlay-tag">RTSP SENSOR &bull; 1080p</div>
                   </div>
                 </div>
@@ -527,47 +542,14 @@
             <div class="panel-card priority-panel">
               <div class="panel-header">
                 <div class="panel-title">PRIORITY INCIDENTS QUEUE</div>
-                <span class="badge-critical" id="side-incident-count">3 CRITICAL</span>
+                <span class="badge-status active" id="side-incident-count">0 ACTIVE</span>
               </div>
 
               <div class="priority-incident-list" id="priority-incident-list">
-                <div class="priority-item critical" onclick="openForensicModal('INC-2025-0847', 'Wrong-Way Vehicle', 'CAM-042: Canal St / 8th Ave', 'CRITICAL', '48 mph', 'CP-HVY-3012')">
-                  <div class="pri-top">
-                    <span class="pri-badge critical">CRITICAL &bull; 9.4/10</span>
-                    <span class="pri-time">14:42:18</span>
-                  </div>
-                  <div class="pri-title">Wrong-Way Vehicle Incursion</div>
-                  <div class="pri-meta">CAM-042 &bull; Plate: <code>CP-HVY-3012</code> &bull; Speed: <strong>48 mph</strong></div>
-                  <div class="pri-actions">
-                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                    <button class="btn btn-xs btn-outline">Dispatch Police</button>
-                  </div>
-                </div>
-
-                <div class="priority-item warning" onclick="openForensicModal('INC-2025-0846', 'Pedestrian Crosswalk Conflict', 'CAM-027: FDR Drive', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">
-                  <div class="pri-top">
-                    <span class="pri-badge warning">HIGH &bull; 8.1/10</span>
-                    <span class="pri-time">14:38:45</span>
-                  </div>
-                  <div class="pri-title">Pedestrian Crosswalk Hazard</div>
-                  <div class="pri-meta">CAM-027 &bull; Person in Lane &bull; TTC: <strong>1.4s</strong></div>
-                  <div class="pri-actions">
-                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                    <button class="btn btn-xs btn-outline">Acknowledge</button>
-                  </div>
-                </div>
-
-                <div class="priority-item info" onclick="openForensicModal('INC-2025-0845', 'Optical Speed Violation', 'CAM-118: Broadway', 'MEDIUM', '62 mph', 'SP-BUS-4491')">
-                  <div class="pri-top">
-                    <span class="pri-badge info">MEDIUM &bull; 5.2/10</span>
-                    <span class="pri-time">14:35:19</span>
-                  </div>
-                  <div class="pri-title">Optical Radar Speed Violation</div>
-                  <div class="pri-meta">CAM-118 &bull; 62 mph in 40 mph Corridor</div>
-                  <div class="pri-actions">
-                    <button class="btn btn-xs btn-primary">Inspect Dossier</button>
-                    <button class="btn btn-xs btn-outline">Acknowledge</button>
-                  </div>
+                <div class="empty-feed" id="empty-priority-placeholder" style="padding: 24px 16px; text-align: center;">
+                  <div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.4;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                  <div class="empty-text">Zero Active Priority Violations</div>
+                  <div class="empty-sub">Corridor flow vectors, optical radar thresholds, and pedestrian crosswalks clear.</div>
                 </div>
               </div>
             </div>
@@ -856,37 +838,13 @@
               </thead>
               <tbody id="incidents-table-body">
                 <tr>
-                  <td><code>INC-2025-0847</code></td>
-                  <td><span class="badge-critical">CRITICAL</span></td>
-                  <td>Wrong-Way Vehicle Incursion</td>
-                  <td>CAM-042 (Canal St / 8th Ave)</td>
-                  <td><code>CP-HVY-3012</code></td>
-                  <td>14:42:18 UTC</td>
-                  <td><span class="sla-timer red">01:42</span></td>
-                  <td><span class="badge-status active">SEALED</span></td>
-                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0847', 'Wrong-Way Vehicle Incursion', 'CAM-042', 'CRITICAL', '48 mph', 'CP-HVY-3012')">Dossier</button></td>
-                </tr>
-                <tr>
-                  <td><code>INC-2025-0846</code></td>
-                  <td><span class="badge-warning">HIGH</span></td>
-                  <td>Pedestrian Crosswalk Conflict</td>
-                  <td>CAM-027 (FDR Drive South)</td>
-                  <td><code>WP-CAR-7821</code></td>
-                  <td>14:38:45 UTC</td>
-                  <td><span class="sla-timer green">04:12</span></td>
-                  <td><span class="badge-status active">SEALED</span></td>
-                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0846', 'Pedestrian Crosswalk Conflict', 'CAM-027', 'HIGH', '32.1 km/h', 'WP-CAR-7821')">Dossier</button></td>
-                </tr>
-                <tr>
-                  <td><code>INC-2025-0845</code></td>
-                  <td><span class="badge-info">MEDIUM</span></td>
-                  <td>Optical Radar Speed Violation</td>
-                  <td>CAM-118 (Broadway / 42nd St)</td>
-                  <td><code>SP-BUS-4491</code></td>
-                  <td>14:35:19 UTC</td>
-                  <td><span class="sla-timer green">08:40</span></td>
-                  <td><span class="badge-status active">SEALED</span></td>
-                  <td><button class="btn btn-sm btn-primary" onclick="openForensicModal('INC-2025-0845', 'Optical Radar Speed Violation', 'CAM-118', 'MEDIUM', '62 mph', 'SP-BUS-4491')">Dossier</button></td>
+                  <td colspan="9" class="text-center py-8 text-dim">
+                    <div style="padding: 28px; text-align: center; color: #64748b;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                      <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">ZERO ACTIVE INCIDENTS RECORDED</div>
+                      <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Autonomous Invariant Engine is monitoring 24/7 across all active camera sensor sectors.</div>
+                    </div>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1105,9 +1063,15 @@
                 <tr><th>Report ID</th><th>Title / Description</th><th>Period</th><th>Signer</th><th>Status</th><th>SHA-256 Merkle Seal</th><th>Action</th></tr>
               </thead>
               <tbody id="reports-table-body">
-                <tr><td><code>RPT-2025-00984</code></td><td><strong>Canal Street Wrong-Way Incident Dossier</strong></td><td>Today (24 Hours)</td><td>Saptha Sanka (SUPER_ADMIN)</td><td><span class="badge-status active">VERIFIED</span></td><td><code>8f2a1c...99b2</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
-                <tr><td><code>RPT-2025-00983</code></td><td><strong>Weekly Corridor Optical Speed Compliance Audit</strong></td><td>Weekly Scope</td><td>Legal Forensic Examiner</td><td><span class="badge-status active">SEALED</span></td><td><code>7d3e4f...11a0</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
-                <tr><td><code>RPT-2025-00982</code></td><td><strong>AI Model Zero False-Positive Ledger</strong></td><td>Monthly Audit</td><td>Autonomous Core</td><td><span class="badge-status active">VERIFIED</span></td><td><code>5c9b1a...44f2</code></td><td><button class="btn btn-sm btn-primary" onclick="generateExecutiveReport()">Download PDF</button></td></tr>
+                <tr>
+                  <td colspan="7" class="text-center py-8 text-dim">
+                    <div style="padding: 28px; text-align: center; color: #64748b;">
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">NO EXPORTED DOSSIERS IN CURRENT SESSION</div>
+                      <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Generate New Report</strong> above to compile an instant court-admissible ISO/IEC 27037 compliance ledger.</div>
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
