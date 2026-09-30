@@ -53,7 +53,9 @@ class ContinuousLedgerSentinel:
         if getattr(self, "_initialized", False):
             return
         self._initialized = True
-        self.db_path = get_data_dir() / "incident_db.db"
+        self.db_path = get_data_dir() / "incidents.db"
+        if not self.db_path.exists() and (get_data_dir() / "incident_db.db").exists():
+            self.db_path = get_data_dir() / "incident_db.db"
         self._last_report: Optional[LedgerAuditReport] = None
 
     def _get_connection(self) -> sqlite3.Connection:
@@ -91,18 +93,27 @@ class ContinuousLedgerSentinel:
 
         with self._get_connection() as conn:
             cursor = conn.cursor()
+            rows = []
             try:
+                # Primary schema: alert_id
                 cursor.execute(
-                    "SELECT incident_id, incident_type, severity, timestamp, description, location_x, location_y FROM incidents ORDER BY timestamp ASC"
+                    "SELECT alert_id, incident_type, severity, timestamp, description, location_x, location_y FROM incidents ORDER BY timestamp ASC"
                 )
                 rows = cursor.fetchall()
             except sqlite3.OperationalError:
-                rows = []
+                try:
+                    # Legacy schema fallback: incident_id
+                    cursor.execute(
+                        "SELECT incident_id, incident_type, severity, timestamp, description, location_x, location_y FROM incidents ORDER BY timestamp ASC"
+                    )
+                    rows = cursor.fetchall()
+                except sqlite3.OperationalError:
+                    rows = []
 
             for row in rows:
                 total_records += 1
                 row_dict = dict(row)
-                inc_id = row_dict.get("incident_id", "UNKNOWN")
+                inc_id = row_dict.get("alert_id") or row_dict.get("incident_id") or "UNKNOWN"
 
                 # Reconstruct raw canon string
                 canon_str = f"{inc_id}_{row_dict.get('incident_type')}_{row_dict.get('severity')}_{row_dict.get('timestamp')}_{row_dict.get('location_x')}_{row_dict.get('location_y')}"
@@ -110,6 +121,7 @@ class ContinuousLedgerSentinel:
 
                 # Chain into Merkle cumulative tree
                 cumulative_hash = hashlib.sha256(cumulative_hash + record_hash).digest()
+
 
         merkle_hex = cumulative_hash.hex()
         is_compromised = len(corrupted_ids) > 0

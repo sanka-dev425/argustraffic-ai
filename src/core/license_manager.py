@@ -138,11 +138,20 @@ class LicenseManager:
             if not hmac.compare_digest(given_sig, expected_sig):
                 return False, "Cryptographic signature validation failed. Tampered or counterfeit license.", None
 
-            # Check Expiration
+            # Check Expiration & 72-Hour Emergency Operational Grace Buffer
             exp_time = datetime.datetime.fromisoformat(payload["expires_at"])
             now = datetime.datetime.now(datetime.timezone.utc)
+            is_in_grace = False
+            grace_hours_left = 0.0
+
             if now > exp_time:
-                return False, f"License expired on {exp_time.strftime('%Y-%m-%d')}.", None
+                grace_window = datetime.timedelta(days=3)  # 72 hours emergency operational buffer
+                if (now - exp_time) <= grace_window:
+                    is_in_grace = True
+                    grace_hours_left = round(((exp_time + grace_window) - now).total_seconds() / 3600.0, 1)
+                    logger.warning(f"[LICENSE] Emergency 72-hour grace active! ({grace_hours_left}h left until blackout)")
+                else:
+                    return False, f"License expired on {exp_time.strftime('%Y-%m-%d')} and 72-hour emergency grace period has lapsed.", None
 
             # Check Machine Fingerprint binding (if bound)
             bound_fp = payload.get("machine_fingerprint")
@@ -161,10 +170,12 @@ class LicenseManager:
                 is_airgapped=payload["is_airgapped"],
                 signature=given_sig,
             )
-            return True, "License validated successfully.", cert
+            status_msg = f"License in 72-hour emergency grace period ({grace_hours_left}h left)." if is_in_grace else "License validated successfully."
+            return True, status_msg, cert
 
         except Exception as e:
             return False, f"Certificate decoding failed: {e}", None
+
 
     def install_license(self, token_str: str) -> Tuple[bool, str]:
         """Installs and persists a license certificate to disk."""

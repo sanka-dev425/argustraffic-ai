@@ -74,23 +74,33 @@ class SpatialRiskEngine(RiskEngineProtocol):
         v1 = np.array(t1.velocity)  # (vx, vy) px/frame
         v2 = np.array(t2.velocity)
 
-        # Relative velocity vector: V_rel = V1 - V2
+        # Relative velocity vector: V_rel = V1 - V2 (px/frame)
         v_rel = v1 - v2
-        rel_speed = float(np.linalg.norm(v_rel))
+        rel_speed_sq = float(np.dot(v_rel, v_rel))
+        rel_speed = math.sqrt(rel_speed_sq)
 
         # Relative position vector: R = P2 - P1
         r_vec = p2 - p1
+        dot_product = float(np.dot(r_vec, v_rel))
 
-        # Check if objects are converging (closing in)
-        # Convergence rate = - (R . V_rel) / |R|
-        dot_product = np.dot(r_vec, v_rel)
-        is_converging = dot_product > 0
-
+        # Closest Point of Approach (CPA) Kinematics (supports orthogonal 90-degree intersection crossings)
         ttc: Optional[float] = None
-        if is_converging and rel_speed > 0.5:
-            # Approximate Time-to-Collision in seconds (assuming 30 FPS)
-            closing_speed_px_per_sec = rel_speed * 30.0
-            ttc = max(0.1, distance_px / closing_speed_px_per_sec)
+        d_min_px: Optional[float] = None
+        t_cpa_sec: Optional[float] = None
+
+        if rel_speed_sq > 0.01:
+            t_cpa_frames = dot_product / rel_speed_sq
+            if t_cpa_frames > 0:
+                t_cpa_sec = t_cpa_frames / 30.0
+                cpa_pos_diff = r_vec - v_rel * t_cpa_frames
+                d_min_px = float(np.linalg.norm(cpa_pos_diff))
+                # If projected closest approach is within critical collision radius (<= 50 px / ~2.5m)
+                if d_min_px < 50.0 and t_cpa_sec <= 4.0:
+                    ttc = max(0.1, t_cpa_sec)
+            elif dot_product > 0 and rel_speed > 0.5:
+                # Direct head-on linear approximation
+                closing_speed_px_per_sec = rel_speed * 30.0
+                ttc = max(0.1, distance_px / closing_speed_px_per_sec)
 
         # Determine vulnerability weight
         is_pedestrian_involved = (
@@ -101,17 +111,21 @@ class SpatialRiskEngine(RiskEngineProtocol):
         factors: List[str] = []
         raw_score = 0.0
 
-        # Factor 1: TTC Score (0 to 1.0)
+        # Factor 1: TTC / Closest Point of Approach Score (0 to 1.0)
         if ttc is not None:
             if ttc <= self.config.critical_ttc_seconds:
                 raw_score += self.config.weight_ttc * 1.0
-                factors.append(f"Critical TTC: {ttc:.2f}s")
+                factors.append(f"Critical TTC: {ttc:.2f}s" + (f" (D_min: {d_min_px:.1f}px)" if d_min_px is not None else ""))
+                # Direct intercept boost for sub-second zero-miss trajectories
+                if d_min_px is not None and d_min_px < 25.0 and ttc <= 1.0:
+                    raw_score += 0.20
+                    factors.append("Direct Path Convergence / Imminent Intercept")
             elif ttc <= self.config.high_ttc_seconds:
                 raw_score += self.config.weight_ttc * 0.7
-                factors.append(f"High-risk TTC: {ttc:.2f}s")
+                factors.append(f"High-risk TTC: {ttc:.2f}s" + (f" (D_min: {d_min_px:.1f}px)" if d_min_px is not None else ""))
             elif ttc <= self.config.medium_ttc_seconds:
                 raw_score += self.config.weight_ttc * 0.4
-                factors.append(f"Moderate TTC: {ttc:.2f}s")
+                factors.append(f"Moderate TTC: {ttc:.2f}s" + (f" (D_min: {d_min_px:.1f}px)" if d_min_px is not None else ""))
 
         # Factor 2: Proximity Score
         proximity_threshold = 120.0 if is_pedestrian_involved else 80.0
@@ -126,8 +140,8 @@ class SpatialRiskEngine(RiskEngineProtocol):
             factors.append("Vulnerable Road User in Conflict Zone")
 
         # Factor 4: Relative Speed Severity
-        if rel_speed > 5.0 and distance_px <= 250.0:
-            raw_score += self.config.weight_relative_speed * min(1.0, rel_speed / 20.0)
+        if rel_speed > 3.0 and (distance_px <= 350.0 or ttc is not None):
+            raw_score += self.config.weight_relative_speed * min(1.0, rel_speed / 15.0)
             factors.append(f"High Relative Delta-V: {rel_speed:.1f} px/f")
 
         risk_score = min(1.0, max(0.0, raw_score))
