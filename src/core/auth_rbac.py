@@ -3,6 +3,7 @@ Manages multi-tenant administrator privileges, password security (PBKDF2-SHA256)
 session token verification, and security audit trails.
 """
 
+from contextlib import contextmanager
 import datetime
 from enum import Enum
 import hashlib
@@ -87,6 +88,18 @@ class SecurityAuthManager:
         conn.execute("PRAGMA synchronous = NORMAL;")
         return conn
 
+    @contextmanager
+    def _connection(self):
+        """Context manager guaranteeing connection termination on Windows."""
+        conn = self._get_connection()
+        try:
+            yield conn
+        finally:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
     def _init_db(self):
         """Initializes tables for enterprise users, sessions, and security audits."""
         conn = self._get_connection()
@@ -105,12 +118,22 @@ class SecurityAuthManager:
                     role TEXT NOT NULL,
                     division_id TEXT DEFAULT 'DIV_METRO_HQ',
                     is_active INTEGER DEFAULT 1,
+                    failed_attempts INTEGER DEFAULT 0,
+                    locked_until REAL DEFAULT 0.0,
                     created_at REAL NOT NULL,
                     last_login REAL
                 )
             """)
             try:
                 conn.execute("ALTER TABLE users ADD COLUMN division_id TEXT DEFAULT 'DIV_METRO_HQ';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN failed_attempts INTEGER DEFAULT 0;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE users ADD COLUMN locked_until REAL DEFAULT 0.0;")
             except sqlite3.OperationalError:
                 pass
 
@@ -137,15 +160,60 @@ class SecurityAuthManager:
                     username TEXT NOT NULL,
                     action TEXT NOT NULL,
                     ip_address TEXT,
-                    details TEXT NOT NULL
+                    details TEXT NOT NULL,
+                    prev_hash TEXT,
+                    merkle_hash TEXT
                 )
             """)
+            try:
+                conn.execute("ALTER TABLE audit_logs ADD COLUMN prev_hash TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE audit_logs ADD COLUMN merkle_hash TEXT;")
+            except sqlite3.OperationalError:
+                pass
+
             conn.commit()
         finally:
             conn.close()
 
+        # Prune expired sessions on startup
+        self.prune_expired_sessions()
         # Seed initial default users if table empty or missing standard accounts
         self._seed_default_users()
+
+    def prune_expired_sessions(self) -> int:
+        """Purges stale sessions exceeding TTL from database."""
+        now = time.time()
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))
+            deleted = cursor.rowcount
+            conn.commit()
+            return deleted
+
+    @staticmethod
+    def validate_password_complexity(password: str) -> Tuple[bool, str]:
+        """
+        NIST SP 800-63B compliant password policy validator:
+        - Minimum 8 characters
+        - At least 1 uppercase letter
+        - At least 1 lowercase letter
+        - At least 1 numerical digit
+        - At least 1 special character
+        """
+        if len(password) < 8:
+            return False, "Password must be at least 8 characters long."
+        if not any(c.isupper() for c in password):
+            return False, "Password must contain at least one uppercase letter (A-Z)."
+        if not any(c.islower() for c in password):
+            return False, "Password must contain at least one lowercase letter (a-z)."
+        if not any(c.isdigit() for c in password):
+            return False, "Password must contain at least one numerical digit (0-9)."
+        if not any(c in "!@#$%^&*()-_=+[]{}|;:,.<>?" for c in password):
+            return False, "Password must contain at least one special symbol (e.g. !@#$%^&*)."
+        return True, "Password complexity verified."
 
     def _hash_password(self, password: str, salt: Optional[str] = None) -> Tuple[str, str]:
         """PBKDF2-HMAC-SHA256 password derivation with 100,000 iterations."""
@@ -211,7 +279,7 @@ class SecurityAuthManager:
 
         pwd_hash, salt = self._hash_password(password)
         try:
-            with self._get_connection() as conn:
+            with self._connection() as conn:
                 conn.execute(
                     """
                     INSERT INTO users (username, full_name, email, password_hash, salt, role, division_id, created_at)
@@ -238,7 +306,7 @@ class SecurityAuthManager:
         """Authenticates user credentials and generates a secure session token."""
         clean_user = username.lower().strip()
         user = None
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM users WHERE username = ? AND is_active = 1",
@@ -261,7 +329,7 @@ class SecurityAuthManager:
             if clean_user in standard_pwds and password == standard_pwds[clean_user][0]:
                 pwd, role, fname, div = standard_pwds[clean_user]
                 self.create_user(clean_user, pwd, fname, f"{clean_user}@argustraffic.internal", role, division_id=div)
-                with self._get_connection() as conn:
+                with self._connection() as conn:
                     cursor = conn.cursor()
                     cursor.execute("SELECT * FROM users WHERE username = ?", (clean_user,))
                     row = cursor.fetchone()
@@ -272,19 +340,40 @@ class SecurityAuthManager:
             self.log_audit(username, "AUTH_FAILED", f"Invalid login attempt from {ip_address}", ip_address)
             return None
 
+        # Check account lockout state
+        now = time.time()
+        locked_until = user.get("locked_until") or 0.0
+        if locked_until > now:
+            mins_left = int((locked_until - now) / 60) + 1
+            self.log_audit(username, "AUTH_BLOCKED", f"Account locked due to excessive failed attempts. Locked for {mins_left} more minutes.", ip_address)
+            return None
+
         # Verify password
         expected_hash, _ = self._hash_password(password, user["salt"])
         if not hmac.compare_digest(expected_hash, user["password_hash"]):
-            self.log_audit(username, "AUTH_FAILED", f"Password mismatch from {ip_address}", ip_address)
+            failed_count = (user.get("failed_attempts") or 0) + 1
+            new_lock = 0.0
+            if failed_count >= 5:
+                new_lock = now + 900.0  # 15 minutes lockout
+                self.log_audit(username, "ACCOUNT_LOCKED", f"5 consecutive failed login attempts. Account locked for 15 minutes.", ip_address)
+            else:
+                self.log_audit(username, "AUTH_FAILED", f"Password mismatch from {ip_address} (Attempt {failed_count}/5)", ip_address)
+
+            with self._connection() as conn:
+                conn.execute(
+                    "UPDATE users SET failed_attempts = ?, locked_until = ? WHERE username = ?",
+                    (failed_count, new_lock, user["username"]),
+                )
+                conn.commit()
             return None
 
-        # Generate secure random bearer token
+        # Successful Login: Reset lockout counter and prune expired sessions
+        self.prune_expired_sessions()
         token = secrets.token_urlsafe(32)
-        now = time.time()
         expires = now + 86400.0  # 24-hour session
         div_id = user.get("division_id") or "DIV_METRO_HQ"
 
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(
                 """
                 INSERT INTO sessions (token, username, role, division_id, created_at, expires_at)
@@ -293,7 +382,7 @@ class SecurityAuthManager:
                 (token, user["username"], user["role"], div_id, now, expires),
             )
             conn.execute(
-                "UPDATE users SET last_login = ? WHERE username = ?",
+                "UPDATE users SET last_login = ?, failed_attempts = 0, locked_until = 0.0 WHERE username = ?",
                 (now, user["username"]),
             )
             conn.commit()
@@ -314,7 +403,7 @@ class SecurityAuthManager:
         """Validates an active session token."""
         if not token:
             return None
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT * FROM sessions WHERE token = ? AND expires_at > ?",
@@ -335,20 +424,29 @@ class SecurityAuthManager:
         return None
 
     def log_audit(self, username: str, action: str, details: str, ip_address: str = "127.0.0.1"):
-        """Records an immutable security audit entry."""
-        with self._get_connection() as conn:
+        """Records an immutable security audit entry with cryptographic hash chaining."""
+        now = time.time()
+        with self._connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT merkle_hash FROM audit_logs ORDER BY id DESC LIMIT 1")
+            row = cursor.fetchone()
+            prev_hash = row[0] if (row and row[0]) else "GENESIS_AUDIT_ROOT_2026"
+
+            canon_str = f"{prev_hash}_{now}_{username}_{action}_{details}_{ip_address}"
+            current_hash = hashlib.sha256(canon_str.encode("utf-8")).hexdigest()
+
             conn.execute(
                 """
-                INSERT INTO audit_logs (timestamp, username, action, ip_address, details)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO audit_logs (timestamp, username, action, ip_address, details, prev_hash, merkle_hash)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-                (time.time(), username, action, ip_address, details),
+                (now, username, action, ip_address, details, prev_hash, current_hash),
             )
             conn.commit()
 
     def list_users(self, filter_division: Optional[str] = None) -> List[Dict]:
         """Lists registered operators and administrators, optionally filtered by division."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             if filter_division and filter_division != "ALL_DIVISIONS":
                 cursor.execute(
@@ -363,7 +461,7 @@ class SecurityAuthManager:
 
     def get_user(self, username: str) -> Optional[Dict]:
         """Retrieves a single user's safe profile info without credentials."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "SELECT username, full_name, email, role, division_id, is_active, created_at, last_login FROM users WHERE username = ?",
@@ -419,7 +517,7 @@ class SecurityAuthManager:
         params.append(clean_user)
         query = f"UPDATE users SET {', '.join(updates)} WHERE username = ?"
 
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(query, tuple(params))
             conn.commit()
 
@@ -429,7 +527,7 @@ class SecurityAuthManager:
     def change_password(self, username: str, old_password: str, new_password: str) -> Tuple[bool, str]:
         """Allows a user to securely change their own password."""
         clean_user = username.lower().strip()
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT password_hash, salt FROM users WHERE username = ?", (clean_user,))
             row = cursor.fetchone()
@@ -469,7 +567,7 @@ class SecurityAuthManager:
             return False, "Cannot reset credentials for a Super Administrator."
 
         new_hash, new_salt = self._hash_password(new_password)
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute(
                 "UPDATE users SET password_hash = ?, salt = ? WHERE username = ?",
                 (new_hash, new_salt, clean_user),
@@ -498,7 +596,7 @@ class SecurityAuthManager:
         if clean_user == "admin":
             return False, "Protected root enterprise administrator cannot be deleted."
 
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute("DELETE FROM sessions WHERE username = ?", (clean_user,))
             conn.execute("DELETE FROM users WHERE username = ?", (clean_user,))
             conn.commit()
@@ -508,7 +606,7 @@ class SecurityAuthManager:
 
     def revoke_session(self, token: str, username: str = "SYSTEM") -> bool:
         """Revokes an active session bearer token."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
             conn.commit()
         self.log_audit(username, "SESSION_REVOKED", "Session token revoked")
@@ -522,7 +620,7 @@ class SecurityAuthManager:
         filter_action: Optional[str] = None,
     ) -> List[Dict]:
         """Retrieves paginated immutable security audit trails."""
-        with self._get_connection() as conn:
+        with self._connection() as conn:
             cursor = conn.cursor()
             query = "SELECT id, timestamp, username, action, ip_address, details FROM audit_logs"
             clauses = []

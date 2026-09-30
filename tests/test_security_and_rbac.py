@@ -225,3 +225,55 @@ def test_system_settings_manager(tmp_path):
     assert persisted["default_map_provider"] == "google_road"
 
 
+def test_account_lockout_after_failed_attempts(temp_auth_manager):
+    # admin account created with ArgusAdmin2026!
+    # Try 5 wrong passwords
+    for _ in range(5):
+        res = temp_auth_manager.authenticate("admin", "WrongPassword!")
+        assert res is None
+
+    # 6th attempt with correct password should still be blocked due to lockout
+    blocked_res = temp_auth_manager.authenticate("admin", "ArgusAdmin2026!")
+    assert blocked_res is None
+
+    user = temp_auth_manager.get_user("admin")
+    assert user is not None
+
+
+def test_password_complexity_validator():
+    # Too short
+    valid, msg = SecurityAuthManager.validate_password_complexity("Pass1!")
+    assert not valid
+
+    # No uppercase
+    valid, msg = SecurityAuthManager.validate_password_complexity("password123!")
+    assert not valid
+
+    # No special char
+    valid, msg = SecurityAuthManager.validate_password_complexity("Password12345")
+    assert not valid
+
+    # Compliant NIST password
+    valid, msg = SecurityAuthManager.validate_password_complexity("ArgusDefense#2026")
+    assert valid
+
+
+def test_cryptographic_chained_audit_logs(temp_auth_manager):
+    temp_auth_manager.log_audit("admin", "TEST_ACTION_1", "First audit entry")
+    temp_auth_manager.log_audit("admin", "TEST_ACTION_2", "Second audit entry")
+
+    logs = temp_auth_manager.list_audit_logs(limit=10)
+    assert len(logs) >= 2
+
+    # Verify chained integrity in raw SQLite table
+    conn = temp_auth_manager._get_connection()
+    try:
+        rows = conn.execute("SELECT prev_hash, merkle_hash FROM audit_logs ORDER BY id ASC").fetchall()
+        assert len(rows) >= 2
+        # Row 2's prev_hash must match Row 1's merkle_hash
+        assert rows[1]["prev_hash"] == rows[0]["merkle_hash"]
+    finally:
+        conn.close()
+
+
+
