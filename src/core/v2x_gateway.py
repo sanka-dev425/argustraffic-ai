@@ -63,7 +63,7 @@ class V2XGateway:
         self.active_advisories: Dict[str, RoadSafetyAdvisory] = {}
         self.connected_vehicle_registry: Dict[str, BasicSafetyMessage] = {}
         self.total_messages_ingested: int = 0
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
 
     def prune_stale_vehicles(self, ttl_seconds: Optional[float] = None) -> int:
         """Removes vehicles that have stopped transmitting BSM telemetry beyond TTL window."""
