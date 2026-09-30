@@ -363,9 +363,25 @@ class CameraNode:
         return asdict(self)
 
 
+def mask_rtsp_url(url: str) -> str:
+    """Masks cleartext passwords in RTSP/HTTP URLs for safe display and logging."""
+    if not url or "@" not in url:
+        return url
+    try:
+        scheme, rest = url.split("://", 1)
+        creds, host_path = rest.split("@", 1)
+        if ":" in creds:
+            user, _ = creds.split(":", 1)
+            return f"{scheme}://{user}:*****@{host_path}"
+        return f"{scheme}://*****@{host_path}"
+    except Exception:
+        return url
+
+
 class CameraInventoryManager:
     """
     Enterprise Device Fleet & Camera Management Engine.
+
     Handles camera registration, re-naming, mounting structure classification,
     and multi-tenant police station divisional isolation.
     """
@@ -627,9 +643,10 @@ class CameraInventoryManager:
         self,
         camera_data: Dict[str, Any],
         operator_role: Role = Role.SUPER_ADMIN,
+
         operator_division: Optional[str] = None,
     ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
-        """Registers a new physical camera node under appropriate divisional jurisdiction."""
+        """Registers a new physical camera node under appropriate divisional jurisdiction with collision validation."""
         if operator_role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
             return False, "Insufficient privilege: Requires STATION_ADMIN or SUPER_ADMIN.", None
 
@@ -641,6 +658,30 @@ class CameraInventoryManager:
         target_division = camera_data.get("division_id", "DIV_METRO_HQ")
         if operator_role == Role.STATION_ADMIN and operator_division:
             target_division = operator_division
+
+        ip_addr = str(camera_data.get("ip_address", "")).strip()
+        poe_port = camera_data.get("poe_port")
+        station_name = camera_data.get("station_name", "Municipal Traffic Command")
+
+        # Conflict Detection: Check for duplicate IP or same PoE port on same station
+        with self.lock:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                if ip_addr and ip_addr != "192.168.1.200":
+                    cursor.execute("SELECT camera_id, name FROM cameras WHERE ip_address = ?", (ip_addr,))
+                    conflict = cursor.fetchone()
+                    if conflict:
+                        return False, f"IP Address conflict: {ip_addr} is already assigned to camera '{conflict['name']}' ({conflict['camera_id']}).", None
+
+                if poe_port is not None and poe_port != "":
+                    try:
+                        poe_port_int = int(poe_port)
+                        cursor.execute("SELECT camera_id, name FROM cameras WHERE station_name = ? AND poe_port = ?", (station_name, poe_port_int))
+                        poe_conflict = cursor.fetchone()
+                        if poe_conflict:
+                            return False, f"PoE Port conflict: Port {poe_port_int} at '{station_name}' is already assigned to '{poe_conflict['name']}' ({poe_conflict['camera_id']}).", None
+                    except ValueError:
+                        pass
 
         raw_struct = camera_data.get("mounting_structure", CameraMountingStructure.TRAFFIC_SIGNAL_POLE.value)
         clean_struct = str(raw_struct).strip().upper().replace(" ", "_")
@@ -661,7 +702,7 @@ class CameraInventoryManager:
             mounting_structure=mounting_struct,
             mounting_height_m=float(camera_data.get("mounting_height_m", 6.0)),
             division_id=target_division,
-            station_name=camera_data.get("station_name", "Municipal Traffic Command"),
+            station_name=station_name,
             intersection_or_corridor=camera_data.get("intersection_or_corridor", "Urban Corridor"),
             latitude=float(camera_data.get("latitude", 6.9271)),
             longitude=float(camera_data.get("longitude", 79.8612)),
@@ -669,11 +710,11 @@ class CameraInventoryManager:
             tilt_angle_deg=float(camera_data.get("tilt_angle_deg", 25.0)),
             rtsp_main_url=camera_data.get("rtsp_main_url", f"rtsp://192.168.1.200:554/{cam_id}"),
             rtsp_sub_url=camera_data.get("rtsp_sub_url", ""),
-            ip_address=camera_data.get("ip_address", "192.168.1.200"),
+            ip_address=ip_addr or "192.168.1.200",
             status=camera_data.get("status", "ONLINE"),
             fps=float(camera_data.get("fps", 30.0)),
             resolution=camera_data.get("resolution", "1920x1080"),
-            poe_port=camera_data.get("poe_port"),
+            poe_port=int(poe_port) if poe_port is not None and str(poe_port).isdigit() else None,
             created_at=now,
             last_updated=now,
         )
@@ -700,6 +741,7 @@ class CameraInventoryManager:
                 return True, f"Camera {cam_id} successfully registered.", node.to_dict()
             except sqlite3.IntegrityError:
                 return False, f"Camera with ID {cam_id} already exists.", None
+
 
     @staticmethod
     def _is_same_division(div1: Optional[str], div2: Optional[str]) -> bool:
@@ -970,4 +1012,123 @@ class CameraInventoryManager:
                 "is_custom": bool(s["is_custom"]),
             }
         return specs
+
+    def bulk_import_cameras_csv(
+        self,
+        csv_text: str,
+        operator_role: Role = Role.SUPER_ADMIN,
+        operator_division: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Bulk provisions camera nodes from CSV data.
+        Expected headers: camera_id, name, ip_address, rtsp_main_url, mounting_structure, mounting_height_m, division_id, station_name, poe_port
+        """
+        import csv
+        import io
+
+        if operator_role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+            return {"success": False, "imported": 0, "skipped": 0, "errors": ["Insufficient privilege: Requires STATION_ADMIN or SUPER_ADMIN."]}
+
+        lines = [line for line in csv_text.strip().splitlines() if line.strip()]
+        if not lines:
+            return {"success": False, "imported": 0, "skipped": 0, "errors": ["Empty CSV content provided."]}
+
+        reader = csv.DictReader(io.StringIO("\n".join(lines)))
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for row_idx, row in enumerate(reader, start=1):
+            cam_id = row.get("camera_id", "").strip()
+            if not cam_id:
+                skipped += 1
+                errors.append(f"Row {row_idx}: Missing camera_id")
+                continue
+
+            cam_data = {
+                "camera_id": cam_id,
+                "name": row.get("name", f"Camera {cam_id}").strip(),
+                "ip_address": row.get("ip_address", "192.168.1.200").strip(),
+                "rtsp_main_url": row.get("rtsp_main_url", f"rtsp://192.168.1.200:554/{cam_id}").strip(),
+                "rtsp_sub_url": row.get("rtsp_sub_url", "").strip(),
+                "mounting_structure": row.get("mounting_structure", "TRAFFIC_SIGNAL_POLE").strip(),
+                "mounting_height_m": float(row.get("mounting_height_m", 6.0) or 6.0),
+                "division_id": row.get("division_id", operator_division or "DIV_METRO_HQ").strip(),
+                "station_name": row.get("station_name", "Municipal Traffic Command").strip(),
+                "intersection_or_corridor": row.get("intersection_or_corridor", "Urban Corridor").strip(),
+                "latitude": float(row.get("latitude", 6.9271) or 6.9271),
+                "longitude": float(row.get("longitude", 79.8612) or 79.8612),
+                "azimuth_heading_deg": float(row.get("azimuth_heading_deg", 0.0) or 0.0),
+                "tilt_angle_deg": float(row.get("tilt_angle_deg", 25.0) or 25.0),
+                "fps": float(row.get("fps", 30.0) or 30.0),
+                "resolution": row.get("resolution", "1920x1080").strip(),
+                "poe_port": int(row.get("poe_port")) if row.get("poe_port") and str(row.get("poe_port")).isdigit() else None,
+            }
+
+            success, msg, _ = self.register_camera(cam_data, operator_role=operator_role, operator_division=operator_division)
+            if success:
+                imported += 1
+            else:
+                skipped += 1
+                errors.append(f"Row {row_idx} ({cam_id}): {msg}")
+
+        return {
+            "success": True,
+            "imported": imported,
+            "skipped": skipped,
+            "errors": errors[:50],
+        }
+
+    def export_cameras_csv(
+        self,
+        operator_role: Role = Role.SUPER_ADMIN,
+        operator_division: Optional[str] = None,
+    ) -> str:
+        """Exports camera fleet inventory to standard CSV format."""
+        import csv
+        import io
+
+        cameras = self.list_cameras(operator_role=operator_role, operator_division=operator_division)
+        output = io.StringIO()
+        fieldnames = [
+            "camera_id", "name", "mounting_structure", "mounting_height_m",
+            "division_id", "station_name", "intersection_or_corridor",
+            "latitude", "longitude", "azimuth_heading_deg", "tilt_angle_deg",
+            "rtsp_main_url", "rtsp_sub_url", "ip_address", "status", "fps", "resolution", "poe_port"
+        ]
+        writer = csv.DictWriter(output, fieldnames=fieldnames, lineterminator="\n")
+        writer.writeheader()
+        for cam in cameras:
+            row = {k: cam.get(k, "") for k in fieldnames}
+            writer.writerow(row)
+        return output.getvalue()
+
+    def cascade_delete_camera(
+        self,
+        camera_id: str,
+        app_state: Optional[Dict[str, Any]] = None,
+        operator_role: Role = Role.SUPER_ADMIN,
+        operator_division: Optional[str] = None,
+    ) -> Tuple[bool, str]:
+        """
+        Deletes a camera device and cascades cleanup to active Watchdog, Relay Proxies, and Stream caches.
+        """
+        success, msg = self.delete_camera(camera_id, operator_role=operator_role, operator_division=operator_division)
+        if not success:
+            return False, msg
+
+        # Cascade cleanup across runtime subsystems if app_state provided
+        if app_state:
+            # 1. Unregister from watchdog
+            watchdog = app_state.get("camera_watchdog")
+            if watchdog and hasattr(watchdog, "unregister_camera"):
+                watchdog.unregister_camera(camera_id)
+
+            # 2. Clean up stream relay proxy
+            relays = app_state.get("stream_relays")
+            if isinstance(relays, dict) and camera_id in relays:
+                del relays[camera_id]
+
+        return True, f"Camera {camera_id} and all active pipeline bindings successfully removed."
+
 

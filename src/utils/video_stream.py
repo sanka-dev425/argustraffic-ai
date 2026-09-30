@@ -691,6 +691,30 @@ class HardwareAcceleratedCapture:
             frame = self.synthetic_sim.next_frame()
         return True, frame
 
+    def hot_swap_source(self, new_source: Union[str, int], new_channel_id: Optional[str] = None) -> bool:
+        """
+        Dynamically hot-swaps the underlying video source (RTSP URL, device index, or synthetic channel)
+        without dropping the capture pipeline container.
+        """
+        with self.lock:
+            # Release existing backend
+            if self.cap:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
+
+            self.source = new_source
+            if new_channel_id:
+                self.channel_id = new_channel_id
+            self.consecutive_failures = 0
+            self.reconnect_attempts = 0
+            self.no_signal_frame_count = 0
+            self.synthetic_sim = None
+            self._init_backend_capture()
+            return self.connection_status == "ONLINE" or self.is_synthetic
+
     def release(self) -> None:
         with self.lock:
             self.running = False
@@ -714,5 +738,11 @@ class VideoStream:
     def read_frame(self) -> Tuple[bool, np.ndarray]:
         return self.capture.read_frame()
 
+    def hot_swap_source(self, new_source: Union[str, int], new_channel_id: Optional[str] = None) -> bool:
+        """Dynamically rebinds stream source without recreating container."""
+        self.source = new_source
+        return self.capture.hot_swap_source(new_source, new_channel_id)
+
     def release(self) -> None:
         self.capture.release()
+

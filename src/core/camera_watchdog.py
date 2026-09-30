@@ -144,6 +144,15 @@ class CameraSelfHealingWatchdog:
         jitter = random.uniform(-0.25, 0.25) * exponential
         return max(1.0, round(exponential + jitter, 2))
 
+    def unregister_camera(self, camera_id: str) -> bool:
+        """Unregisters a camera from the self-healing watchdog registry."""
+        with self.lock:
+            if camera_id in self.monitored_cameras:
+                del self.monitored_cameras[camera_id]
+                logger.info(f"[WATCHDOG] Unregistered camera {camera_id} from watchdog monitoring.")
+                return True
+            return False
+
     def get_fleet_diagnostics(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.monitored_cameras.values())
@@ -151,4 +160,5 @@ class CameraSelfHealingWatchdog:
     def get_remediation_history(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.remediation_log[-20:])
+
 

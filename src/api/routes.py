@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 import cv2
 from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 import numpy as np
 from PIL import Image
 from pydantic import BaseModel, Field
@@ -23,6 +23,8 @@ from src.api.schemas import (
     TelemetryResponse,
     ZoneSchema,
 )
+from src.core.camera_scanner import scan_local_cameras, validate_rtsp_stream
+from src.core.device_manager import StreamRelayProxy
 from src.core.detector import TrafficDetector
 from src.core.evidence_report import generate_executive_traffic_report, generate_forensic_html_report
 from src.core.incident_engine import IncidentEngine
@@ -32,6 +34,7 @@ from src.api.security import sanitize_identifier
 from src.utils.visualizer import FrameVisualizer
 
 router = APIRouter(prefix="/api/v1")
+
 
 
 def get_components():
@@ -431,7 +434,17 @@ class CameraUpdateRequest(BaseModel):
     poe_port: Optional[int] = None
 
 
+class CameraValidateStreamRequest(BaseModel):
+    rtsp_url: str = Field(..., description="RTSP, RTSPS, or HTTP video stream endpoint")
+    timeout_sec: float = Field(2.5, description="Socket and frame handshake timeout in seconds")
+
+
+class CameraBulkImportRequest(BaseModel):
+    csv_data: str = Field(..., description="Raw CSV string containing camera fleet records")
+
+
 def _resolve_caller_identity(token: Optional[str] = None, auth_header: Optional[str] = None):
+
     """Resolves caller role, division, and operator username from bearer token or query."""
     from src.core.auth_rbac import Role
     state = get_components()
@@ -1041,6 +1054,73 @@ async def get_fleet_camera(
     return cam
 
 
+@router.get("/cameras/scan", tags=["Camera Fleet Management"])
+async def scan_cameras_subnet(
+    subnet: Optional[str] = Query(None, description="Optional custom CIDR / subnet (e.g. 10.10.20.0/24)"),
+    timeout: float = Query(5.0, description="Scan timeout in seconds"),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Scans local or specified subnet for active ONVIF/RTSP IP cameras."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    cameras = await scan_local_cameras(timeout_sec=timeout, target_subnet=subnet)
+    return {
+        "status": "success",
+        "target_subnet": subnet or "auto-detected",
+        "discovered_count": len(cameras),
+        "devices": cameras,
+    }
+
+
+@router.post("/cameras/validate-stream", tags=["Camera Fleet Management"])
+async def validate_camera_stream_endpoint(
+    req: CameraValidateStreamRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Performs rapid non-blocking reachability and handshake validation on an RTSP stream endpoint."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    result = await validate_rtsp_stream(req.rtsp_url, timeout_sec=req.timeout_sec)
+    return result
+
+
+@router.post("/cameras/bulk-import", tags=["Camera Fleet Management"])
+async def bulk_import_fleet_cameras(
+    req: CameraBulkImportRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Bulk provisions camera nodes from CSV dataset."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    res = cam_mgr.bulk_import_cameras_csv(req.csv_data, operator_role=role, operator_division=division)
+    return res
+
+
+@router.get("/cameras/export", tags=["Camera Fleet Management"])
+async def export_fleet_cameras_csv(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Exports camera fleet inventory as standard CSV file."""
+    role, division, _ = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    cam_mgr = state.get("camera_inventory")
+    if not cam_mgr:
+        raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
+
+    csv_data = cam_mgr.export_cameras_csv(operator_role=role, operator_division=division)
+    return Response(
+        content=csv_data,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=camera_fleet_export.csv"},
+    )
+
+
 @router.post("/cameras", tags=["Camera Fleet Management"])
 async def register_fleet_camera(
     req: CameraRegistrationRequest,
@@ -1055,14 +1135,34 @@ async def register_fleet_camera(
         raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
 
     dump_fn = getattr(req, "model_dump", req.dict)
+    camera_dict = dump_fn()
     success, msg, node = cam_mgr.register_camera(
-        camera_data=dump_fn(),
+        camera_data=camera_dict,
         operator_role=role,
         operator_division=division,
     )
     if not success:
         status_code = 403 if "privilege" in msg.lower() else 400
         raise HTTPException(status_code=status_code, detail=msg)
+
+    # Automatically register into self-healing watchdog
+    watchdog = state.get("camera_watchdog")
+    if watchdog and hasattr(watchdog, "register_camera"):
+        watchdog.register_camera(
+            camera_id=node["camera_id"],
+            ip_address=node.get("ip_address", "192.168.1.200"),
+            poe_port=node.get("poe_port") or 1,
+        )
+
+    # Initialize single-ingestion stream relay proxy
+    relays = state.get("stream_relays")
+    if isinstance(relays, dict) and node.get("rtsp_main_url"):
+        relays[node["camera_id"]] = StreamRelayProxy(
+            camera_id=node["camera_id"],
+            rtsp_url=node["rtsp_main_url"],
+            sub_stream_url=node.get("rtsp_sub_url") or node["rtsp_main_url"],
+        )
+
     return {"status": "registered", "message": msg, "camera": node}
 
 
@@ -1100,15 +1200,16 @@ async def delete_fleet_camera(
     token: Optional[str] = Query(None),
     authorization: Optional[str] = Header(None),
 ):
-    """Deletes camera node with station division boundary enforcement."""
+    """Deletes camera node and cleanly cascades unregistration across watchdog and stream relay proxies."""
     role, division, _ = _resolve_caller_identity(token, authorization)
     state = get_components()
     cam_mgr = state.get("camera_inventory")
     if not cam_mgr:
         raise HTTPException(status_code=500, detail="Camera inventory engine unavailable.")
 
-    success, msg = cam_mgr.delete_camera(
+    success, msg = cam_mgr.cascade_delete_camera(
         camera_id=camera_id,
+        app_state=state,
         operator_role=role,
         operator_division=division,
     )
@@ -1116,6 +1217,7 @@ async def delete_fleet_camera(
         status_code = 403 if "access denied" in msg.lower() or "privilege" in msg.lower() else 404
         raise HTTPException(status_code=status_code, detail=msg)
     return {"status": "deleted", "message": msg}
+
 
 
 @router.get("/telemetry/anpr-radar", tags=["Telemetry"])
