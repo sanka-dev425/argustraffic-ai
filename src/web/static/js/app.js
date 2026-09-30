@@ -267,7 +267,35 @@ function updateUserUI() {
 /* ==========================================================================
    3. WEBSOCKET REAL-TIME STREAMING & TELEMETRY
    ========================================================================== */
+let wsReconnectTimer = null;
+let wsBackoffDelay = 1000;
+
+function scheduleWebSocketReconnect() {
+  if (wsReconnectTimer) return;
+  const delay = Math.min(wsBackoffDelay, 8000);
+  wsBackoffDelay = Math.min(wsBackoffDelay * 1.5, 8000);
+  wsReconnectTimer = setTimeout(() => {
+    wsReconnectTimer = null;
+    initWebSocket();
+  }, delay);
+}
+
 function initWebSocket() {
+  if (wsReconnectTimer) {
+    clearTimeout(wsReconnectTimer);
+    wsReconnectTimer = null;
+  }
+  if (ws) {
+    try {
+      ws.onopen = null;
+      ws.onmessage = null;
+      ws.onerror = null;
+      ws.onclose = null;
+      ws.close();
+    } catch (e) {}
+    ws = null;
+  }
+
   const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
   const wsUrl = `${protocol}//${window.location.host}/ws/stream`;
   const statusEl = document.getElementById("connection-status");
@@ -278,12 +306,16 @@ function initWebSocket() {
     ws = new WebSocket(wsUrl);
   } catch (err) {
     fallbackToMjpegStream();
+    scheduleWebSocketReconnect();
     return;
   }
 
   ws.onopen = () => {
     console.log("[ArgusTraffic] WebSocket stream online.");
-    statusEl.innerHTML = `<span class="pulse-dot"></span><span>SYSTEM ONLINE (320ms)</span>`;
+    wsBackoffDelay = 1000;
+    if (statusEl) {
+      statusEl.innerHTML = `<span class="pulse-dot"></span><span>SYSTEM ONLINE (320ms)</span>`;
+    }
   };
 
   ws.onmessage = (event) => {
@@ -296,15 +328,18 @@ function initWebSocket() {
   };
 
   ws.onclose = () => {
-    statusEl.innerHTML = `<span class="pulse-dot" style="background:#ff3d71;box-shadow:0 0 8px #ff3d71"></span><span>RECONNECTING</span>`;
+    if (statusEl) {
+      statusEl.innerHTML = `<span class="pulse-dot" style="background:#ff3d71;box-shadow:0 0 8px #ff3d71"></span><span>RECONNECTING</span>`;
+    }
     showNoSignalOverlay(currentVideoSource, "WEBSOCKET STREAM INTERRUPTED");
     fallbackToMjpegStream();
-    setTimeout(initWebSocket, 2000);
+    scheduleWebSocketReconnect();
   };
 
   ws.onerror = (err) => {
     showNoSignalOverlay(currentVideoSource, "CONNECTION TIMEOUT");
     fallbackToMjpegStream();
+    scheduleWebSocketReconnect();
   };
 
   if (streamImg) {

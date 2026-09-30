@@ -285,7 +285,7 @@ def process_single_frame(frame_idx: int):
                 sla_mgr.register_incident(ad)
             if edge_vault and ring_buf:
                 clip_frames = ring_buf.get_pre_event_window(10.0)
-                edge_vault.lock_incident_clip(ad.get("alert_id", "INC"), clip_frames, ad)
+                edge_vault.lock_incident_clip_async(ad.get("alert_id", "INC"), clip_frames, ad)
 
     # Periodic SLA Escalation check
     if sla_mgr and (frame_idx % 30 == 0):

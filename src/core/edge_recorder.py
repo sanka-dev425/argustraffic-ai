@@ -8,6 +8,7 @@ Author: ArgusTraffic Autonomous Systems Engineering Team
 """
 
 from collections import deque
+import concurrent.futures
 import datetime
 import json
 import logging
@@ -28,11 +29,18 @@ class EdgeRingBuffer:
     In-memory pre-event buffer holding the last N seconds of decoded frames.
     When a collision, wrong-way driving, or crime occurs, this enables saving the
     crucial seconds BEFORE the AI trigger occurred (pre-incident forensics).
+    Includes memory optimization by bounding frame dimensions to prevent RAM bloat.
     """
 
-    def __init__(self, capacity_seconds: float = 15.0, fps: float = 30.0):
+    def __init__(
+        self,
+        capacity_seconds: float = 15.0,
+        fps: float = 30.0,
+        max_resolution: Optional[Tuple[int, int]] = (1280, 720),
+    ):
         self.capacity_frames = int(capacity_seconds * fps)
         self.fps = fps
+        self.max_resolution = max_resolution
         self.buffer: deque = deque(maxlen=self.capacity_frames)
         self.lock = threading.Lock()
 
@@ -41,8 +49,19 @@ class EdgeRingBuffer:
         if frame is None or frame.size == 0:
             return
         ts = timestamp or time.time()
+        
+        # Memory optimization: scale down if frame exceeds max_resolution
+        stored_frame = frame
+        if self.max_resolution:
+            max_w, max_h = self.max_resolution
+            h, w = frame.shape[:2]
+            if w > max_w or h > max_h:
+                scale = min(max_w / w, max_h / h)
+                new_w, new_h = int(w * scale), int(h * scale)
+                stored_frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
         with self.lock:
-            self.buffer.append((ts, frame.copy()))
+            self.buffer.append((ts, stored_frame.copy()))
 
     def get_pre_event_window(self, window_seconds: float = 10.0) -> List[Tuple[float, np.ndarray]]:
         """Retrieves frames from the last window_seconds up to the current moment."""
@@ -68,6 +87,7 @@ class EdgeStorageVault:
     Local Edge NVR Segment Archiver and Store-and-Forward Dispatcher.
     Stores locked incident clips locally under %LOCALAPPDATA%/ArgusTraffic/vault
     and marks them for automated HQ cloud sync upon network restoration.
+    Utilizes an asynchronous ThreadPoolExecutor for non-blocking clip encoding.
     """
 
     def __init__(self, storage_root: Optional[Path] = None, max_disk_mb: float = 2048.0):
@@ -79,9 +99,33 @@ class EdgeStorageVault:
         self.manifests_dir = self.storage_root / "pending_sync"
         self.max_disk_mb = max_disk_mb
         self.lock = threading.Lock()
+        self._executor = concurrent.futures.ThreadPoolExecutor(
+            max_workers=2,
+            thread_name_prefix="ArgusClipWriter",
+        )
 
         self.clips_dir.mkdir(parents=True, exist_ok=True)
         self.manifests_dir.mkdir(parents=True, exist_ok=True)
+
+    def lock_incident_clip_async(
+        self,
+        incident_id: str,
+        frames: List[Tuple[float, np.ndarray]],
+        metadata: Dict[str, Any],
+        fps: float = 30.0,
+    ) -> concurrent.futures.Future:
+        """Asynchronously encodes and saves incident video clip without blocking the vision loop."""
+        return self._executor.submit(
+            self.lock_incident_clip,
+            incident_id,
+            frames,
+            metadata,
+            fps,
+        )
+
+    def shutdown(self, wait: bool = False) -> None:
+        """Gracefully flushes pending clip writers on shutdown."""
+        self._executor.shutdown(wait=wait)
 
     def lock_incident_clip(
         self,

@@ -128,8 +128,9 @@ class StorageWatchdogManager:
         for sub in target_dirs:
             target_path = self.data_dir / sub
             if target_path.exists() and target_path.is_dir():
+                PROTECTED_DB_EXTENSIONS = (".db", ".db-wal", ".db-shm", ".sqlite", ".sqlite3", ".db-journal")
                 for p in target_path.rglob("*"):
-                    if p.is_file() and not p.name.endswith(".db") and not p.name.endswith(".db-wal"):
+                    if p.is_file() and not p.name.lower().endswith(PROTECTED_DB_EXTENSIONS):
                         try:
                             mtime = p.stat().st_mtime
                             size = p.stat().st_size

@@ -21,10 +21,11 @@ logger = logging.getLogger("argustraffic.dispatch")
 class AlertDispatcher:
     """Non-blocking resilient incident broadcaster."""
 
-    def __init__(self, webhook_url: Optional[str] = None, webhook_secret: Optional[str] = None):
+    def __init__(self, webhook_url: Optional[str] = None, webhook_secret: Optional[str] = None, max_queue_size: int = 2000):
         self.webhook_url = webhook_url or os.getenv("ARGUS_WEBHOOK_URL", "")
         self.webhook_secret = webhook_secret or os.getenv("ARGUS_WEBHOOK_SECRET", "")
-        self._queue: asyncio.Queue = asyncio.Queue()
+        self._max_queue_size = max_queue_size
+        self._queue: asyncio.Queue = asyncio.Queue(maxsize=max_queue_size)
         self._worker_task: Optional[asyncio.Task] = None
         self._client: Optional[httpx.AsyncClient] = None
 
@@ -58,7 +59,13 @@ class AlertDispatcher:
         try:
             self._queue.put_nowait(alert_dict)
         except asyncio.QueueFull:
-            logger.warning("Alert dispatch queue full. Dropping older event.")
+            try:
+                # Discard oldest event to make room for newest high-priority incident
+                self._queue.get_nowait()
+                self._queue.put_nowait(alert_dict)
+                logger.warning("Alert dispatch queue saturated (maxsize reached). Evicted oldest item.")
+            except Exception:
+                logger.warning("Alert dispatch queue full. Dropping event.")
 
     async def _process_queue(self) -> None:
         while True:
