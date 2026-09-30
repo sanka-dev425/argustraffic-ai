@@ -118,3 +118,77 @@ def test_executive_and_forensic_reports():
     assert "EXECUTIVE TRAFFIC SAFETY AUDIT" in exec_html
     assert "Commander Alex" in exec_html
     assert "MERKLE CERTIFICATE" in exec_html
+
+
+def test_report_template_manager_and_exports(tmp_path):
+    from src.core.evidence_report import ReportTemplateManager
+
+    db_file = str(tmp_path / "test_templates.db")
+    mgr = ReportTemplateManager(db_path=db_file)
+
+    # 1. Built-in templates verification
+    templates = mgr.list_templates()
+    assert len(templates) >= 4
+    tpl_ids = [t["template_id"] for t in templates]
+    assert "tpl_executive_summary" in tpl_ids
+    assert "tpl_forensic_court_dossier" in tpl_ids
+
+    # 2. Create custom template
+    success, tpl_id = mgr.create_custom_template(
+        template_id="tpl_custom_highway_speed",
+        name="Custom Highway Speed Report",
+        category="SPEED_RADAR",
+        agency_name="National Highway Traffic Patrol",
+        agency_sub_title="Division 1 Expressway",
+        logo_url="https://agency.gov/logo.png",
+        accent_color="#065f46",
+        disclaimer_text="Confidential legal document.",
+        created_by="admin",
+    )
+    assert success is True
+    assert tpl_id == "tpl_custom_highway_speed"
+
+    # 3. List and Get custom template
+    fetched = mgr.get_template(tpl_id)
+    assert fetched is not None
+    assert fetched["name"] == "Custom Highway Speed Report"
+    assert fetched["agency_name"] == "National Highway Traffic Patrol"
+
+    # 4. Render HTML Report with custom template
+    records = [
+        {
+            "alert_id": "INC-RADAR-001",
+            "incident_type": "OVERSPEEDING",
+            "severity": "CRITICAL",
+            "formatted_time": "2026-09-30 08:30:00",
+            "zone_id": "North Corridor KM 42",
+            "description": "Speed violation 142.5 km/h",
+        }
+    ]
+    html_out = mgr.render_custom_report(
+        template_id=tpl_id,
+        stats={"total_recorded": 1, "critical_count": 1},
+        recent_incidents=records,
+        officer_name="Officer Smith",
+    )
+    assert "Custom Highway Speed Report" in html_out
+    assert "National Highway Traffic Patrol" in html_out
+    assert "INC-RADAR-001" in html_out
+
+    # 5. Export CSV and JSON
+    csv_str = mgr.export_csv(records)
+    assert "INC-RADAR-001" in csv_str
+    assert "OVERSPEEDING" in csv_str
+
+    json_str = mgr.export_json(records, {"total_recorded": 1})
+    assert "INC-RADAR-001" in json_str
+    assert "ArgusTraffic AI Enterprise Core" in json_str
+
+    # 6. Delete custom template
+    del_ok, _ = mgr.delete_custom_template(tpl_id)
+    assert del_ok is True
+    # Built-ins should be protected
+    del_builtin_ok, _ = mgr.delete_custom_template("tpl_executive_summary")
+    assert del_builtin_ok is False
+
+

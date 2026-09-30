@@ -36,6 +36,8 @@ from src.core.station_mesh import NationalStationMeshAggregator
 from src.core.camera_watchdog import CameraSelfHealingWatchdog
 from src.core.device_manager import CameraInventoryManager
 from src.core.speed_engine import PointToPointAverageSpeedEngine
+from src.core.evidence_report import ReportTemplateManager
+from src.core.system_settings import SystemSettingsManager
 from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
@@ -139,6 +141,8 @@ def init_app_state():
     app_state["camera_watchdog"].register_camera("CAM-118", "192.168.1.101", "192.168.1.2", 2)
     app_state["section_speed_engine"] = PointToPointAverageSpeedEngine()
     app_state["camera_inventory"] = CameraInventoryManager()
+    app_state["report_template_mgr"] = ReportTemplateManager()
+    app_state["settings_mgr"] = SystemSettingsManager()
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 

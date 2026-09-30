@@ -1409,9 +1409,90 @@ function initSLATimer() {
 }
 
 /* ==========================================================================
-   10B. GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY RADAR MAP
+   10B. GIS SPATIAL CORRIDOR & MULTI-PROVIDER TILE RADAR ENGINE
    ========================================================================== */
 let gisMapInstance = null;
+let gisCurrentTileLayer = null;
+let gisHeatmapActive = true;
+let gisMarkersLayer = null;
+
+const MAP_TILE_PROVIDERS = {
+  carto_dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    name: "CartoDB Dark Matter",
+    subdomains: "abcd",
+    maxZoom: 19,
+    attribution: "&copy; CartoDB"
+  },
+  google_road: {
+    url: "https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}",
+    name: "Google Maps Roadmap",
+    subdomains: "0123",
+    maxZoom: 20,
+    attribution: "&copy; Google"
+  },
+  esri_satellite: {
+    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    name: "Esri World Imagery 4K Satellite",
+    subdomains: "abcd",
+    maxZoom: 19,
+    attribution: "&copy; Esri World Imagery"
+  },
+  osm_standard: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    name: "OpenStreetMap Standard",
+    subdomains: "abc",
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap"
+  },
+  custom_wms: {
+    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+    name: "Custom Tile Server / WMS",
+    subdomains: "abcd",
+    maxZoom: 19,
+    attribution: "Custom Enterprise GIS"
+  }
+};
+
+function switchMapTileProvider(providerKey) {
+  const provider = MAP_TILE_PROVIDERS[providerKey] || MAP_TILE_PROVIDERS.carto_dark;
+  if (!gisMapInstance || typeof L === "undefined") return;
+
+  if (gisCurrentTileLayer) {
+    gisMapInstance.removeLayer(gisCurrentTileLayer);
+  }
+
+  gisCurrentTileLayer = L.tileLayer(provider.url, {
+    maxZoom: provider.maxZoom || 19,
+    subdomains: provider.subdomains || "abc",
+  }).addTo(gisMapInstance);
+
+  localStorage.setItem("argus_map_provider", providerKey);
+  showToast({ incident_type: "GIS", description: `Switched GIS tile provider to: ${provider.name}` });
+}
+
+window.switchMapTileProvider = switchMapTileProvider;
+
+function toggleMapHeatmap() {
+  gisHeatmapActive = !gisHeatmapActive;
+  const btn = document.getElementById("btn-toggle-heatmap");
+  if (btn) {
+    btn.innerText = `🔥 Heatmap: ${gisHeatmapActive ? 'ON' : 'OFF'}`;
+    btn.style.color = gisHeatmapActive ? '#00e5ff' : '#94a3b8';
+  }
+  showToast({ incident_type: "GIS", description: `Traffic density heatmap overlay ${gisHeatmapActive ? 'enabled' : 'disabled'}.` });
+}
+
+window.toggleMapHeatmap = toggleMapHeatmap;
+
+function recenterGisMap() {
+  if (gisMapInstance) {
+    gisMapInstance.setView([6.9300, 79.8550], 13);
+    showToast({ incident_type: "GIS", description: "Recentered GIS radar map on National Capital Grid." });
+  }
+}
+
+window.recenterGisMap = recenterGisMap;
 
 function initGisMap() {
   const mapContainer = document.getElementById("gis-leaflet-map");
@@ -1426,17 +1507,23 @@ function initGisMap() {
         attributionControl: false,
       });
 
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-        maxZoom: 19,
-        subdomains: "abcd",
+      const savedProvider = localStorage.getItem("argus_map_provider") || "carto_dark";
+      const initialTile = MAP_TILE_PROVIDERS[savedProvider] || MAP_TILE_PROVIDERS.carto_dark;
+
+      const mapSelect = document.getElementById("map-provider-select");
+      if (mapSelect) mapSelect.value = savedProvider;
+
+      gisCurrentTileLayer = L.tileLayer(initialTile.url, {
+        maxZoom: initialTile.maxZoom,
+        subdomains: initialTile.subdomains,
       }).addTo(gisMapInstance);
 
       const createRadarIcon = (label, color = "#00e5ff") => {
         return L.divIcon({
           className: "custom-radar-icon",
           html: `<div style="display:flex;align-items:center;gap:6px;transform:translate(-50%,-50%);">
-                  <div style="width:12px;height:12px;background:${color};border-radius:50%;box-shadow:0 0 10px ${color};border:2px solid #fff;"></div>
-                  <span style="background:rgba(10,15,24,0.9);color:${color};font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid ${color};white-space:nowrap;">${label}</span>
+                  <div style="width:12px;height:12px;background:${color};border-radius:50%;box-shadow:0 0 12px ${color};border:2px solid #fff;"></div>
+                  <span style="background:rgba(10,15,24,0.92);color:${color};font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid ${color};white-space:nowrap;">${label}</span>
                 </div>`,
           iconSize: [20, 20],
         });
@@ -1449,16 +1536,26 @@ function initGisMap() {
         { id: "CAM-004", name: "South Coastal Overpass", lat: 6.0328, lng: 80.2168, color: "#00e5ff" },
       ];
 
+      gisMarkersLayer = L.layerGroup().addTo(gisMapInstance);
+
       cameras.forEach(cam => {
-        const marker = L.marker([cam.lat, cam.lng], { icon: createRadarIcon(cam.id, cam.color) }).addTo(gisMapInstance);
+        const marker = L.marker([cam.lat, cam.lng], { icon: createRadarIcon(cam.id, cam.color) }).addTo(gisMarkersLayer);
         marker.bindPopup(`
-          <div style="font-family:'Inter',sans-serif;color:#fff;background:#0e1626;padding:8px;border-radius:4px;">
-            <div style="font-weight:700;color:${cam.color};font-size:12px;">${cam.id}: ${cam.name}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:4px;">STATUS: ONLINE &bull; 30 FPS &bull; 1080p</div>
-            <button onclick="switchStreamSource('${cam.id}', 'wall-node-1');" style="margin-top:6px;width:100%;padding:4px 8px;background:${cam.color};color:#000;border:none;border-radius:3px;font-weight:700;cursor:pointer;font-size:10px;">SWITCH PRIMARY FEED</button>
+          <div style="font-family:'Inter',sans-serif;color:#fff;background:#0e1626;padding:10px;border-radius:6px;min-width:180px;">
+            <div style="font-weight:800;color:${cam.color};font-size:12px;">${cam.id}: ${cam.name}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:4px;">STATUS: ONLINE &bull; 30 FPS &bull; H.265</div>
+            <div style="font-size:10px;color:#00e5ff;margin-top:2px;">GPS: ${cam.lat.toFixed(4)}, ${cam.lng.toFixed(4)}</div>
+            <button onclick="switchStreamSource('${cam.id}', 'wall-node-1');" style="margin-top:8px;width:100%;padding:5px 8px;background:${cam.color};color:#000;border:none;border-radius:4px;font-weight:700;cursor:pointer;font-size:11px;">SWITCH PRIMARY FEED</button>
           </div>
         `);
       });
+
+      // Corridor vector polyline
+      const corridorPolyline = L.polyline([
+        [6.9319, 79.8478],
+        [6.9271, 79.8612],
+        [6.9147, 79.8653]
+      ], { color: '#00e5ff', weight: 3, opacity: 0.7, dashArray: '6, 6' }).addTo(gisMapInstance);
 
       gisMapInstance.setView([6.9300, 79.8550], 13);
       return;
@@ -1548,6 +1645,498 @@ function renderTacticalRadarCanvas(container) {
   }
   drawRadar();
 }
+
+/* ==========================================================================
+   10C. ENTERPRISE RBAC & USER MANAGEMENT
+   ========================================================================== */
+async function loadUsersTable() {
+  try {
+    const res = await fetch("/api/v1/auth/users");
+    if (!res.ok) return;
+    const users = await res.json();
+    const tbody = document.getElementById("users-table-body");
+    if (!tbody) return;
+
+    if (!users || users.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center py-6 text-dim">No registered operators found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = users.map(u => {
+      const isRoot = u.username === "admin";
+      const roleBadge = u.role === "SUPER_ADMIN" ? "badge-role super" : (u.role === "STATION_ADMIN" ? "badge-role admin" : (u.role === "FORENSIC_AUDITOR" ? "badge-role auditor" : "badge-role operator"));
+      const statusBadge = u.is_active ? `<span class="badge-status active">ACTIVE</span>` : `<span class="badge-status inactive">DISABLED</span>`;
+      
+      return `
+        <tr>
+          <td><code>${u.username}</code></td>
+          <td><strong>${u.full_name}</strong></td>
+          <td><span class="${roleBadge}">${u.role}</span></td>
+          <td><span style="font-size:11px;color:#94a3b8;">${u.division_id || 'DIV_METRO_HQ'}</span></td>
+          <td>${u.email}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-sm btn-outline" onclick="openEditUserModal('${u.username}')">Edit</button>
+              <button class="btn btn-sm btn-outline" onclick="openResetPasswordModal('${u.username}')">Reset Key</button>
+              ${!isRoot ? `<button class="btn btn-sm btn-outline" style="color:#ef4444;border-color:rgba(239,68,68,0.4);" onclick="deleteUserPrompt('${u.username}')">Delete</button>` : `<span style="font-size:11px;color:#64748b;padding:4px;">LOCKED</span>`}
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  } catch (e) {
+    console.error("Failed to load users table:", e);
+  }
+}
+
+window.loadUsersTable = loadUsersTable;
+
+function openAddUserModal() {
+  const modal = document.getElementById("add-user-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeAddUserModal() {
+  const modal = document.getElementById("add-user-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.openAddUserModal = openAddUserModal;
+window.closeAddUserModal = closeAddUserModal;
+
+async function submitNewUser() {
+  const username = document.getElementById("new-user-username")?.value.trim();
+  const password = document.getElementById("new-user-password")?.value.trim();
+  const fullName = document.getElementById("new-user-fullname")?.value.trim();
+  const email = document.getElementById("new-user-email")?.value.trim();
+  const role = document.getElementById("new-user-role")?.value;
+  const division = document.getElementById("new-user-division")?.value;
+
+  if (!username || !password || !fullName || !email) {
+    showToast({ incident_type: "ERROR", description: "Please complete all required operator fields." });
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/v1/auth/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        password,
+        full_name: fullName,
+        email,
+        role,
+        division_id: division,
+      }),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SECURITY", description: `Provisioned operator '${username}' (${role}) successfully.` });
+      closeAddUserModal();
+      loadUsersTable();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to provision operator." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.submitNewUser = submitNewUser;
+
+async function openEditUserModal(username) {
+  try {
+    const res = await fetch("/api/v1/auth/users");
+    const users = await res.json();
+    const user = users.find(u => u.username === username);
+    if (!user) return;
+
+    document.getElementById("edit-user-username-hidden").value = user.username;
+    document.getElementById("edit-user-username").value = user.username;
+    document.getElementById("edit-user-fullname").value = user.full_name;
+    document.getElementById("edit-user-email").value = user.email;
+    document.getElementById("edit-user-role").value = user.role;
+    document.getElementById("edit-user-division").value = user.division_id || "DIV_METRO_HQ";
+    document.getElementById("edit-user-active").checked = user.is_active !== 0;
+
+    const modal = document.getElementById("edit-user-modal");
+    if (modal) modal.classList.remove("hidden");
+  } catch (e) {
+    console.error("Error loading user profile:", e);
+  }
+}
+
+function closeEditUserModal() {
+  const modal = document.getElementById("edit-user-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.openEditUserModal = openEditUserModal;
+window.closeEditUserModal = closeEditUserModal;
+
+async function submitEditUser() {
+  const username = document.getElementById("edit-user-username-hidden")?.value;
+  const fullName = document.getElementById("edit-user-fullname")?.value.trim();
+  const email = document.getElementById("edit-user-email")?.value.trim();
+  const role = document.getElementById("edit-user-role")?.value;
+  const division = document.getElementById("edit-user-division")?.value;
+  const isActive = document.getElementById("edit-user-active")?.checked;
+
+  try {
+    const res = await fetch(`/api/v1/auth/users/${username}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        full_name: fullName,
+        email,
+        role,
+        division_id: division,
+        is_active: isActive,
+      }),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SECURITY", description: `Updated account profile for '${username}'.` });
+      closeEditUserModal();
+      loadUsersTable();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to update profile." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.submitEditUser = submitEditUser;
+
+function openResetPasswordModal(username) {
+  document.getElementById("reset-pwd-username-hidden").value = username;
+  document.getElementById("reset-pwd-username-label").innerText = username;
+  document.getElementById("reset-new-password").value = "";
+  const modal = document.getElementById("reset-password-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeResetPasswordModal() {
+  const modal = document.getElementById("reset-password-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.openResetPasswordModal = openResetPasswordModal;
+window.closeResetPasswordModal = closeResetPasswordModal;
+
+async function submitResetPassword() {
+  const username = document.getElementById("reset-pwd-username-hidden")?.value;
+  const newPassword = document.getElementById("reset-new-password")?.value.trim();
+
+  if (!newPassword || newPassword.length < 6) {
+    showToast({ incident_type: "ERROR", description: "Password must be at least 6 characters." });
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/v1/auth/users/${username}/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ new_password: newPassword }),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SECURITY", description: `Reset password for '${username}' and revoked active sessions.` });
+      closeResetPasswordModal();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Password reset failed." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.submitResetPassword = submitResetPassword;
+
+async function deleteUserPrompt(username) {
+  if (!confirm(`Are you sure you want to permanently delete operator '${username}'? This action cannot be undone.`)) return;
+
+  try {
+    const res = await fetch(`/api/v1/auth/users/${username}`, { method: "DELETE" });
+    if (res.ok) {
+      showToast({ incident_type: "SECURITY", description: `Deleted user account '${username}'.` });
+      loadUsersTable();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to delete account." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.deleteUserPrompt = deleteUserPrompt;
+
+async function openRolesMatrixModal() {
+  try {
+    const res = await fetch("/api/v1/auth/roles-permissions");
+    const matrix = await res.json();
+    const tbody = document.getElementById("rbac-matrix-body");
+    if (!tbody) return;
+
+    const allScopes = [
+      "system:manage", "users:manage", "cameras:manage", "cameras:view",
+      "zones:write", "alerts:acknowledge", "incidents:read", "incidents:export",
+      "dossier:verify", "logs:purge"
+    ];
+
+    tbody.innerHTML = allScopes.map(scope => {
+      const checkSuper = (matrix.SUPER_ADMIN || []).includes(scope) ? "✅" : "❌";
+      const checkStation = (matrix.STATION_ADMIN || []).includes(scope) ? "✅" : "❌";
+      const checkOperator = (matrix.TRAFFIC_OPERATOR || []).includes(scope) ? "✅" : "❌";
+      const checkAuditor = (matrix.FORENSIC_AUDITOR || []).includes(scope) ? "✅" : "❌";
+      const checkViewer = (matrix.READONLY_VIEWER || []).includes(scope) ? "✅" : "❌";
+
+      return `
+        <tr>
+          <td><code>${scope}</code></td>
+          <td style="text-align:center;">${checkSuper}</td>
+          <td style="text-align:center;">${checkStation}</td>
+          <td style="text-align:center;">${checkOperator}</td>
+          <td style="text-align:center;">${checkAuditor}</td>
+          <td style="text-align:center;">${checkViewer}</td>
+        </tr>
+      `;
+    }).join("");
+
+    const modal = document.getElementById("roles-matrix-modal");
+    if (modal) modal.classList.remove("hidden");
+  } catch (e) {
+    console.error("Error loading RBAC matrix:", e);
+  }
+}
+
+function closeRolesMatrixModal() {
+  const modal = document.getElementById("roles-matrix-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.openRolesMatrixModal = openRolesMatrixModal;
+window.closeRolesMatrixModal = closeRolesMatrixModal;
+
+/* ==========================================================================
+   10D. REPORT TEMPLATES & MULTI-FORMAT EXPORT SUITE
+   ========================================================================== */
+async function loadReportTemplates() {
+  try {
+    const res = await fetch("/api/v1/reports/templates");
+    if (!res.ok) return;
+    const data = await res.json();
+    const select = document.getElementById("report-template-select");
+    if (!select || !data.templates) return;
+
+    select.innerHTML = data.templates.map(t => `<option value="${t.template_id}">${t.name} (${t.category})</option>`).join("");
+    showToast({ incident_type: "INFO", description: `Loaded ${data.templates.length} report compliance templates.` });
+  } catch (e) {
+    console.error("Failed to load report templates:", e);
+  }
+}
+
+window.loadReportTemplates = loadReportTemplates;
+
+function handleTemplateSelectChange(tplId) {
+  localStorage.setItem("argus_selected_report_tpl", tplId);
+}
+
+function selectTemplateCard(tplId) {
+  const select = document.getElementById("report-template-select");
+  if (select) {
+    select.value = tplId;
+    handleTemplateSelectChange(tplId);
+  }
+  showToast({ incident_type: "INFO", description: `Selected template: ${tplId}` });
+}
+
+window.handleTemplateSelectChange = handleTemplateSelectChange;
+window.selectTemplateCard = selectTemplateCard;
+
+function openCreateTemplateModal() {
+  const modal = document.getElementById("custom-template-modal");
+  if (modal) modal.classList.remove("hidden");
+}
+
+function closeCreateTemplateModal() {
+  const modal = document.getElementById("custom-template-modal");
+  if (modal) modal.classList.add("hidden");
+}
+
+window.openCreateTemplateModal = openCreateTemplateModal;
+window.closeCreateTemplateModal = closeCreateTemplateModal;
+
+async function submitNewReportTemplate() {
+  const tplId = document.getElementById("tpl-id")?.value.trim();
+  const name = document.getElementById("tpl-name")?.value.trim();
+  const category = document.getElementById("tpl-category")?.value;
+  const agencyName = document.getElementById("tpl-agency-name")?.value.trim();
+  const subTitle = document.getElementById("tpl-sub-title")?.value.trim();
+  const logoUrl = document.getElementById("tpl-logo-url")?.value.trim();
+  const accentColor = document.getElementById("tpl-accent-color")?.value;
+  const incKpis = document.getElementById("tpl-inc-kpis")?.checked;
+  const incTable = document.getElementById("tpl-inc-table")?.checked;
+  const incSeal = document.getElementById("tpl-inc-seal")?.checked;
+  const incRadar = document.getElementById("tpl-inc-radar")?.checked;
+  const disclaimer = document.getElementById("tpl-disclaimer")?.value.trim();
+
+  if (!tplId || !name || !agencyName) {
+    showToast({ incident_type: "ERROR", description: "Template ID, Name, and Agency Heading are required." });
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/v1/reports/templates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        template_id: tplId,
+        name,
+        category,
+        agency_name: agencyName,
+        agency_sub_title: subTitle,
+        logo_url: logoUrl,
+        accent_color: accentColor,
+        include_kpis: incKpis,
+        include_incident_table: incTable,
+        include_cryptographic_seal: incSeal,
+        include_speed_radar_stats: incRadar,
+        disclaimer_text: disclaimer,
+      }),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SUCCESS", description: `Custom template '${name}' saved successfully.` });
+      closeCreateTemplateModal();
+      loadReportTemplates();
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to create template." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.submitNewReportTemplate = submitNewReportTemplate;
+
+function generateCustomSelectedReport() {
+  const select = document.getElementById("report-template-select");
+  const tplId = select ? select.value : "tpl_executive_summary";
+  window.open(`/api/v1/reports/generate?template_id=${encodeURIComponent(tplId)}`, "_blank");
+}
+
+window.generateCustomSelectedReport = generateCustomSelectedReport;
+
+function exportReportsData(format) {
+  window.open(`/api/v1/reports/export/${format}`, "_blank");
+  showToast({ incident_type: "INFO", description: `Exporting telemetry and incidents dataset as ${format.toUpperCase()}...` });
+}
+
+window.exportReportsData = exportReportsData;
+
+/* ==========================================================================
+   10E. PLATFORM SETTINGS & JURISDICTION PREFERENCES
+   ========================================================================== */
+async function loadPlatformSettings() {
+  try {
+    const res = await fetch("/api/v1/settings/system");
+    if (!res.ok) return;
+    const data = await res.json();
+    const s = data.settings || {};
+
+    if (document.getElementById("setting-agency-name")) document.getElementById("setting-agency-name").value = s.agency_name || "";
+    if (document.getElementById("setting-agency-subtitle")) document.getElementById("setting-agency-subtitle").value = s.agency_sub_title || "";
+    if (document.getElementById("setting-logo-url")) document.getElementById("setting-logo-url").value = s.agency_logo_url || "";
+    if (document.getElementById("setting-header-badge")) document.getElementById("setting-header-badge").value = s.header_badge_text || "";
+    if (document.getElementById("setting-default-map-provider")) document.getElementById("setting-default-map-provider").value = s.default_map_provider || "carto_dark";
+    if (document.getElementById("setting-custom-tile-url")) document.getElementById("setting-custom-tile-url").value = s.custom_tile_url || "";
+    if (document.getElementById("setting-gmaps-key")) document.getElementById("setting-gmaps-key").value = s.google_maps_api_key || "";
+    if (document.getElementById("setting-speed-urban")) document.getElementById("setting-speed-urban").value = s.speed_limit_urban_kmh || 60;
+    if (document.getElementById("setting-speed-expressway")) document.getElementById("setting-speed-expressway").value = s.speed_limit_expressway_kmh || 100;
+    if (document.getElementById("setting-speed-grace")) document.getElementById("setting-speed-grace").value = s.speed_tolerance_grace_kmh || 5;
+    if (document.getElementById("setting-sla-limit")) document.getElementById("setting-sla-limit").value = s.sla_critical_timeout_sec || 120;
+    if (document.getElementById("setting-siren-toggle")) document.getElementById("setting-siren-toggle").checked = !!s.enable_audio_alarms;
+  } catch (e) {
+    console.error("Failed to load platform settings:", e);
+  }
+}
+
+window.loadPlatformSettings = loadPlatformSettings;
+
+async function savePlatformSettings() {
+  const payload = {
+    agency_name: document.getElementById("setting-agency-name")?.value.trim(),
+    agency_sub_title: document.getElementById("setting-agency-subtitle")?.value.trim(),
+    agency_logo_url: document.getElementById("setting-logo-url")?.value.trim(),
+    header_badge_text: document.getElementById("setting-header-badge")?.value.trim(),
+    default_map_provider: document.getElementById("setting-default-map-provider")?.value,
+    custom_tile_url: document.getElementById("setting-custom-tile-url")?.value.trim(),
+    google_maps_api_key: document.getElementById("setting-gmaps-key")?.value.trim(),
+    speed_limit_urban_kmh: parseFloat(document.getElementById("setting-speed-urban")?.value || 60),
+    speed_limit_expressway_kmh: parseFloat(document.getElementById("setting-speed-expressway")?.value || 100),
+    speed_tolerance_grace_kmh: parseFloat(document.getElementById("setting-speed-grace")?.value || 5),
+    sla_critical_timeout_sec: parseInt(document.getElementById("setting-sla-limit")?.value || 120, 10),
+    enable_audio_alarms: document.getElementById("setting-siren-toggle")?.checked,
+  };
+
+  try {
+    const res = await fetch("/api/v1/settings/system", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      showToast({ incident_type: "SUCCESS", description: "Enterprise platform settings saved and synchronized." });
+      if (payload.default_map_provider) {
+        switchMapTileProvider(payload.default_map_provider);
+      }
+    } else {
+      const err = await res.json();
+      showToast({ incident_type: "ERROR", description: err.detail || "Failed to save settings." });
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Network error: ${e.message}` });
+  }
+}
+
+window.savePlatformSettings = savePlatformSettings;
+
+async function loadAuditLogs() {
+  try {
+    const res = await fetch("/api/v1/auth/audit-logs");
+    if (!res.ok) return;
+    const data = await res.json();
+    const tbody = document.getElementById("audit-table-body");
+    if (!tbody || !data.logs) return;
+
+    tbody.innerHTML = data.logs.map(l => `
+      <tr>
+        <td><code>${l.formatted_time || l.timestamp}</code></td>
+        <td><strong>${l.username}</strong></td>
+        <td><span class="badge-action auth">${l.action}</span></td>
+        <td>${l.ip_address || '127.0.0.1'}</td>
+        <td>${l.details}</td>
+      </tr>
+    `).join("");
+
+    showToast({ incident_type: "AUDIT", description: `Loaded ${data.logs.length} immutable cryptographic audit trails.` });
+  } catch (e) {
+    console.error("Failed to load audit logs:", e);
+  }
+}
+
+window.loadAuditLogs = loadAuditLogs;
+
 
 /* ==========================================================================
    11. INCIDENTS & HOTLIST SUB-TAB NAVIGATION

@@ -3,6 +3,7 @@ Manages multi-tenant administrator privileges, password security (PBKDF2-SHA256)
 session token verification, and security audit trails.
 """
 
+import datetime
 from enum import Enum
 import hashlib
 import hmac
@@ -359,3 +360,202 @@ class SecurityAuthManager:
                     "SELECT username, full_name, email, role, division_id, is_active, created_at, last_login FROM users"
                 )
             return [dict(r) for r in cursor.fetchall()]
+
+    def get_user(self, username: str) -> Optional[Dict]:
+        """Retrieves a single user's safe profile info without credentials."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT username, full_name, email, role, division_id, is_active, created_at, last_login FROM users WHERE username = ?",
+                (username.lower().strip(),),
+            )
+            row = cursor.fetchone()
+            return dict(row) if row else None
+
+    def update_user(
+        self,
+        username: str,
+        full_name: Optional[str] = None,
+        email: Optional[str] = None,
+        role: Optional[Union[Role, str]] = None,
+        division_id: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        operator_username: str = "SYSTEM",
+        operator_role: Optional[Role] = None,
+    ) -> Tuple[bool, str]:
+        """Updates user profile attributes with RBAC role integrity constraints."""
+        clean_user = username.lower().strip()
+        existing = self.get_user(clean_user)
+        if not existing:
+            return False, f"User '{username}' not found."
+
+        # Prevent non-superadmins from escalating to or modifying SUPER_ADMIN accounts
+        if operator_role != Role.SUPER_ADMIN:
+            if existing["role"] == Role.SUPER_ADMIN.value or (role and str(role) == Role.SUPER_ADMIN.value):
+                return False, "Super Administrator authorization required for this account."
+
+        updates = []
+        params = []
+        if full_name is not None:
+            updates.append("full_name = ?")
+            params.append(full_name.strip())
+        if email is not None:
+            updates.append("email = ?")
+            params.append(email.strip())
+        if role is not None:
+            role_val = role.value if isinstance(role, Role) else str(role)
+            updates.append("role = ?")
+            params.append(role_val)
+        if division_id is not None:
+            updates.append("division_id = ?")
+            params.append(division_id)
+        if is_active is not None:
+            updates.append("is_active = ?")
+            params.append(1 if is_active else 0)
+
+        if not updates:
+            return True, "No changes requested."
+
+        params.append(clean_user)
+        query = f"UPDATE users SET {', '.join(updates)} WHERE username = ?"
+
+        with self._get_connection() as conn:
+            conn.execute(query, tuple(params))
+            conn.commit()
+
+        self.log_audit(operator_username, "USER_UPDATED", f"Updated account profile for {clean_user}")
+        return True, "User account updated successfully."
+
+    def change_password(self, username: str, old_password: str, new_password: str) -> Tuple[bool, str]:
+        """Allows a user to securely change their own password."""
+        clean_user = username.lower().strip()
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT password_hash, salt FROM users WHERE username = ?", (clean_user,))
+            row = cursor.fetchone()
+            if not row:
+                return False, "User not found."
+
+            expected_hash, _ = self._hash_password(old_password, row["salt"])
+            if not hmac.compare_digest(expected_hash, row["password_hash"]):
+                return False, "Current password verification failed."
+
+            new_hash, new_salt = self._hash_password(new_password)
+            conn.execute(
+                "UPDATE users SET password_hash = ?, salt = ? WHERE username = ?",
+                (new_hash, new_salt, clean_user),
+            )
+            # Revoke all active sessions on password change
+            conn.execute("DELETE FROM sessions WHERE username = ?", (clean_user,))
+            conn.commit()
+
+        self.log_audit(clean_user, "PASSWORD_CHANGED", "User changed account password")
+        return True, "Password changed successfully. Please log in again."
+
+    def reset_password_by_admin(
+        self,
+        username: str,
+        new_password: str,
+        admin_username: str = "admin",
+        admin_role: Optional[Role] = None,
+    ) -> Tuple[bool, str]:
+        """Allows an administrator to reset credentials for a user."""
+        clean_user = username.lower().strip()
+        existing = self.get_user(clean_user)
+        if not existing:
+            return False, f"User '{username}' not found."
+
+        if admin_role != Role.SUPER_ADMIN and existing["role"] == Role.SUPER_ADMIN.value:
+            return False, "Cannot reset credentials for a Super Administrator."
+
+        new_hash, new_salt = self._hash_password(new_password)
+        with self._get_connection() as conn:
+            conn.execute(
+                "UPDATE users SET password_hash = ?, salt = ? WHERE username = ?",
+                (new_hash, new_salt, clean_user),
+            )
+            conn.execute("DELETE FROM sessions WHERE username = ?", (clean_user,))
+            conn.commit()
+
+        self.log_audit(admin_username, "PASSWORD_RESET_ADMIN", f"Admin reset password for {clean_user}")
+        return True, f"Password for {clean_user} reset successfully."
+
+    def delete_user(
+        self,
+        username: str,
+        operator_username: str = "admin",
+        operator_role: Optional[Role] = None,
+    ) -> Tuple[bool, str]:
+        """Deletes or deactivates a user account with SuperAdmin protection."""
+        clean_user = username.lower().strip()
+        existing = self.get_user(clean_user)
+        if not existing:
+            return False, f"User '{username}' not found."
+
+        if clean_user == operator_username.lower().strip():
+            return False, "Cannot delete your own active administrator account."
+
+        if clean_user == "admin":
+            return False, "Protected root enterprise administrator cannot be deleted."
+
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM sessions WHERE username = ?", (clean_user,))
+            conn.execute("DELETE FROM users WHERE username = ?", (clean_user,))
+            conn.commit()
+
+        self.log_audit(operator_username, "USER_DELETED", f"Deleted operator account {clean_user}")
+        return True, f"User {clean_user} deleted successfully."
+
+    def revoke_session(self, token: str, username: str = "SYSTEM") -> bool:
+        """Revokes an active session bearer token."""
+        with self._get_connection() as conn:
+            conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
+            conn.commit()
+        self.log_audit(username, "SESSION_REVOKED", "Session token revoked")
+        return True
+
+    def list_audit_logs(
+        self,
+        limit: int = 100,
+        offset: int = 0,
+        filter_user: Optional[str] = None,
+        filter_action: Optional[str] = None,
+    ) -> List[Dict]:
+        """Retrieves paginated immutable security audit trails."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            query = "SELECT id, timestamp, username, action, ip_address, details FROM audit_logs"
+            clauses = []
+            params = []
+            if filter_user:
+                clauses.append("username = ?")
+                params.append(filter_user.lower().strip())
+            if filter_action:
+                clauses.append("action = ?")
+                params.append(filter_action.upper().strip())
+
+            if clauses:
+                query += " WHERE " + " AND ".join(clauses)
+
+            query += " ORDER BY id DESC LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+
+            cursor.execute(query, tuple(params))
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": r["id"],
+                    "timestamp": r["timestamp"],
+                    "formatted_time": datetime.datetime.fromtimestamp(r["timestamp"], datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+                    "username": r["username"],
+                    "action": r["action"],
+                    "ip_address": r["ip_address"],
+                    "details": r["details"],
+                }
+                for r in rows
+            ]
+
+    def get_role_permissions_matrix(self) -> Dict[str, List[str]]:
+        """Returns the active enterprise RBAC permission matrix for all roles."""
+        return {role.value: list(perms) for role, perms in ROLE_PERMISSIONS.items()}
+

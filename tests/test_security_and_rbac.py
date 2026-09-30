@@ -129,3 +129,99 @@ def test_defense_grade_security_headers():
     assert headers.get("X-XSS-Protection") == "1; mode=block"
     assert "strict-origin" in headers.get("Referrer-Policy", "")
     assert "geolocation=()" in headers.get("Permissions-Policy", "")
+
+
+def test_user_management_crud_and_lifecycle(temp_auth_manager):
+    # 1. Create User
+    temp_auth_manager.create_user(
+        username="dispatcher_bob",
+        password="InitialPassword123!",
+        full_name="Bob Dispatcher",
+        email="bob@dispatch.internal",
+        role=Role.FORENSIC_AUDITOR,
+    )
+    user = temp_auth_manager.get_user("dispatcher_bob")
+    assert user is not None
+    assert user["full_name"] == "Bob Dispatcher"
+    assert user["is_active"] == 1
+
+    # 2. Update User metadata and role
+    success, _ = temp_auth_manager.update_user(
+        username="dispatcher_bob",
+        full_name="Senior Officer Bob",
+        email="bob.senior@dispatch.internal",
+        role=Role.TRAFFIC_OPERATOR,
+        is_active=True,
+    )
+    assert success is True
+    updated = temp_auth_manager.get_user("dispatcher_bob")
+    assert updated["full_name"] == "Senior Officer Bob"
+    assert updated["role"] == Role.TRAFFIC_OPERATOR.value
+
+    # 3. Change Password
+    pwd_changed, _ = temp_auth_manager.change_password("dispatcher_bob", "InitialPassword123!", "NewSecretPass456!")
+    assert pwd_changed is True
+    # Verify old password fails
+    assert temp_auth_manager.authenticate("dispatcher_bob", "InitialPassword123!") is None
+    # Verify new password succeeds
+    assert temp_auth_manager.authenticate("dispatcher_bob", "NewSecretPass456!") is not None
+
+    # 4. Admin Reset Password
+    reset_ok, _ = temp_auth_manager.reset_password_by_admin("dispatcher_bob", "AdminOverridePass789!")
+    assert reset_ok is True
+    assert temp_auth_manager.authenticate("dispatcher_bob", "AdminOverridePass789!") is not None
+
+    # 5. Audit logs recorded
+    logs = temp_auth_manager.list_audit_logs(limit=50)
+    assert len(logs) > 0
+    actions = [l["action"] for l in logs]
+    assert "USER_CREATED" in actions
+    assert "PASSWORD_CHANGED" in actions
+    assert "PASSWORD_RESET_ADMIN" in actions
+
+    # 6. Delete user
+    del_ok, _ = temp_auth_manager.delete_user("dispatcher_bob")
+    assert del_ok is True
+    assert temp_auth_manager.get_user("dispatcher_bob") is None
+    # Admin root account cannot be deleted
+    del_admin_ok, _ = temp_auth_manager.delete_user("admin")
+    assert del_admin_ok is False
+
+
+def test_system_settings_manager(tmp_path):
+    from src.core.system_settings import SystemSettingsManager
+
+    db_path = str(tmp_path / "test_settings.db")
+    mgr = SystemSettingsManager(db_path=db_path)
+
+    # 1. Get default settings
+    settings = mgr.get_all_settings()
+    assert "agency_name" in settings
+    assert settings["default_map_provider"] == "carto_dark"
+
+    # 2. Update settings
+    ok, _ = mgr.update_settings(
+        {
+            "agency_name": "Sri Lanka Highway Patrol Authority",
+            "agency_logo_url": "https://police.lk/assets/logo.png",
+            "default_map_provider": "google_road",
+            "speed_limit_urban_kmh": 60.0,
+            "speed_tolerance_grace_kmh": 5.0,
+            "sla_critical_timeout_sec": 90,
+        },
+        operator_username="admin",
+    )
+    assert ok is True
+    updated = mgr.get_all_settings()
+    assert updated["agency_name"] == "Sri Lanka Highway Patrol Authority"
+    assert updated["default_map_provider"] == "google_road"
+    assert updated["speed_limit_urban_kmh"] == 60.0
+    assert updated["sla_critical_timeout_sec"] == 90
+
+    # 3. Reload from fresh instance to verify persistence
+    mgr2 = SystemSettingsManager(db_path=db_path)
+    persisted = mgr2.get_all_settings()
+    assert persisted["agency_name"] == "Sri Lanka Highway Patrol Authority"
+    assert persisted["default_map_provider"] == "google_road"
+
+

@@ -307,6 +307,89 @@ class CreateUserRequest(BaseModel):
     division_id: Optional[str] = "DIV_METRO_HQ"
 
 
+class UpdateUserRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    division_id: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str
+
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class CreateReportTemplateRequest(BaseModel):
+    template_id: str
+    name: str
+    category: str = "CUSTOM"
+    agency_name: str = "Municipal Traffic Safety Directorate"
+    agency_sub_title: str = "Autonomous Road Safety & Traffic Management Report"
+    logo_url: Optional[str] = ""
+    accent_color: Optional[str] = "#0f172a"
+    include_kpis: bool = True
+    include_incident_table: bool = True
+    include_cryptographic_seal: bool = True
+    include_speed_radar_stats: bool = False
+    include_camera_fleet_health: bool = False
+    disclaimer_text: Optional[str] = ""
+
+
+class UpdateReportTemplateRequest(BaseModel):
+    name: Optional[str] = None
+    category: Optional[str] = None
+    agency_name: Optional[str] = None
+    agency_sub_title: Optional[str] = None
+    logo_url: Optional[str] = None
+    accent_color: Optional[str] = None
+    include_kpis: Optional[bool] = None
+    include_incident_table: Optional[bool] = None
+    include_cryptographic_seal: Optional[bool] = None
+    include_speed_radar_stats: Optional[bool] = None
+    include_camera_fleet_health: Optional[bool] = None
+    disclaimer_text: Optional[str] = None
+
+
+class GenerateReportRequest(BaseModel):
+    template_id: Optional[str] = "tpl_executive_summary"
+    time_window: Optional[str] = "Last 24 Hours"
+    officer_name: Optional[str] = "Chief Traffic Supervisor"
+    format: Optional[str] = "html"  # html | json | csv
+    division_id: Optional[str] = None
+
+
+class UpdateSystemSettingsRequest(BaseModel):
+    agency_name: Optional[str] = None
+    agency_sub_title: Optional[str] = None
+    agency_logo_url: Optional[str] = None
+    header_badge_text: Optional[str] = None
+    contact_emergency_phone: Optional[str] = None
+    contact_email: Optional[str] = None
+    default_map_provider: Optional[str] = None
+    custom_tile_url: Optional[str] = None
+    google_maps_api_key: Optional[str] = None
+    map_center_lat: Optional[float] = None
+    map_center_lng: Optional[float] = None
+    map_default_zoom: Optional[int] = None
+    enable_gis_corridor_polylines: Optional[bool] = None
+    enable_gis_radar_sweep_anim: Optional[bool] = None
+    speed_limit_urban_kmh: Optional[float] = None
+    speed_limit_expressway_kmh: Optional[float] = None
+    speed_tolerance_grace_kmh: Optional[float] = None
+    speed_radar_calibration_factor: Optional[float] = None
+    sla_critical_timeout_sec: Optional[int] = None
+    sla_warning_timeout_sec: Optional[int] = None
+    enable_audio_alarms: Optional[bool] = None
+    enable_v2x_broadcasting: Optional[bool] = None
+    ui_theme: Optional[str] = None
+    default_report_template: Optional[str] = None
+
+
 class CameraRegistrationRequest(BaseModel):
     camera_id: str
     name: str
@@ -470,6 +553,383 @@ async def create_enterprise_user(
     if not success:
         raise HTTPException(status_code=409, detail="User already exists or permission denied.")
     return {"status": "created", "username": req.username, "role": req.role, "division_id": assigned_div}
+
+
+@router.put("/auth/users/{username}", tags=["Security & RBAC"])
+async def update_enterprise_user(
+    username: str,
+    req: UpdateUserRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Updates user full name, email, role, division, or active status."""
+    from src.core.auth_rbac import Role
+    role, division, caller_user = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        raise HTTPException(status_code=500, detail="Security auth manager unavailable.")
+
+    # Station Admins can only modify users in their own division
+    if role == Role.STATION_ADMIN:
+        target = auth_mgr.get_user(username)
+        if not target or target.get("division_id") != division:
+            raise HTTPException(status_code=403, detail="Station Admins can only modify operators in their station.")
+
+    role_val = None
+    if req.role:
+        try:
+            role_val = Role(req.role)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid role: {req.role}")
+
+    ok, msg = auth_mgr.update_user(
+        username=username,
+        full_name=req.full_name,
+        email=req.email,
+        role=role_val,
+        division_id=req.division_id,
+        is_active=req.is_active,
+        operator_username=caller_user,
+        operator_role=role,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg, "user": auth_mgr.get_user(username)}
+
+
+@router.delete("/auth/users/{username}", tags=["Security & RBAC"])
+async def delete_enterprise_user(
+    username: str,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Deletes or deactivates a user account."""
+    from src.core.auth_rbac import Role
+    role, division, caller_user = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Administrator permissions required to delete accounts.")
+
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        raise HTTPException(status_code=500, detail="Security auth manager unavailable.")
+
+    ok, msg = auth_mgr.delete_user(username=username, operator_username=caller_user, operator_role=role)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg}
+
+
+@router.post("/auth/users/{username}/reset-password", tags=["Security & RBAC"])
+async def reset_user_password_by_admin(
+    username: str,
+    req: ResetPasswordRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Admin reset password for a subordinate user."""
+    from src.core.auth_rbac import Role
+    role, _, caller_user = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Administrator permissions required to reset credentials.")
+
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        raise HTTPException(status_code=500, detail="Security auth manager unavailable.")
+
+    ok, msg = auth_mgr.reset_password_by_admin(
+        username=username,
+        new_password=req.new_password,
+        admin_username=caller_user,
+        admin_role=role,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg}
+
+
+@router.post("/auth/change-password", tags=["Security & RBAC"])
+async def change_own_password(
+    req: ChangePasswordRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Allows authenticated user to change their own password."""
+    _, _, caller_user = _resolve_caller_identity(token, authorization)
+    if caller_user == "SYSTEM":
+        raise HTTPException(status_code=401, detail="Authentication token required.")
+
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        raise HTTPException(status_code=500, detail="Security auth manager unavailable.")
+
+    ok, msg = auth_mgr.change_password(
+        username=caller_user,
+        old_password=req.old_password,
+        new_password=req.new_password,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg}
+
+
+@router.post("/auth/logout", tags=["Security & RBAC"])
+async def logout_session(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Revokes active session bearer token."""
+    raw_token = token
+    if not raw_token and authorization:
+        raw_token = authorization.split(" ")[-1]
+
+    if not raw_token:
+        return {"status": "SUCCESS", "message": "No active token provided"}
+
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if auth_mgr:
+        auth_mgr.revoke_session(raw_token)
+    return {"status": "SUCCESS", "message": "Session invalidated."}
+
+
+@router.get("/auth/audit-logs", tags=["Security & RBAC"])
+async def get_security_audit_logs(
+    limit: int = Query(100, description="Max records to return"),
+    offset: int = Query(0, description="Pagination offset"),
+    filter_user: Optional[str] = Query(None),
+    filter_action: Optional[str] = Query(None),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Fetches immutable enterprise security audit trails."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN, Role.FORENSIC_AUDITOR):
+        raise HTTPException(status_code=403, detail="Audit log inspection requires Auditor or Admin privileges.")
+
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        return {"logs": [], "count": 0}
+    logs = auth_mgr.list_audit_logs(limit=limit, offset=offset, filter_user=filter_user, filter_action=filter_action)
+    return {"logs": logs, "count": len(logs)}
+
+
+@router.get("/auth/roles-permissions", tags=["Security & RBAC"])
+async def get_roles_permissions():
+    """Returns the granular enterprise RBAC matrix for all roles."""
+    state = get_components()
+    auth_mgr = state.get("auth_mgr")
+    if not auth_mgr:
+        from src.core.auth_rbac import ROLE_PERMISSIONS
+        return {role.value: list(perms) for role, perms in ROLE_PERMISSIONS.items()}
+    return auth_mgr.get_role_permissions_matrix()
+
+
+# ==============================================================================
+# Enterprise Report Templates & Multi-Format Exporter Endpoints
+# ==============================================================================
+@router.get("/reports/templates", tags=["Report Templates"])
+async def list_report_templates():
+    """Returns all standard built-in compliance templates and custom agency templates."""
+    state = get_components()
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+    return {"templates": tpl_mgr.list_templates()}
+
+
+@router.post("/reports/templates", tags=["Report Templates"])
+async def create_custom_report_template(
+    req: CreateReportTemplateRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Creates a custom report template with custom agency branding, logo, and layout."""
+    from src.core.auth_rbac import Role
+    role, _, caller_user = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN, Role.FORENSIC_AUDITOR):
+        raise HTTPException(status_code=403, detail="Template creation requires Admin or Auditor privileges.")
+
+    state = get_components()
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+
+    ok, res = tpl_mgr.create_custom_template(
+        template_id=req.template_id,
+        name=req.name,
+        category=req.category,
+        agency_name=req.agency_name,
+        agency_sub_title=req.agency_sub_title,
+        logo_url=req.logo_url or "",
+        accent_color=req.accent_color or "#0f172a",
+        include_kpis=req.include_kpis,
+        include_incident_table=req.include_incident_table,
+        include_cryptographic_seal=req.include_cryptographic_seal,
+        include_speed_radar_stats=req.include_speed_radar_stats,
+        include_camera_fleet_health=req.include_camera_fleet_health,
+        disclaimer_text=req.disclaimer_text or "",
+        created_by=caller_user,
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail=res)
+    return {"status": "SUCCESS", "template_id": res, "template": tpl_mgr.get_template(res)}
+
+
+@router.put("/reports/templates/{template_id}", tags=["Report Templates"])
+async def update_custom_report_template(
+    template_id: str,
+    req: UpdateReportTemplateRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Updates custom report template attributes."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN, Role.FORENSIC_AUDITOR):
+        raise HTTPException(status_code=403, detail="Template editing requires Admin or Auditor privileges.")
+
+    state = get_components()
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+
+    ok, msg = tpl_mgr.update_custom_template(template_id, req.model_dump(exclude_unset=True))
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg, "template": tpl_mgr.get_template(template_id)}
+
+
+@router.delete("/reports/templates/{template_id}", tags=["Report Templates"])
+async def delete_custom_report_template(
+    template_id: str,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Deletes a custom report template."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role != Role.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="SuperAdmin authorization required to delete report templates.")
+
+    state = get_components()
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+
+    ok, msg = tpl_mgr.delete_custom_template(template_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg}
+
+
+@router.post("/reports/generate", tags=["Report Templates"])
+async def generate_custom_report(req: GenerateReportRequest):
+    """Renders a customized report in HTML, CSV, or JSON format."""
+    state = get_components()
+    db = state.get("db")
+    stats = db.get_stats() if db else {"total_recorded": 0, "critical_count": 0, "warning_count": 0}
+    recent_incidents = db.query_incidents(limit=100) if db else []
+    if not recent_incidents and state.get("incident_engine"):
+        recent_incidents = [a.to_dict() for a in state["incident_engine"].active_alerts]
+
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+
+    fmt = (req.format or "html").lower()
+    if fmt == "csv":
+        from fastapi.responses import Response
+        csv_data = tpl_mgr.export_csv(recent_incidents, stats)
+        return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=traffic_incident_report.csv"})
+    elif fmt == "json":
+        from fastapi.responses import Response
+        json_data = tpl_mgr.export_json(recent_incidents, stats)
+        return Response(content=json_data, media_type="application/json", headers={"Content-Disposition": "attachment; filename=traffic_report.json"})
+    else:
+        html_content = tpl_mgr.render_custom_report(
+            template_id=req.template_id or "tpl_executive_summary",
+            stats=stats,
+            recent_incidents=recent_incidents,
+            time_window=req.time_window or "Last 24 Hours",
+            officer_name=req.officer_name or "Chief Traffic Supervisor",
+        )
+        return HTMLResponse(content=html_content)
+
+
+@router.get("/reports/export/{export_format}", tags=["Report Templates"])
+async def export_traffic_data(export_format: str):
+    """Directly exports telemetry & incident dataset in CSV or JSON format."""
+    state = get_components()
+    db = state.get("db")
+    stats = db.get_stats() if db else {"total_recorded": 0, "critical_count": 0, "warning_count": 0}
+    recent_incidents = db.query_incidents(limit=500) if db else []
+    if not recent_incidents and state.get("incident_engine"):
+        recent_incidents = [a.to_dict() for a in state["incident_engine"].active_alerts]
+
+    tpl_mgr = state.get("report_template_mgr")
+    if not tpl_mgr:
+        from src.core.evidence_report import ReportTemplateManager
+        tpl_mgr = ReportTemplateManager()
+
+    fmt = export_format.lower()
+    from fastapi.responses import Response
+    if fmt == "csv":
+        csv_data = tpl_mgr.export_csv(recent_incidents, stats)
+        return Response(content=csv_data, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=argustraffic_export.csv"})
+    else:
+        json_data = tpl_mgr.export_json(recent_incidents, stats)
+        return Response(content=json_data, media_type="application/json", headers={"Content-Disposition": "attachment; filename=argustraffic_export.json"})
+
+
+# ==============================================================================
+# Enterprise System Customization & Settings Endpoints
+# ==============================================================================
+@router.get("/settings/system", tags=["System Settings & Customization"])
+async def get_system_settings():
+    """Returns persistent enterprise branding, map tile providers, speed limits, and SLA timers."""
+    state = get_components()
+    settings_mgr = state.get("settings_mgr")
+    if not settings_mgr:
+        from src.core.system_settings import SystemSettingsManager
+        settings_mgr = SystemSettingsManager()
+    return {"settings": settings_mgr.get_all_settings()}
+
+
+@router.put("/settings/system", tags=["System Settings & Customization"])
+async def update_system_settings(
+    req: UpdateSystemSettingsRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Updates persistent system customization preferences."""
+    from src.core.auth_rbac import Role
+    role, _, caller_user = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Administrator permissions required to modify system settings.")
+
+    state = get_components()
+    settings_mgr = state.get("settings_mgr")
+    if not settings_mgr:
+        from src.core.system_settings import SystemSettingsManager
+        settings_mgr = SystemSettingsManager()
+
+    updates = req.model_dump(exclude_unset=True)
+    ok, msg = settings_mgr.update_settings(updates, operator_username=caller_user)
+    if not ok:
+        raise HTTPException(status_code=400, detail=msg)
+    return {"status": "SUCCESS", "message": msg, "settings": settings_mgr.get_all_settings()}
+
 
 
 class MountingStructureConfigureRequest(BaseModel):

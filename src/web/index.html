@@ -477,16 +477,28 @@
               </div>
             </div>
 
-            <!-- GIS Spatial City Map -->
+            <!-- GIS Spatial City Map & Multi-Provider Radar -->
             <div class="panel-card gis-card">
-              <div class="panel-header">
-                <div class="panel-title">GIS SPATIAL CORRIDOR &amp; SENSOR TOPOLOGY</div>
-                <div class="panel-sub">Metropolitan Municipal Grid &bull; Live GPS Node Telemetry &bull; Density Heatmap</div>
+              <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div class="panel-title">GIS SPATIAL CORRIDOR &amp; SENSOR TOPOLOGY</div>
+                  <div class="panel-sub">Metropolitan Municipal Grid &bull; Live GPS Node Telemetry &bull; Multi-Provider Tile Engine</div>
+                </div>
+                <div class="gis-controls" style="display: flex; gap: 8px; align-items: center;">
+                  <select id="map-provider-select" class="form-select text-xs" style="padding: 4px 10px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(0,229,255,0.4); color: #00e5ff; border-radius: 4px;" onchange="switchMapTileProvider(this.value)">
+                    <option value="carto_dark">🛰️ CartoDB Dark (Tactical Dark)</option>
+                    <option value="google_road">🗺️ Google Maps (Roadmap)</option>
+                    <option value="esri_satellite">🌍 Esri 4K Satellite Imagery</option>
+                    <option value="osm_standard">🌐 OpenStreetMap Standard</option>
+                    <option value="custom_wms">⚙️ Custom Tile / WMS Server</option>
+                  </select>
+                  <button class="btn btn-sm btn-outline text-xs" onclick="toggleMapHeatmap()" id="btn-toggle-heatmap">🔥 Heatmap: ON</button>
+                  <button class="btn btn-sm btn-outline text-xs" onclick="recenterGisMap()">🎯 Recenter</button>
+                </div>
               </div>
               <div class="gis-map-viewport" id="gis-map-viewport">
                 <div id="gis-leaflet-map" style="width: 100%; height: 260px; border-radius: var(--radius-sm); z-index: 10;"></div>
               </div>
-            </div>
             </div>
 
           </section>
@@ -984,19 +996,70 @@
         <div class="report-page-wrap">
           <div class="report-header">
             <div>
-              <h2 class="view-heading">REPORT CENTER & OFFICIAL REPORT BUILDER</h2>
-              <p class="view-subheading">Generate, verify, and export court-admissible forensic dossiers and municipal safety reports.</p>
+              <h2 class="view-heading">ENTERPRISE REPORT CENTER & TEMPLATE BUILDER</h2>
+              <p class="view-subheading">Generate, customize, and export court-admissible forensic dossiers, speed radar audits, and municipal compliance reports.</p>
             </div>
-            <div class="report-actions">
-              <button class="btn btn-outline" onclick="generateExecutiveReport()">Export All Ledgers</button>
-              <button id="btn-export-exec-report" class="btn btn-primary" onclick="generateExecutiveReport()">+ Generate New Report</button>
+            <div class="report-actions" style="display: flex; gap: 10px; align-items: center;">
+              <select id="report-template-select" class="form-select" style="min-width: 220px; font-size: 12px;" onchange="handleTemplateSelectChange(this.value)">
+                <option value="tpl_executive_summary">Executive Safety &amp; KPI Summary</option>
+                <option value="tpl_forensic_court_dossier">Court Legal Forensic Dossier</option>
+                <option value="tpl_speed_radar_audit">Speed Radar Section Audit</option>
+                <option value="tpl_noc_camera_sla">NOC Camera Fleet SLA Report</option>
+              </select>
+              <button class="btn btn-outline" onclick="exportReportsData('csv')">📊 Export CSV</button>
+              <button class="btn btn-outline" onclick="exportReportsData('json')">🗄️ Export JSON</button>
+              <button class="btn btn-outline" onclick="openCreateTemplateModal()">+ New Custom Template</button>
+              <button id="btn-export-exec-report" class="btn btn-primary" onclick="generateCustomSelectedReport()">+ Generate HTML / PDF</button>
+            </div>
+          </div>
+
+          <!-- Template Cards Overview Grid -->
+          <div class="kpi-grid-4" style="margin-bottom: 24px;" id="template-cards-grid">
+            <div class="kpi-card" style="text-align: left; cursor: pointer;" onclick="selectTemplateCard('tpl_executive_summary')">
+              <div class="kpi-top">
+                <span class="kpi-title">EXECUTIVE COMPLIANCE</span>
+                <span class="kpi-tag" style="background: rgba(2,132,199,0.2); color: #38bdf8;">STANDARD</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 8px 0 4px 0;">Executive Safety Summary</div>
+              <div style="font-size: 11px; color: #94a3b8;">KPI grids, corridor safety score, and high-level hazard breakdowns.</div>
+            </div>
+
+            <div class="kpi-card" style="text-align: left; cursor: pointer;" onclick="selectTemplateCard('tpl_forensic_court_dossier')">
+              <div class="kpi-top">
+                <span class="kpi-title">FORENSIC DOSSIER</span>
+                <span class="kpi-tag" style="background: rgba(220,38,38,0.2); color: #f87171;">LEGAL</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 8px 0 4px 0;">Court Evidence Dossier</div>
+              <div style="font-size: 11px; color: #94a3b8;">ISO/IEC 27037 chain-of-custody, SHA-256 seal &amp; kinematic logs.</div>
+            </div>
+
+            <div class="kpi-card" style="text-align: left; cursor: pointer;" onclick="selectTemplateCard('tpl_speed_radar_audit')">
+              <div class="kpi-top">
+                <span class="kpi-title">SPEED RADAR</span>
+                <span class="kpi-tag" style="background: rgba(245,158,11,0.2); color: #fbbf24;">ENFORCEMENT</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 8px 0 4px 0;">Section Speed Audit</div>
+              <div style="font-size: 11px; color: #94a3b8;">Point-to-point velocity logs, speed limit tolerances &amp; citation ledger.</div>
+            </div>
+
+            <div class="kpi-card" style="text-align: left; cursor: pointer;" onclick="selectTemplateCard('tpl_noc_camera_sla')">
+              <div class="kpi-top">
+                <span class="kpi-title">NOC SLA HEALTH</span>
+                <span class="kpi-tag" style="background: rgba(16,185,129,0.2); color: #34d399;">INFRASTRUCTURE</span>
+              </div>
+              <div style="font-size: 14px; font-weight: 700; color: #f8fafc; margin: 8px 0 4px 0;">Camera Fleet Health</div>
+              <div style="font-size: 11px; color: #94a3b8;">99.98% SLA telemetry, PoE self-healing tickets &amp; zero-copy metrics.</div>
             </div>
           </div>
 
           <div class="panel-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+              <span style="font-size: 13px; font-weight: 700; color: #f8fafc; letter-spacing: 0.05em;">GENERATED COMPLIANCE REPORTS &amp; ACTIVE AUDIT DOSSIERS</span>
+              <button class="btn btn-sm btn-outline" onclick="loadReportTemplates()">Refresh Templates</button>
+            </div>
             <table class="data-table">
               <thead>
-                <tr><th>Report ID</th><th>Title / Description</th><th>Period</th><th>Signer</th><th>Status</th><th>SHA-256 Merkle Seal</th><th>Action</th></tr>
+                <tr><th>Report ID</th><th>Title / Category</th><th>Period</th><th>Signer</th><th>Status</th><th>SHA-256 Merkle Seal</th><th>Action</th></tr>
               </thead>
               <tbody id="reports-table-body">
                 <tr>
@@ -1004,7 +1067,7 @@
                     <div style="padding: 28px; text-align: center; color: #64748b;">
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 8px; opacity: 0.5;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                       <div style="font-size: 13px; font-weight: 600; color: #94a3b8;">NO EXPORTED DOSSIERS IN CURRENT SESSION</div>
-                      <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Generate New Report</strong> above to compile an instant court-admissible ISO/IEC 27037 compliance ledger.</div>
+                      <div style="font-size: 11px; margin-top: 4px; color: #64748b;">Click <strong>+ Generate HTML / PDF</strong> above to compile an instant court-admissible compliance ledger.</div>
                     </div>
                   </td>
                 </tr>
@@ -1082,17 +1145,26 @@
       <main class="content-view hidden" id="view-security">
         <div class="security-page-wrap">
           <div class="security-header">
-            <div><h2 class="view-heading">ENTERPRISE ACCESS CONTROL & ZERO-TRUST IAM</h2><p class="view-subheading">Manage multi-tenant operator roles, cryptographic session tokens, and zero-trust permissions.</p></div>
-            <button class="btn btn-primary">+ Add Operator</button>
+            <div>
+              <h2 class="view-heading">ENTERPRISE ACCESS CONTROL & ZERO-TRUST IAM</h2>
+              <p class="view-subheading">Manage multi-tenant operator roles, cryptographic session tokens, user provisioning, and zero-trust permissions.</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-outline" onclick="openRolesMatrixModal()">RBAC Permissions Matrix</button>
+              <button class="btn btn-outline" onclick="loadUsersTable()">Refresh Roster</button>
+              <button class="btn btn-primary" onclick="openAddUserModal()">+ Provision New Operator</button>
+            </div>
           </div>
+
           <div class="active-user-card">
             <div class="active-user-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
             <div>
               <div class="active-user-title" id="sec-active-user-title">Authorized Administrator &bull; <span class="badge-role super">SUPER_ADMIN</span></div>
               <div class="active-user-sub">Active Session Token: <code id="sec-token-preview">argus_sec_tok_admin... (SHA-256 Validated)</code></div>
-              <div class="perms-chips"><span class="perm-chip">system:manage</span><span class="perm-chip">cameras:manage</span><span class="perm-chip">incidents:export</span><span class="perm-chip">dossier:verify</span></div>
+              <div class="perms-chips" id="active-user-perms-chips"><span class="perm-chip">system:manage</span><span class="perm-chip">users:manage</span><span class="perm-chip">cameras:manage</span><span class="perm-chip">incidents:export</span><span class="perm-chip">dossier:verify</span></div>
             </div>
           </div>
+
           <div class="panel-card" style="margin-top: 20px;">
             <div style="font-size: 13px; font-weight: 700; color: #f8fafc; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
               <span>AUTHORIZED OPERATOR ROSTER & ROLE-BASED ACCESS CONTROL (RBAC)</span>
@@ -1104,19 +1176,21 @@
                   <th>Username</th>
                   <th>Full Name / Title</th>
                   <th>RBAC Role</th>
+                  <th>Station Division</th>
                   <th>Official Email</th>
                   <th>Status</th>
-                  <th>Operations</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody id="users-table-body">
                 <tr>
                   <td><code>admin</code></td>
-                  <td>System Administrator</td>
+                  <td>Chief Traffic Administrator</td>
                   <td><span class="badge-role super">SUPER_ADMIN</span></td>
+                  <td>ALL_DIVISIONS</td>
                   <td>admin@argustraffic.internal</td>
                   <td><span class="badge-status active">ACTIVE</span></td>
-                  <td><span style="color: #64748b; font-size: 11px;">PROTECTED</span></td>
+                  <td><span style="color: #64748b; font-size: 11px;">PROTECTED ROOT</span></td>
                 </tr>
               </tbody>
             </table>
@@ -1129,7 +1203,7 @@
         <div class="audit-page-wrap">
           <div class="audit-header">
             <div><h2 class="view-heading">IMMUTABLE FORENSIC AUDIT LOG & CRYPTOGRAPHIC LEDGER</h2><p class="view-subheading">Tamper-evident system activity records, operator actions, and automated incident logs.</p></div>
-            <button class="btn btn-primary" id="btn-refresh-audit">Refresh Audit Logs</button>
+            <button class="btn btn-primary" id="btn-refresh-audit" onclick="loadAuditLogs()">Refresh Audit Logs</button>
           </div>
           <div class="panel-card">
             <table class="data-table">
@@ -1143,49 +1217,124 @@
         </div>
       </main>
 
-      <!-- VIEW 12: SETTINGS -->
+      <!-- VIEW 12: SETTINGS & CUSTOMIZATION -->
       <main class="content-view hidden" id="view-settings">
         <div class="security-page-wrap">
           <div class="security-header">
             <div>
-              <h2 class="view-heading">ENTERPRISE PLATFORM SETTINGS & JURISDICTION PREFERENCES</h2>
-              <p class="view-subheading">Configure national police command branding, response SLA thresholds, audio sirens, and edge vault parameters.</p>
+              <h2 class="view-heading">ENTERPRISE PLATFORM SETTINGS & CUSTOMIZATION</h2>
+              <p class="view-subheading">Configure national authority branding, custom agency logo, default map tile servers, speed radar limits, and emergency SLA timeouts.</p>
             </div>
-            <button class="btn btn-primary" onclick="savePlatformSettings()">Save Platform Configuration</button>
+            <button class="btn btn-primary" onclick="savePlatformSettings()">Save All Settings</button>
           </div>
-          <div class="panel-card" style="display: flex; flex-direction: column; gap: 16px;">
-            <div class="form-group">
-              <label>National Law Enforcement & Municipal Jurisdiction Title</label>
-              <input type="text" id="setting-jurisdiction" class="form-input" value="National Police Traffic Command & Control Center" />
-            </div>
-            <div class="form-group">
-              <label>Official Operating Timezone</label>
-              <select id="setting-timezone" class="form-select">
-                <option value="Asia/Colombo" selected>Asia/Colombo (UTC+05:30) &bull; Sri Lanka Standard Time</option>
-                <option value="UTC">UTC (Universal Coordinated Time)</option>
-                <option value="America/New_York">America/New_York (UTC-05:00) &bull; Eastern Time</option>
-                <option value="Europe/London">Europe/London (UTC+00:00) &bull; GMT / BST</option>
-              </select>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-              <div class="form-group">
-                <label>Critical Incident Escalation SLA Limit (Seconds)</label>
-                <input type="number" id="setting-sla-limit" class="form-input" value="45" min="15" max="300" />
+
+          <div class="panel-card" style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- 1. Agency Branding & Identity -->
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+              <h3 style="font-size: 14px; font-weight: 700; color: #00e5ff; margin-bottom: 12px; letter-spacing: 0.05em;">1. AGENCY BRANDING &amp; REPORT IDENTIFICATION</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label>National Law Enforcement / Municipal Agency Title</label>
+                  <input type="text" id="setting-agency-name" class="form-input" value="National Traffic Operations & Municipal Police Command" />
+                </div>
+                <div class="form-group">
+                  <label>Agency Subtitle / Division Alias</label>
+                  <input type="text" id="setting-agency-subtitle" class="form-input" value="Autonomous Edge Telemetry & Incident Intelligence Center" />
+                </div>
+                <div class="form-group">
+                  <label>Agency Header Logo URL / Embedded Data</label>
+                  <input type="text" id="setting-logo-url" class="form-input" placeholder="https://example.com/logo.png or /static/img/logo.png" value="/static/img/logo.png" />
+                </div>
+                <div class="form-group">
+                  <label>Top Header Badge Label</label>
+                  <input type="text" id="setting-header-badge" class="form-input" value="METROPOLITAN COMMAND HQ" />
+                </div>
               </div>
-              <div class="form-group">
-                <label>Edge Ring-Buffer Pre-Incident Window (Seconds)</label>
-                <input type="number" id="setting-buffer-window" class="form-input" value="15" min="5" max="60" />
+            </div>
+
+            <!-- 2. GIS Map Providers & Custom Tile Server -->
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+              <h3 style="font-size: 14px; font-weight: 700; color: #00e5ff; margin-bottom: 12px; letter-spacing: 0.05em;">2. GIS MAP ENGINE &amp; CUSTOM TILE PROVIDERS</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                  <label>Default GIS Map Provider</label>
+                  <select id="setting-default-map-provider" class="form-select" onchange="switchMapTileProvider(this.value)">
+                    <option value="carto_dark" selected>CartoDB Dark Matter (Tactical Dark - High Contrast)</option>
+                    <option value="google_road">Google Maps (Roadmap Overlay)</option>
+                    <option value="esri_satellite">Esri World Imagery (4K Satellite Orthophoto)</option>
+                    <option value="osm_standard">OpenStreetMap Standard</option>
+                    <option value="custom_wms">Custom Tile Server / WMS Endpoint</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Custom Tile Server URL (XYZ / WMS Template)</label>
+                  <input type="text" id="setting-custom-tile-url" class="form-input font-mono" value="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" placeholder="https://tile.server.org/{z}/{x}/{y}.png" />
+                </div>
+                <div class="form-group">
+                  <label>Google Maps API Key (Optional)</label>
+                  <input type="text" id="setting-gmaps-key" class="form-input font-mono" placeholder="AIzaSy..." />
+                </div>
+                <div class="form-group">
+                  <label>Default Report Template</label>
+                  <select id="setting-default-report-tpl" class="form-select">
+                    <option value="tpl_executive_summary">Executive Traffic Safety &amp; KPI Summary</option>
+                    <option value="tpl_forensic_court_dossier">Court Legal Forensic Dossier</option>
+                    <option value="tpl_speed_radar_audit">Speed Radar Section Audit</option>
+                    <option value="tpl_noc_camera_sla">NOC Camera Fleet SLA Report</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
-              <div>
-                <strong style="color: #f1f5f9;">High-Priority Audio Klaxon Siren</strong>
-                <p style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Trigger audible synthesizer siren alarm on CRITICAL hazard detection or Wanted Vehicle hit.</p>
+
+            <!-- 3. Speed Limits & Radar Tolerances -->
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 16px;">
+              <h3 style="font-size: 14px; font-weight: 700; color: #00e5ff; margin-bottom: 12px; letter-spacing: 0.05em;">3. OPTICAL SPEED RADAR LIMITS &amp; TOLERANCES</h3>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+                <div class="form-group">
+                  <label>Urban Corridor Speed Limit (km/h)</label>
+                  <input type="number" id="setting-speed-urban" class="form-input" value="60" min="20" max="120" />
+                </div>
+                <div class="form-group">
+                  <label>Expressway Speed Limit (km/h)</label>
+                  <input type="number" id="setting-speed-expressway" class="form-input" value="100" min="50" max="160" />
+                </div>
+                <div class="form-group">
+                  <label>Radar Grace Tolerance (+km/h)</label>
+                  <input type="number" id="setting-speed-grace" class="form-input" value="5" min="0" max="25" />
+                </div>
               </div>
-              <input type="checkbox" id="setting-siren-toggle" checked style="width: 20px; height: 20px; accent-color: #00e5ff; cursor: pointer;" />
             </div>
+
+            <!-- 4. SLA Timers, Siren & Alarms -->
+            <div>
+              <h3 style="font-size: 14px; font-weight: 700; color: #00e5ff; margin-bottom: 12px; letter-spacing: 0.05em;">4. EMERGENCY SLA TIMERS &amp; AUDIO ALARMS</h3>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 12px;">
+                <div class="form-group">
+                  <label>Critical Hazard SLA Timeout (Seconds)</label>
+                  <input type="number" id="setting-sla-limit" class="form-input" value="120" min="15" max="600" />
+                </div>
+                <div class="form-group">
+                  <label>Operating Jurisdiction Timezone</label>
+                  <select id="setting-timezone" class="form-select">
+                    <option value="Asia/Colombo" selected>Asia/Colombo (UTC+05:30) &bull; Sri Lanka Standard Time</option>
+                    <option value="UTC">UTC (Universal Coordinated Time)</option>
+                    <option value="America/New_York">America/New_York (UTC-05:00) &bull; Eastern Time</option>
+                    <option value="Europe/London">Europe/London (UTC+00:00) &bull; GMT / BST</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(0,0,0,0.3); border-radius: 6px; border: 1px solid rgba(255,255,255,0.06);">
+                <div>
+                  <strong style="color: #f1f5f9;">High-Priority Audio Klaxon Siren</strong>
+                  <p style="font-size: 12px; color: #94a3b8; margin-top: 2px;">Trigger audible synthesizer siren alarm on CRITICAL hazard detection or Wanted Vehicle hit.</p>
+                </div>
+                <input type="checkbox" id="setting-siren-toggle" checked style="width: 20px; height: 20px; accent-color: #00e5ff; cursor: pointer;" />
+              </div>
+            </div>
+
             <div style="display: flex; justify-content: flex-end; margin-top: 8px;">
-              <button class="btn btn-primary" onclick="savePlatformSettings()">Save Platform Configuration</button>
+              <button class="btn btn-primary" onclick="savePlatformSettings()">Save All Platform Settings</button>
             </div>
           </div>
         </div>
@@ -1480,6 +1629,242 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="closeDivisionManagerModal()">Close Configurator</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Enterprise Operator Modal -->
+  <div id="add-user-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">PROVISION NEW OPERATOR / ADMINISTRATOR</div>
+        <button class="modal-close-btn" onclick="closeAddUserModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Username</label>
+            <input type="text" id="new-user-username" class="form-input font-mono" placeholder="e.g. operator_colombo" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Temporary Password</label>
+            <input type="password" id="new-user-password" class="form-input" placeholder="Min 8 characters" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Full Name &amp; Official Title</label>
+          <input type="text" id="new-user-fullname" class="form-input" placeholder="e.g. Inspector K. Perera (Station Officer)" />
+        </div>
+        <div class="form-group">
+          <label>Official Email Address</label>
+          <input type="email" id="new-user-email" class="form-input" placeholder="k.perera@argustraffic.internal" />
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>RBAC Role Privilege Level</label>
+            <select id="new-user-role" class="form-select">
+              <option value="TRAFFIC_OPERATOR" selected>TRAFFIC_OPERATOR (View Feeds &amp; Alerts)</option>
+              <option value="STATION_ADMIN">STATION_ADMIN (Sector Station Commander)</option>
+              <option value="FORENSIC_AUDITOR">FORENSIC_AUDITOR (Forensics &amp; Export)</option>
+              <option value="READONLY_VIEWER">READONLY_VIEWER (Read-Only Observer)</option>
+              <option value="SUPER_ADMIN">SUPER_ADMIN (Full System Root)</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label>Assigned Command Sector</label>
+            <select id="new-user-division" class="form-select">
+              <option value="DIV_METRO_HQ" selected>Metropolitan Command HQ</option>
+              <option value="DIV_NORTH_DISTRICT">North District Command</option>
+              <option value="DIV_SOUTH_DISTRICT">South District Command</option>
+              <option value="DIV_EAST_DISTRICT">Eastern District Command</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeAddUserModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewUser()">+ Provision User</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit User Modal -->
+  <div id="edit-user-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">UPDATE USER ACCOUNT PROFILE</div>
+        <button class="modal-close-btn" onclick="closeEditUserModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-user-username-hidden" />
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="edit-user-username" class="form-input font-mono" disabled />
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" id="edit-user-fullname" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="edit-user-email" class="form-input" />
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>RBAC Role</label>
+            <select id="edit-user-role" class="form-select">
+              <option value="TRAFFIC_OPERATOR">TRAFFIC_OPERATOR</option>
+              <option value="STATION_ADMIN">STATION_ADMIN</option>
+              <option value="FORENSIC_AUDITOR">FORENSIC_AUDITOR</option>
+              <option value="READONLY_VIEWER">READONLY_VIEWER</option>
+              <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label>Command Sector</label>
+            <select id="edit-user-division" class="form-select">
+              <option value="DIV_METRO_HQ">Metropolitan Command HQ</option>
+              <option value="DIV_NORTH_DISTRICT">North District Command</option>
+              <option value="DIV_SOUTH_DISTRICT">South District Command</option>
+              <option value="DIV_EAST_DISTRICT">Eastern District Command</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+          <input type="checkbox" id="edit-user-active" style="width: 18px; height: 18px; accent-color: #00e5ff;" />
+          <label for="edit-user-active" style="cursor: pointer; color: #f8fafc; font-size: 13px;">User Account Active &amp; Login Permitted</label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeEditUserModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEditUser()">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Password Modal -->
+  <div id="reset-password-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title">RESET OPERATOR CREDENTIALS</div>
+        <button class="modal-close-btn" onclick="closeResetPasswordModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reset-pwd-username-hidden" />
+        <p style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Resetting credentials for account: <strong id="reset-pwd-username-label" style="color: #00e5ff;">-</strong></p>
+        <div class="form-group">
+          <label>New Password</label>
+          <input type="password" id="reset-new-password" class="form-input" placeholder="Enter new secure password" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeResetPasswordModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitResetPassword()">Reset &amp; Invalidate Sessions</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Report Template Modal -->
+  <div id="custom-template-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">CREATE CUSTOM COMPLIANCE REPORT TEMPLATE</div>
+        <button class="modal-close-btn" onclick="closeCreateTemplateModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label>Template ID Code</label>
+            <input type="text" id="tpl-id" class="form-input font-mono" placeholder="tpl_custom_metro_patrol" />
+          </div>
+          <div class="form-group flex-2">
+            <label>Template Display Name</label>
+            <input type="text" id="tpl-name" class="form-input" placeholder="e.g. Metro Expressway Weekly Safety Audit" />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Authority / Agency Heading</label>
+            <input type="text" id="tpl-agency-name" class="form-input" placeholder="e.g. Metropolitan Highway Police &amp; Traffic Authority" value="Metropolitan Traffic Safety Directorate" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Category</label>
+            <select id="tpl-category" class="form-select">
+              <option value="EXECUTIVE">EXECUTIVE</option>
+              <option value="FORENSIC">FORENSIC</option>
+              <option value="SPEED_RADAR">SPEED_RADAR</option>
+              <option value="NOC_SLA">NOC_SLA</option>
+              <option value="CUSTOM" selected>CUSTOM</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Agency Subtitle / Report Narrative</label>
+            <input type="text" id="tpl-sub-title" class="form-input" placeholder="Autonomous Road Safety &amp; Traffic Management Report" />
+          </div>
+          <div class="form-group flex-1">
+            <label>Brand Accent Color</label>
+            <input type="color" id="tpl-accent-color" class="form-input" value="#0284c7" style="height: 38px; padding: 2px;" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Header Logo URL / Embedded Data</label>
+          <input type="text" id="tpl-logo-url" class="form-input" placeholder="https://example.com/logo.png" />
+        </div>
+
+        <div class="form-group">
+          <label>Report Sections &amp; Module Inclusion</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;"><input type="checkbox" id="tpl-inc-kpis" checked style="accent-color:#00e5ff;" /> High-Level KPI Summary Grid</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;"><input type="checkbox" id="tpl-inc-table" checked style="accent-color:#00e5ff;" /> Detailed Incident Audit Table</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;"><input type="checkbox" id="tpl-inc-seal" checked style="accent-color:#00e5ff;" /> SHA-256 Merkle Cryptographic Seal</label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; cursor:pointer;"><input type="checkbox" id="tpl-inc-radar" checked style="accent-color:#00e5ff;" /> Optical Speed Radar Statistics</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Custom Legal Disclaimer / Footer Text</label>
+          <input type="text" id="tpl-disclaimer" class="form-input" placeholder="Official automated report compiled by ArgusTraffic AI Enterprise." value="Official automated report compiled by ArgusTraffic AI Enterprise. Certified court-admissible." />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeCreateTemplateModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitNewReportTemplate()">+ Save Report Template</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RBAC Permissions Matrix Modal -->
+  <div id="roles-matrix-modal" class="modal-backdrop hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">ENTERPRISE RBAC PRIVILEGE &amp; PERMISSION MATRIX</div>
+        <button class="modal-close-btn" onclick="closeRolesMatrixModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">Granular zero-trust permission allocations across all operational security tiers.</p>
+        <div style="overflow-x: auto;">
+          <table class="data-table" id="rbac-matrix-table">
+            <thead>
+              <tr>
+                <th>Permission Scope</th>
+                <th style="color: #ef4444;">SUPER_ADMIN</th>
+                <th style="color: #f59e0b;">STATION_ADMIN</th>
+                <th style="color: #00e5ff;">TRAFFIC_OPERATOR</th>
+                <th style="color: #a855f7;">FORENSIC_AUDITOR</th>
+                <th style="color: #64748b;">READONLY_VIEWER</th>
+              </tr>
+            </thead>
+            <tbody id="rbac-matrix-body"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeRolesMatrixModal()">Close Inspector</button>
       </div>
     </div>
   </div>
