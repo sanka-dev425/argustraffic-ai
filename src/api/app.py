@@ -43,6 +43,9 @@ from src.core.hardware_governor import HardwareGovernor
 from src.core.optical_tamper_detector import OpticalTamperDetector
 from src.core.license_manager import LicenseManager
 from src.core.ledger_sentinel import ContinuousLedgerSentinel
+from src.core.batch_writer import AsyncDatabaseBatchWriter
+from src.core.memory_pool import FrameMemoryPool
+from src.core.process_supervisor import WorkerSupervisor
 from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
@@ -153,6 +156,9 @@ def init_app_state():
     app_state["optical_tamper_detector"] = OpticalTamperDetector()
     app_state["license_manager"] = LicenseManager()
     app_state["ledger_sentinel"] = ContinuousLedgerSentinel()
+    app_state["batch_writer"] = AsyncDatabaseBatchWriter()
+    app_state["memory_pool"] = FrameMemoryPool()
+    app_state["supervisor"] = WorkerSupervisor()
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 
@@ -271,6 +277,8 @@ def process_single_frame(frame_idx: int):
             ad = a.to_dict()
             if app_state.get("db"):
                 app_state["db"].save_incident(ad)
+            if app_state.get("batch_writer"):
+                app_state["batch_writer"].enqueue_incident(ad)
             if app_state.get("dispatcher"):
                 app_state["dispatcher"].dispatch(ad)
             if sla_mgr:
@@ -388,11 +396,15 @@ class VideoStreamBroadcaster:
                         target_clients = list(self.clients)
 
                     if target_clients:
+                        # Non-blocking backpressure: drop frame for slow clients taking >150ms to prevent RAM queue buildup
+                        async def safe_send(client):
+                            return await asyncio.wait_for(client.send_text(payload), timeout=0.15)
+
                         results = await asyncio.gather(
-                            *[ws.send_text(payload) for ws in target_clients],
+                            *[safe_send(ws) for ws in target_clients],
                             return_exceptions=True,
                         )
-                        stale = [ws for ws, res in zip(target_clients, results) if isinstance(res, Exception)]
+                        stale = [ws for ws, res in zip(target_clients, results) if isinstance(res, (Exception, asyncio.TimeoutError))]
                         if stale:
                             async with self.lock:
                                 for ws in stale:
