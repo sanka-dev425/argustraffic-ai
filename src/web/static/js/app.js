@@ -3178,7 +3178,7 @@ function toggleNightShiftMode() {
 }
 
 async function downloadCourtEvidenceBundle(incidentId) {
-  const safeId = incidentId || "INC_DEMO_001";
+  const safeId = incidentId || (typeof currentInspectedIncidentId !== "undefined" && currentInspectedIncidentId ? currentInspectedIncidentId : `INC_${Date.now()}`);
   showToast({
     incident_type: "EVIDENCE_EXPORT",
     description: `Compiling 1-Click Court-Ready Evidence ZIP Bundle for ${safeId}...`,
