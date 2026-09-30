@@ -61,9 +61,19 @@ class ArgusDigitalTwin:
 
         # Baseline metrics
         target_corridor_id = "CORRIDOR_GRAND_CENTRAL"
-        corridor = sim_corridors.get(target_corridor_id, list(sim_corridors.values())[0])
+        if sim_corridors:
+            corridor = sim_corridors.get(target_corridor_id, list(sim_corridors.values())[0])
+        else:
+            corridor = CorridorEntity(
+                corridor_id="CORRIDOR_DEFAULT",
+                name="Default Corridor",
+                intersection_ids=[],
+                length_meters=1000.0,
+                free_flow_travel_time_sec=60.0,
+                average_travel_time_sec=60.0,
+            )
         baseline_delay = max(0.0, corridor.average_travel_time_sec - corridor.free_flow_travel_time_sec)
-        baseline_throughput = sum(l.capacity_vph for l in sim_lanes.values())
+        baseline_throughput = sum(l.capacity_vph for l in sim_lanes.values()) if sim_lanes else 3600.0
 
         # 2. Apply interventions
         total_capacity_lost_pct = 0.0
