@@ -227,31 +227,28 @@ tests\test_evidence_and_privacy.py .....                                 [ 62%]
 tests\test_golden_e2e_pipeline.py .                                      [ 63%]
 tests\test_hw_accel.py ......                                            [ 69%]
 tests\test_incident_engine.py ...                                        [ 71%]
-tests\test_security_and_rbac.py ......                                   [ 77%]
-tests\test_tamper_and_resilience.py .........                            [ 85%]
-tests\test_tracker.py ..                                                 [ 87%]
-tests\test_v2_platform.py .......                                        [ 93%]
+tests\test_security_and_rbac.py ...........                              [ 77%]
+tests\test_sentinel_risk_and_licensing.py ...                            [ 78%]
+tests\test_shift_handover_and_storage.py ....                            [ 81%]
+tests\test_software_patterns_and_concurrency.py ...                      [ 83%]
+tests\test_tamper_and_resilience.py .........                            [ 88%]
+tests\test_tracker.py ..                                                 [ 89%]
+tests\test_user_workflows.py ....                                        [ 91%]
+tests\test_v2_platform.py .......                                        [ 95%]
 tests\test_vulnerability_audit.py .......                                [100%]
 
-======================= 110 passed, 0 errors (100% SUCCESS) =======================
+======================= 171 passed, 0 errors (100% SUCCESS) =======================
 ```
 
 ---
 
-## Author & Leadership
+## 👤 Author & Architecture
 
-<table style="border: none;">
-  <tr>
-    <td width="90px" align="center">
-      <img src="https://github.com/sanka-dev425.png" width="75px" style="border-radius: 50%;" alt="Saptha Sanka"/>
-    </td>
-    <td>
-      <strong>Saptha Sanka</strong><br>
-      Founder & Principal AI Systems Architect &bull; ArgusTraffic Autonomous Systems<br>
-      GitHub: <a href="https://github.com/sanka-dev425">@sanka-dev425</a> &bull; Email: <a href="mailto:sapthasanka@gmail.com">sapthasanka@gmail.com</a>
-    </td>
-  </tr>
-</table>
+**Saptha Sanka**  
+*Founder & Principal AI Systems Architect &bull; ArgusTraffic Autonomous Systems*  
+
+[![GitHub](https://img.shields.io/badge/GitHub-sanka--dev425-181717?style=flat-square&logo=github)](https://github.com/sanka-dev425)
+[![Email](https://img.shields.io/badge/Email-sapthasanka%40gmail.com-blue?style=flat-square&logo=gmail&logoColor=white)](mailto:sapthasanka@gmail.com)
 
 ---
 
