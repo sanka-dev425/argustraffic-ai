@@ -310,6 +310,13 @@
         </div>
 
         <div class="header-right">
+          <div class="volume-control-box" title="Emergency Alarm Volume Control">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.08"/></svg>
+            <input type="range" id="alarm-volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="0.7" onchange="setAlarmVolume(this.value)" />
+          </div>
+          <button class="btn-top-alert" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);" onclick="openShortcutsModal()" title="Keyboard Shortcuts (?)">
+            <span class="kbd-key" style="border: none; background: transparent; padding: 0;">?</span>
+          </button>
           <div class="clock-display" id="header-clock">14:42:18 UTC</div>
           <div class="status-pill" id="connection-status">
             <span class="pulse-dot"></span>
@@ -585,6 +592,19 @@
             <!-- Video Viewport -->
             <div class="feed-card ops-feed-card">
               <div class="video-wrapper" id="video-wrapper">
+                <!-- Optical Camera Tamper Alert HUD Banner -->
+                <div id="tamper-hud-banner" class="tamper-hud-banner hidden">
+                  <span>⚠️</span>
+                  <span id="tamper-hud-text">OPTICAL TAMPER DETECTED: LENS OCCLUSION / DEFOCUS</span>
+                </div>
+
+                <!-- Reconnecting Live Stream Glassmorphic Overlay -->
+                <div id="stream-reconnect-overlay" class="stream-reconnect-overlay hidden">
+                  <div class="reconnect-spinner"></div>
+                  <div class="reconnect-title">RECONNECTING LIVE FEED...</div>
+                  <div class="reconnect-sub" id="reconnect-status-text">Attempting low-latency WebSocket / RTSP handshake</div>
+                </div>
+
                 <img id="stream-img" alt="Live Camera Feed" />
                 <canvas id="drawing-canvas"></canvas>
 
@@ -1899,6 +1919,69 @@
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="window.location.reload()">Return to Full Login</button>
         <button class="btn btn-primary" onclick="submitReAuth()" style="background: #f59e0b; border-color: #f59e0b; color: #000; font-weight: 700;">Re-Authenticate Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tactical Keyboard Shortcuts Guide Modal -->
+  <div id="shortcuts-modal" class="modal-backdrop hidden">
+    <div class="modal-card" style="max-width: 550px;">
+      <div class="modal-header">
+        <div class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><line x1="6" y1="8" x2="6" y2="8"/><line x1="10" y1="8" x2="10" y2="8"/><line x1="14" y1="8" x2="14" y2="8"/><line x1="18" y1="8" x2="18" y2="8"/><line x1="6" y1="12" x2="6" y2="12"/><line x1="10" y1="12" x2="10" y2="12"/><line x1="14" y1="12" x2="14" y2="12"/><line x1="18" y1="12" x2="18" y2="12"/><line x1="7" y1="16" x2="17" y2="16"/></svg>
+          TACTICAL KEYBOARD SHORTCUTS
+        </div>
+        <button class="modal-close" onclick="closeShortcutsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px;">
+          Use hotkeys for sub-millisecond switching and incident triage in high-pressure Command Center environments:
+        </p>
+        <div class="shortcuts-grid">
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Command Center</span>
+            <span class="kbd-key">1</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Live Operations</span>
+            <span class="kbd-key">2</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Incidents Queue</span>
+            <span class="kbd-key">3</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Traffic Analytics</span>
+            <span class="kbd-key">4</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Report Center</span>
+            <span class="kbd-key">5</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Device Fleet</span>
+            <span class="kbd-key">6</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Toggle Siren Mute</span>
+            <span class="kbd-key">M</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Close Active Modal</span>
+            <span class="kbd-key">Esc</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Toggle Geofence Draw</span>
+            <span class="kbd-key">D</span>
+          </div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">Open Shortcuts Menu</span>
+            <span class="kbd-key">?</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="closeShortcutsModal()">Dismiss Shortcuts</button>
       </div>
     </div>
   </div>

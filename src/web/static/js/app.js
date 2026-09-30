@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initGisMap();
   setupInspectorDrawer();
   setupGridSwitchers();
+  setupKeyboardShortcuts();
   updateHwAccelTelemetry();
   setInterval(updateHwAccelTelemetry, 8000);
 });
@@ -717,8 +718,187 @@ function setupSidebarNavigation() {
         if (rootBc) rootBc.innerText = viewBreadcrumbMap[targetViewId].root;
         if (pageBc) pageBc.innerText = viewBreadcrumbMap[targetViewId].page;
       }
+
+      // Enterprise GIS Map Tile Invalidation on View Switch
+      setTimeout(() => {
+        if (window.gisMap && typeof window.gisMap.invalidateSize === "function") {
+          window.gisMap.invalidateSize();
+        }
+      }, 150);
     });
   });
+}
+
+/* ==========================================================================
+   4.1 TACTICAL KEYBOARD SHORTCUTS & OPERATOR ERGONOMICS
+   ========================================================================== */
+function setupKeyboardShortcuts() {
+  window.addEventListener("keydown", (e) => {
+    const activeEl = document.activeElement;
+    const isInput = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.tagName === "SELECT");
+
+    if (e.key === "Escape") {
+      document.querySelectorAll(".modal-backdrop:not(.hidden)").forEach((m) => m.classList.add("hidden"));
+      return;
+    }
+
+    if (isInput) return;
+
+    if (e.key === "1") {
+      document.querySelector('[data-view="view-command-center"]')?.click();
+    } else if (e.key === "2") {
+      document.querySelector('[data-view="view-live-operations"]')?.click();
+    } else if (e.key === "3") {
+      document.querySelector('[data-view="view-incidents"]')?.click();
+    } else if (e.key === "4") {
+      document.querySelector('[data-view="view-analytics"]')?.click();
+    } else if (e.key === "5") {
+      document.querySelector('[data-view="view-reports"]')?.click();
+    } else if (e.key === "6") {
+      document.querySelector('[data-view="view-devices"]')?.click();
+    } else if (e.key === "m" || e.key === "M") {
+      toggleAudioAlarm();
+    } else if (e.key === "?") {
+      openShortcutsModal();
+    } else if (e.key === "d" || e.key === "D") {
+      document.getElementById("btn-draw-mode")?.click();
+    }
+  });
+}
+
+function openShortcutsModal() {
+  const m = document.getElementById("shortcuts-modal");
+  if (m) m.classList.remove("hidden");
+}
+
+function closeShortcutsModal() {
+  const m = document.getElementById("shortcuts-modal");
+  if (m) m.classList.add("hidden");
+}
+
+/* ==========================================================================
+   4.2 ALARM VOLUME & FREQUENCY CONTROL
+   ========================================================================== */
+let alarmGainNode = null;
+let alarmVolume = 0.7;
+
+function setAlarmVolume(val) {
+  alarmVolume = parseFloat(val) || 0.7;
+  if (alarmGainNode && audioContext) {
+    try {
+      alarmGainNode.gain.setValueAtTime(alarmVolume * 0.2, audioContext.currentTime);
+    } catch (e) {}
+  }
+  showToast({ incident_type: "INFO", description: `Emergency Siren volume: ${Math.round(alarmVolume * 100)}%` });
+}
+
+function toggleAudioAlarm() {
+  audioEnabled = !audioEnabled;
+  showToast({ incident_type: "INFO", description: audioEnabled ? "Emergency Siren UNMUTED" : "Emergency Siren MUTED" });
+}
+
+/* ==========================================================================
+   4.3 CRYPTOGRAPHIC MERKLE HASH 1-CLICK CLIPBOARD COPY
+   ========================================================================== */
+function copyToClipboard(text, btnElement) {
+  if (!text) return;
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast({ incident_type: "INFO", description: "✓ Hash & Merkle Proof copied to clipboard" });
+      if (btnElement) {
+        const origHTML = btnElement.innerHTML;
+        btnElement.innerHTML = "<span>✓ COPIED</span>";
+        btnElement.style.color = "#10b981";
+        setTimeout(() => {
+          btnElement.innerHTML = origHTML;
+          btnElement.style.color = "";
+        }, 1500);
+      }
+    }).catch(() => fallbackCopyText(text, btnElement));
+  } else {
+    fallbackCopyText(text, btnElement);
+  }
+}
+
+function fallbackCopyText(text, btnElement) {
+  const textArea = document.createElement("textarea");
+  textArea.value = text;
+  document.body.appendChild(textArea);
+  textArea.select();
+  try {
+    document.execCommand("copy");
+    showToast({ incident_type: "INFO", description: "✓ Hash copied to clipboard" });
+    if (btnElement) {
+      const origHTML = btnElement.innerHTML;
+      btnElement.innerHTML = "<span>✓ COPIED</span>";
+      btnElement.style.color = "#10b981";
+      setTimeout(() => {
+        btnElement.innerHTML = origHTML;
+        btnElement.style.color = "";
+      }, 1500);
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: "Could not copy hash." });
+  }
+  document.body.removeChild(textArea);
+}
+
+/* ==========================================================================
+   4.4 STREAM RECONNECT OVERLAY & TAMPER HUD BANNER
+   ========================================================================== */
+function showStreamReconnectOverlay(attempt = 1) {
+  const overlay = document.getElementById("stream-reconnect-overlay");
+  const subText = document.getElementById("reconnect-status-text");
+  if (subText) subText.innerText = `Attempting low-latency WebSocket / RTSP handshake (Attempt ${attempt}/5)...`;
+  if (overlay) overlay.classList.remove("hidden");
+}
+
+function hideStreamReconnectOverlay() {
+  const overlay = document.getElementById("stream-reconnect-overlay");
+  if (overlay) overlay.classList.add("hidden");
+}
+
+function updateTamperHudBanner(tamperState, message) {
+  const banner = document.getElementById("tamper-hud-banner");
+  const textEl = document.getElementById("tamper-hud-text");
+  if (!banner || !textEl) return;
+
+  if (tamperState && tamperState !== "CLEAR_HEALTHY") {
+    textEl.innerText = `⚠️ OPTICAL TAMPER: ${tamperState} (${message || 'Vandalism/Defocus'})`;
+    banner.classList.remove("hidden");
+  } else {
+    banner.classList.add("hidden");
+  }
+}
+
+/* ==========================================================================
+   4.5 SKELETON SHIMMER LOADERS & EMPTY STATE HELPERS
+   ========================================================================== */
+function renderTableSkeleton(tbodyEl, rowCount = 5, colCount = 6) {
+  if (!tbodyEl) return;
+  tbodyEl.innerHTML = "";
+  for (let i = 0; i < rowCount; i++) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="${colCount}"><div class="skeleton-row"></div></td>`;
+    tbodyEl.appendChild(tr);
+  }
+}
+
+function renderEmptyTableState(tbodyEl, colCount, title, sub) {
+  if (!tbodyEl) return;
+  tbodyEl.innerHTML = `
+    <tr>
+      <td colspan="${colCount}" style="padding: 0;">
+        <div class="empty-table-state">
+          <div class="empty-state-icon">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>
+          </div>
+          <div class="empty-state-title">${title}</div>
+          <div class="empty-state-desc">${sub}</div>
+        </div>
+      </td>
+    </tr>
+  `;
 }
 
 function switchToLiveOps() {
