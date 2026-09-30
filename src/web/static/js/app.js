@@ -15,6 +15,22 @@ let drawnPoints = [];
 let slaSeconds = 102; // 01:42 countdown
 let currentUser = null;
 
+// Safe DOM Helper Utilities
+function safeSetText(elementId, text) {
+  const el = typeof elementId === "string" ? document.getElementById(elementId) : elementId;
+  if (el) el.innerText = (text !== null && text !== undefined) ? String(text) : "";
+}
+
+function safeSetValue(elementId, value) {
+  const el = typeof elementId === "string" ? document.getElementById(elementId) : elementId;
+  if (el) el.value = (value !== null && value !== undefined) ? String(value) : "";
+}
+
+function safeSetHTML(elementId, html) {
+  const el = typeof elementId === "string" ? document.getElementById(elementId) : elementId;
+  if (el) el.innerHTML = (html !== null && html !== undefined) ? String(html) : "";
+}
+
 const viewBreadcrumbMap = {
   "view-command-center": { root: "Operations", page: "Command Center" },
   "view-live-operations": { root: "Operations", page: "Live Operations" },
@@ -580,36 +596,38 @@ function addIncidentItem(alert) {
 
 function openForensicModal(id, title, location, severity, speed, plate) {
   const modal = document.getElementById("incident-modal");
-  document.getElementById("modal-title").innerText = `FORENSIC INVESTIGATION: ${id}`;
-  document.getElementById("m-id").innerText = id;
-  document.getElementById("m-sev").innerText = severity;
-  document.getElementById("m-time").innerText = new Date().toUTCString();
-  document.getElementById("m-zone").innerText = location;
-  document.getElementById("m-tracks").innerText = `${plate} (${speed})`;
-  document.getElementById("m-desc").innerText = `${title} detected with verified vector flow invariant. Sealed under ISO/IEC 27037 Court Evidence Standard.`;
+  safeSetText("modal-title", `FORENSIC INVESTIGATION: ${id}`);
+  safeSetText("m-id", id);
+  safeSetText("m-sev", severity);
+  safeSetText("m-time", new Date().toUTCString());
+  safeSetText("m-zone", location);
+  safeSetText("m-tracks", `${plate} (${speed})`);
+  safeSetText("m-desc", `${title} detected with verified vector flow invariant. Sealed under ISO/IEC 27037 Court Evidence Standard.`);
 
-  document.getElementById("btn-export-log").onclick = () => {
-    const payload = {
-      incident_id: id,
-      title: title,
-      location: location,
-      severity: severity,
-      speed: speed,
-      plate: plate,
-      timestamp: new Date().toISOString(),
-      merkle_root: "9f8a3c2e1b4d5f6a7b8c9d0e1f2a3b4c5d6e7f8a",
-      officer: currentUser.full_name,
+  const btnExport = document.getElementById("btn-export-log");
+  if (btnExport) {
+    btnExport.onclick = () => {
+      const payload = {
+        incident_id: id,
+        title: title,
+        location: location,
+        severity: severity,
+        speed: speed,
+        plate: plate,
+        timestamp: new Date().toISOString(),
+        merkle_root: "9f8a3c2e1b4d5f6a7b8c9d0e1f2a3b4c5d6e7f8a",
+        officer: currentUser?.full_name || "Duty Supervisor",
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `argus_incident_${id}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
     };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `argus_incident_${id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  modal.classList.remove("hidden");
+  }
+  if (modal) modal.classList.remove("hidden");
 }
 
 function setupIncidentModal() {
@@ -1199,8 +1217,8 @@ function setupDeviceFleet() {
       });
       if (res.ok) {
         showToast({ incident_type: "CONFIG", description: `Mounting structure '${key}' successfully registered.` });
-        document.getElementById("new-struct-key").value = "";
-        document.getElementById("new-struct-label").value = "";
+        safeSetValue("new-struct-key", "");
+        safeSetValue("new-struct-label", "");
         await renderStructuresTable();
         await loadMountingStructuresDropdown();
       } else {
@@ -1751,16 +1769,17 @@ async function openEditUserModal(username) {
   try {
     const res = await fetch("/api/v1/auth/users");
     const users = await res.json();
-    const user = users.find(u => u.username === username);
+    const user = (Array.isArray(users) ? users : users.officers || []).find(u => u.username === username);
     if (!user) return;
 
-    document.getElementById("edit-user-username-hidden").value = user.username;
-    document.getElementById("edit-user-username").value = user.username;
-    document.getElementById("edit-user-fullname").value = user.full_name;
-    document.getElementById("edit-user-email").value = user.email;
-    document.getElementById("edit-user-role").value = user.role;
-    document.getElementById("edit-user-division").value = user.division_id || "DIV_METRO_HQ";
-    document.getElementById("edit-user-active").checked = user.is_active !== 0;
+    safeSetValue("edit-user-username-hidden", user.username);
+    safeSetValue("edit-user-username", user.username);
+    safeSetValue("edit-user-fullname", user.full_name);
+    safeSetValue("edit-user-email", user.email);
+    safeSetValue("edit-user-role", user.role);
+    safeSetValue("edit-user-division", user.division_id || "DIV_METRO_HQ");
+    const actEl = document.getElementById("edit-user-active");
+    if (actEl) actEl.checked = user.is_active !== 0;
 
     const modal = document.getElementById("edit-user-modal");
     if (modal) modal.classList.remove("hidden");
@@ -1779,8 +1798,8 @@ window.closeEditUserModal = closeEditUserModal;
 
 async function submitEditUser() {
   const username = document.getElementById("edit-user-username-hidden")?.value;
-  const fullName = document.getElementById("edit-user-fullname")?.value.trim();
-  const email = document.getElementById("edit-user-email")?.value.trim();
+  const fullName = document.getElementById("edit-user-fullname")?.value?.trim() || "";
+  const email = document.getElementById("edit-user-email")?.value?.trim() || "";
   const role = document.getElementById("edit-user-role")?.value;
   const division = document.getElementById("edit-user-division")?.value;
   const isActive = document.getElementById("edit-user-active")?.checked;
@@ -1814,9 +1833,9 @@ async function submitEditUser() {
 window.submitEditUser = submitEditUser;
 
 function openResetPasswordModal(username) {
-  document.getElementById("reset-pwd-username-hidden").value = username;
-  document.getElementById("reset-pwd-username-label").innerText = username;
-  document.getElementById("reset-new-password").value = "";
+  safeSetValue("reset-pwd-username-hidden", username);
+  safeSetText("reset-pwd-username-label", username);
+  safeSetValue("reset-new-password", "");
   const modal = document.getElementById("reset-password-modal");
   if (modal) modal.classList.remove("hidden");
 }
@@ -2265,13 +2284,17 @@ let activeModalIncidentId = "INC-2025-0847";
 function openForensicModal(id, hazard, cam, sev, speed, plate) {
   activeModalIncidentId = id;
   const modal = document.getElementById("incident-modal");
-  document.getElementById("m-id").innerText = id;
-  document.getElementById("m-sev").innerText = sev;
-  document.getElementById("m-sev").className = `badge-${sev === 'CRITICAL' ? 'critical' : (sev === 'HIGH' ? 'warning' : 'info')}`;
-  document.getElementById("m-time").innerText = new Date().toISOString();
-  document.getElementById("m-zone").innerText = cam;
-  document.getElementById("m-tracks").innerText = `${plate} (${speed})`;
-  document.getElementById("m-desc").innerText = `${hazard} identified at ${cam}. Speed measured at ${speed}.`;
+  safeSetText("modal-title", `FORENSIC INVESTIGATION: ${id}`);
+  safeSetText("m-id", id);
+  safeSetText("m-sev", sev || "WARNING");
+  const mSevEl = document.getElementById("m-sev");
+  if (mSevEl) {
+    mSevEl.className = `badge-${sev === 'CRITICAL' ? 'critical' : (sev === 'HIGH' ? 'warning' : 'info')}`;
+  }
+  safeSetText("m-time", new Date().toISOString());
+  safeSetText("m-zone", cam || "Main Arterial");
+  safeSetText("m-tracks", `${plate || 'VEHICLE'} (${speed || 'N/A'})`);
+  safeSetText("m-desc", `${hazard || 'Incident'} identified at ${cam || 'Main Arterial'}. Speed measured at ${speed || 'N/A'}.`);
 
   const btnAck = document.getElementById("btn-modal-ack");
   if (btnAck) {
@@ -2279,7 +2302,7 @@ function openForensicModal(id, hazard, cam, sev, speed, plate) {
     btnAck.innerText = "Acknowledge";
   }
 
-  modal?.classList.remove("hidden");
+  if (modal) modal.classList.remove("hidden");
 }
 
 async function ackCurrentModalIncident() {
