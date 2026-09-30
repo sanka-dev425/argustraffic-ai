@@ -49,6 +49,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initANPRRadarPolling();
   initClock();
   initSLATimer();
+  initGisMap();
   setupInspectorDrawer();
   setupGridSwitchers();
   updateHwAccelTelemetry();
@@ -392,6 +393,7 @@ function handleFrameData(data) {
       if (alert.severity === "CRITICAL") {
         triggerAudioAlert();
         showToast(alert);
+        triggerEmergencyBanner(alert);
       }
     });
   }
@@ -1350,19 +1352,201 @@ function initClock() {
   }, 1000);
 }
 
+let isSlaActive = false;
+let slaTimerInterval = null;
+
+function triggerEmergencyBanner(alert) {
+  const banner = document.getElementById("emergency-banner");
+  const tag = document.getElementById("alert-banner-tag");
+  const text = document.getElementById("alert-banner-text");
+  const slaBadge = document.getElementById("alert-sla-badge");
+
+  if (!banner || !text) return;
+
+  banner.classList.remove("nominal");
+  banner.classList.add("alert");
+  if (tag) tag.innerText = "CRITICAL ALERT";
+  text.innerHTML = `<strong>${alert.incident_type || 'HAZARD'}</strong>: ${alert.description || 'Violation detected on active corridor'} &bull; Camera ${alert.camera_id || 'CAM-042'}`;
+  if (slaBadge) slaBadge.style.display = "flex";
+
+  slaSeconds = 120; // 2 minute escalation limit
+  isSlaActive = true;
+}
+
+function ackCurrentAlert() {
+  const banner = document.getElementById("emergency-banner");
+  const tag = document.getElementById("alert-banner-tag");
+  const text = document.getElementById("alert-banner-text");
+  const slaBadge = document.getElementById("alert-sla-badge");
+
+  if (banner) {
+    banner.classList.remove("alert");
+    banner.classList.add("nominal");
+  }
+  if (tag) tag.innerText = "AI VISION ONLINE";
+  if (text) text.innerHTML = "Autonomous Traffic Hazard &amp; Safety Monitoring Active &bull; National Corridor Grid Synchronized";
+  if (slaBadge) slaBadge.style.display = "none";
+  isSlaActive = false;
+
+  showToast({ incident_type: "INFO", description: "Critical incident acknowledged by operator. Dispatch logged." });
+}
+
+window.ackCurrentAlert = ackCurrentAlert;
+
 function initSLATimer() {
   const slaEl = document.getElementById("sla-countdown");
   if (!slaEl) return;
   setInterval(() => {
-    if (slaSeconds > 0) {
+    if (isSlaActive && slaSeconds > 0) {
       slaSeconds--;
       const mins = Math.floor(slaSeconds / 60).toString().padStart(2, '0');
       const secs = (slaSeconds % 60).toString().padStart(2, '0');
       slaEl.innerText = `${mins}:${secs}`;
-    } else {
+    } else if (isSlaActive && slaSeconds <= 0) {
       slaEl.innerText = "00:00 (EXPIRED)";
     }
   }, 1000);
+}
+
+/* ==========================================================================
+   10B. GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY RADAR MAP
+   ========================================================================== */
+let gisMapInstance = null;
+
+function initGisMap() {
+  const mapContainer = document.getElementById("gis-leaflet-map");
+  if (!mapContainer) return;
+
+  if (typeof L !== "undefined") {
+    try {
+      gisMapInstance = L.map("gis-leaflet-map", {
+        center: [6.9271, 79.8612],
+        zoom: 12,
+        zoomControl: false,
+        attributionControl: false,
+      });
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        subdomains: "abcd",
+      }).addTo(gisMapInstance);
+
+      const createRadarIcon = (label, color = "#00e5ff") => {
+        return L.divIcon({
+          className: "custom-radar-icon",
+          html: `<div style="display:flex;align-items:center;gap:6px;transform:translate(-50%,-50%);">
+                  <div style="width:12px;height:12px;background:${color};border-radius:50%;box-shadow:0 0 10px ${color};border:2px solid #fff;"></div>
+                  <span style="background:rgba(10,15,24,0.9);color:${color};font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:3px;border:1px solid ${color};white-space:nowrap;">${label}</span>
+                </div>`,
+          iconSize: [20, 20],
+        });
+      };
+
+      const cameras = [
+        { id: "CAM-042", name: "Capital Highway Gantry", lat: 6.9271, lng: 79.8612, color: "#00e5ff" },
+        { id: "CAM-002", name: "Metropolitan CBD Luminaire", lat: 6.9329, lng: 79.8437, color: "#00e676" },
+        { id: "CAM-003", name: "North Expressway Intermodal", lat: 7.2625, lng: 80.5982, color: "#ffab00" },
+        { id: "CAM-004", name: "South Coastal Overpass", lat: 6.0328, lng: 80.2168, color: "#00e5ff" },
+      ];
+
+      cameras.forEach(cam => {
+        const marker = L.marker([cam.lat, cam.lng], { icon: createRadarIcon(cam.id, cam.color) }).addTo(gisMapInstance);
+        marker.bindPopup(`
+          <div style="font-family:'Inter',sans-serif;color:#fff;background:#0e1626;padding:8px;border-radius:4px;">
+            <div style="font-weight:700;color:${cam.color};font-size:12px;">${cam.id}: ${cam.name}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:4px;">STATUS: ONLINE &bull; 30 FPS &bull; 1080p</div>
+            <button onclick="switchStreamSource('${cam.id}', 'wall-node-1');" style="margin-top:6px;width:100%;padding:4px 8px;background:${cam.color};color:#000;border:none;border-radius:3px;font-weight:700;cursor:pointer;font-size:10px;">SWITCH PRIMARY FEED</button>
+          </div>
+        `);
+      });
+
+      gisMapInstance.setView([6.9300, 79.8550], 13);
+      return;
+    } catch (e) {
+      console.warn("Leaflet map initialization fallback to tactical canvas:", e);
+    }
+  }
+
+  renderTacticalRadarCanvas(mapContainer);
+}
+
+function renderTacticalRadarCanvas(container) {
+  container.innerHTML = `<canvas id="tactical-radar-canvas" width="800" height="260" style="width:100%;height:100%;border-radius:6px;background:#070b14;"></canvas>`;
+  const canvas = document.getElementById("tactical-radar-canvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+
+  let angle = 0;
+  function drawRadar() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = "rgba(30, 41, 59, 0.4)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = 18;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(50, 130);
+    ctx.quadraticCurveTo(250, 80, 400, 130);
+    ctx.quadraticCurveTo(550, 180, 750, 130);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#00e5ff";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(50, 130);
+    ctx.quadraticCurveTo(250, 80, 400, 130);
+    ctx.quadraticCurveTo(550, 180, 750, 130);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    angle += 0.02;
+    const cx = 400, cy = 130, r = 180;
+    const grad = ctx.createRadialGradient(cx, cy, 10, cx, cy, r);
+    grad.addColorStop(0, "rgba(0, 229, 255, 0.25)");
+    grad.addColorStop(1, "rgba(0, 229, 255, 0.0)");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, angle - 0.4, angle);
+    ctx.lineTo(cx, cy);
+    ctx.fill();
+
+    const nodes = [
+      { id: "CAM-042 (Capital Corridor)", x: 180, y: 105, col: "#00e5ff" },
+      { id: "CAM-002 (CBD Luminaire)", x: 400, y: 130, col: "#00e676" },
+      { id: "CAM-003 (North Gateway)", x: 420, y: 60, col: "#ffab00" },
+      { id: "CAM-004 (South Overpass)", x: 640, y: 145, col: "#00e5ff" },
+    ];
+
+    nodes.forEach(n => {
+      ctx.fillStyle = n.col;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,0.4)";
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(10, 15, 24, 0.85)";
+      ctx.fillRect(n.x + 10, n.y - 10, 155, 18);
+      ctx.strokeStyle = n.col;
+      ctx.strokeRect(n.x + 10, n.y - 10, 155, 18);
+
+      ctx.fillStyle = n.col;
+      ctx.font = "10px 'JetBrains Mono', monospace";
+      ctx.fillText(n.id, n.x + 14, n.y + 3);
+    });
+
+    requestAnimationFrame(drawRadar);
+  }
+  drawRadar();
 }
 
 /* ==========================================================================

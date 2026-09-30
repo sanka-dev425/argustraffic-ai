@@ -383,27 +383,41 @@ app_state["broadcaster"] = broadcaster
 
 
 @app.get("/video/feed", tags=["Video"])
-async def video_feed_endpoint():
-    """MJPEG Streaming endpoint for direct HTTP video feed backed by centralized broadcaster."""
+async def video_feed_endpoint(channel: str = "CAM-042"):
+    """MJPEG Streaming endpoint for direct HTTP video feed supporting multi-channel command matrix."""
     async def frame_generator():
         if broadcaster.worker_task is None or broadcaster.worker_task.done():
             broadcaster.running = True
             broadcaster.worker_task = asyncio.create_task(broadcaster._broadcast_loop())
 
-        while True:
-            if broadcaster.latest_buffer:
-                yield (
-                    b"--frame\r\n"
-                    b"Content-Type: image/jpeg\r\n\r\n" + broadcaster.latest_buffer + b"\r\n"
-                )
-            else:
-                buf, _, _, _ = await asyncio.to_thread(process_single_frame, 1)
-                if buf is not None:
+        # If requesting the main active broadcaster stream
+        if channel == "CAM-042" or channel == "MAIN_FEED":
+            while True:
+                if broadcaster.latest_buffer:
                     yield (
                         b"--frame\r\n"
-                        b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
+                        b"Content-Type: image/jpeg\r\n\r\n" + broadcaster.latest_buffer + b"\r\n"
                     )
-            await asyncio.sleep(0.033)
+                else:
+                    buf, _, _, _ = await asyncio.to_thread(process_single_frame, 1)
+                    if buf is not None:
+                        yield (
+                            b"--frame\r\n"
+                            b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
+                        )
+                await asyncio.sleep(0.033)
+        else:
+            # Dedicated perspective CCTV stream for secondary matrix channels (CAM-002, CAM-003, CAM-004)
+            from src.utils.video_stream import PerspectiveCCTVSimulator
+            sim = PerspectiveCCTVSimulator(camera_id=channel)
+            while True:
+                frame = sim.next_frame()
+                _, buf = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 75])
+                yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + buf.tobytes() + b"\r\n"
+                )
+                await asyncio.sleep(0.033)
 
     return StreamingResponse(
         frame_generator(),

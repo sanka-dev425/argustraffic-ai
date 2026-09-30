@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
@@ -321,20 +322,20 @@
       <main class="content-view" id="view-command-center">
 
         <!-- Emergency Alert Banner -->
-        <div class="emergency-alert-banner" id="emergency-banner">
+        <div class="emergency-alert-banner nominal" id="emergency-banner">
           <div class="alert-banner-left">
             <span class="alert-pulse-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
             <div class="alert-banner-content">
-              <span class="alert-banner-tag">CRITICAL ALERT</span>
-              <span class="alert-banner-text" id="alert-banner-text">Wrong-way vehicle detected on Canal St / 8th Ave &bull; Camera CAM-042</span>
+              <span class="alert-banner-tag" id="alert-banner-tag">AI VISION ONLINE</span>
+              <span class="alert-banner-text" id="alert-banner-text">Autonomous Traffic Hazard &amp; Safety Monitoring Active &bull; National Corridor Grid Synchronized</span>
             </div>
           </div>
           <div class="alert-banner-right">
-            <div class="alert-sla-badge">
+            <div class="alert-sla-badge" id="alert-sla-badge" style="display: none;">
               <span class="sla-dot"></span>
-              <span>SLA: <strong id="sla-countdown">01:42</strong></span>
+              <span>SLA: <strong id="sla-countdown">02:00</strong></span>
             </div>
-            <button class="btn-alert-action" id="btn-assess-alert" onclick="switchToLiveOps()">Assess Now &rarr;</button>
+            <button class="btn-alert-action" id="btn-assess-alert" onclick="switchToLiveOps()">Inspect Live &rarr;</button>
             <button class="btn-alert-ack" id="btn-ack-alert" onclick="ackCurrentAlert()">Acknowledge</button>
           </div>
         </div>
@@ -405,62 +406,47 @@
               </div>
 
               <div class="camera-wall-grid" id="camera-wall-grid">
-                <div class="wall-node active" id="wall-node-1" onclick="switchStreamSource('synthetic', 'wall-node-1')">
+                <div class="wall-node active" id="wall-node-1" onclick="switchStreamSource('CAM-042', 'wall-node-1')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-042: CANAL ST / 8TH AVE</span>
-                    <span class="node-status live">LIVE PRIMARY</span>
+                    <span class="node-tag">CAM-042: CAPITAL HIGHWAY GANTRY</span>
+                    <span class="node-status live">PRIMARY LIVE</span>
                   </div>
                   <div class="wall-node-feed">
-                    <img id="wall-stream-1" class="wall-stream-img" alt="Cam 01 Feed" />
+                    <img id="wall-stream-1" class="wall-stream-img" src="/video/feed?channel=CAM-042" alt="Cam 01 Feed" />
                     <div class="stream-overlay-tag">30 FPS &bull; 11.4 ms &bull; AI VISION</div>
                   </div>
                 </div>
 
-                <div class="wall-node" id="wall-node-2" onclick="switchStreamSource('0', 'wall-node-2')">
+                <div class="wall-node" id="wall-node-2" onclick="switchStreamSource('CAM-002', 'wall-node-2')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-002: CENTRAL ARTERIAL MAST</span>
-                    <span class="node-status live">READY</span>
+                    <span class="node-tag">CAM-002: METROPOLITAN CBD LUMINAIRE</span>
+                    <span class="node-status live">LIVE NODE</span>
                   </div>
                   <div class="wall-node-feed">
-                    <div class="matrix-standby-slate">
-                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-                      <div class="matrix-standby-title">OPTICAL SENSOR #02</div>
-                      <div class="matrix-standby-meta">USB 3.0 UVC DIRECT &bull; 1080p @ 30 FPS</div>
-                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
-                    </div>
-                    <div class="stream-overlay-tag">USB SENSOR &bull; 30 FPS</div>
+                    <img id="wall-stream-2" class="wall-stream-img" src="/video/feed?channel=CAM-002" alt="Cam 02 Feed" />
+                    <div class="stream-overlay-tag">30 FPS &bull; 1080p &bull; AI VISION</div>
                   </div>
                 </div>
 
-                <div class="wall-node" id="wall-node-3" onclick="switchStreamSource('synthetic', 'wall-node-3')">
+                <div class="wall-node" id="wall-node-3" onclick="switchStreamSource('CAM-003', 'wall-node-3')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-003: PERIMETER ARTERIAL MAST</span>
-                    <span class="node-status live">READY</span>
+                    <span class="node-tag">CAM-003: NORTH EXPRESSWAY INTERMODAL</span>
+                    <span class="node-status live">LIVE NODE</span>
                   </div>
                   <div class="wall-node-feed">
-                    <div class="matrix-standby-slate">
-                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6v6l4 2"/></svg>
-                      <div class="matrix-standby-title">RADAR / OPTICAL SENSOR #03</div>
-                      <div class="matrix-standby-meta">GIGE VISION ENCODER &bull; BITRATE: 4096 KBPS</div>
-                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
-                    </div>
-                    <div class="stream-overlay-tag">PRIMARY SENSOR &bull; 30 FPS</div>
+                    <img id="wall-stream-3" class="wall-stream-img" src="/video/feed?channel=CAM-003" alt="Cam 03 Feed" />
+                    <div class="stream-overlay-tag">30 FPS &bull; 1080p &bull; AI VISION</div>
                   </div>
                 </div>
 
-                <div class="wall-node alert" id="wall-node-4" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live', 'wall-node-4')">
+                <div class="wall-node" id="wall-node-4" onclick="switchStreamSource('CAM-004', 'wall-node-4')">
                   <div class="wall-node-header">
-                    <span class="node-tag">CAM-004: SOUTH EXPRESSWAY OVERPASS</span>
-                    <span class="node-status live">ONLINE</span>
+                    <span class="node-tag">CAM-004: SOUTH COASTAL OVERPASS</span>
+                    <span class="node-status live">LIVE NODE</span>
                   </div>
                   <div class="wall-node-feed">
-                    <div class="matrix-standby-slate">
-                      <svg class="matrix-standby-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-                      <div class="matrix-standby-title">RTSP CORRIDOR NODE #04</div>
-                      <div class="matrix-standby-meta">rtsp://192.168.1.100:554/live &bull; H.264 1080p</div>
-                      <span class="matrix-standby-action">CLICK TO ACTIVATE FEED &rarr;</span>
-                    </div>
-                    <div class="stream-overlay-tag">RTSP SENSOR &bull; 1080p</div>
+                    <img id="wall-stream-4" class="wall-stream-img" src="/video/feed?channel=CAM-004" alt="Cam 04 Feed" />
+                    <div class="stream-overlay-tag">30 FPS &bull; 1080p &bull; AI VISION</div>
                   </div>
                 </div>
               </div>
@@ -494,45 +480,13 @@
             <!-- GIS Spatial City Map -->
             <div class="panel-card gis-card">
               <div class="panel-header">
-                <div class="panel-title">GIS SPATIAL CORRIDOR & SENSOR TOPOLOGY</div>
-                <div class="panel-sub">Metropolitan Municipal Grid & Live Congestion Vectors</div>
+                <div class="panel-title">GIS SPATIAL CORRIDOR &amp; SENSOR TOPOLOGY</div>
+                <div class="panel-sub">Metropolitan Municipal Grid &bull; Live GPS Node Telemetry &bull; Density Heatmap</div>
               </div>
               <div class="gis-map-viewport" id="gis-map-viewport">
-                <svg class="gis-svg" viewBox="0 0 800 240" preserveAspectRatio="none">
-                  <defs>
-                    <pattern id="gis-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(30, 41, 59, 0.4)" stroke-width="1"/>
-                    </pattern>
-                  </defs>
-                  <rect width="800" height="240" fill="url(#gis-grid)" />
-                  <path d="M 50 120 Q 250 70 400 120 T 750 120" fill="none" stroke="#1e293b" stroke-width="18" stroke-linecap="round"/>
-                  <path d="M 50 120 Q 250 70 400 120 T 750 120" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="6,6"/>
-                  <path d="M 400 20 L 400 220" fill="none" stroke="#1e293b" stroke-width="14" stroke-linecap="round"/>
-                  <path d="M 400 20 L 400 220" fill="none" stroke="#00e5ff" stroke-width="2" stroke-dasharray="4,4"/>
-
-                  <!-- Camera Markers -->
-                  <g transform="translate(180, 95)" class="gis-marker" onclick="switchStreamSource('synthetic')">
-                    <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
-                    <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-001 (Main Gantry)</text>
-                  </g>
-                  <g transform="translate(400, 120)" class="gis-marker" onclick="switchStreamSource('0')">
-                    <circle cx="0" cy="0" r="14" fill="rgba(0, 230, 118, 0.2)" stroke="#00e676" stroke-width="2"/>
-                    <circle cx="0" cy="0" r="5" fill="#00e676"/>
-                    <text x="18" y="4" fill="#00e676" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-002 (Signal Mast)</text>
-                  </g>
-                  <g transform="translate(400, 50)" class="gis-marker" onclick="switchStreamSource('synthetic')">
-                    <circle cx="0" cy="0" r="14" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
-                    <circle cx="0" cy="0" r="5" fill="#00e5ff"/>
-                    <text x="18" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-003 (Highway Mast)</text>
-                  </g>
-                  <g transform="translate(620, 120)" class="gis-marker" onclick="switchStreamSource('rtsp://admin:password@192.168.1.100:554/live')">
-                    <circle cx="0" cy="0" r="18" fill="rgba(0, 229, 255, 0.2)" stroke="#00e5ff" stroke-width="2"/>
-                    <circle cx="0" cy="0" r="6" fill="#00e5ff"/>
-                    <text x="22" y="4" fill="#00e5ff" font-size="11" font-family="'JetBrains Mono', monospace" font-weight="bold">CAM-004 [OVERPASS RTSP]</text>
-                  </g>
-                </svg>
+                <div id="gis-leaflet-map" style="width: 100%; height: 260px; border-radius: var(--radius-sm); z-index: 10;"></div>
               </div>
+            </div>
             </div>
 
           </section>
@@ -626,7 +580,7 @@
                       <span>VIDEO LOSS DETECTED</span>
                     </div>
                     <div class="no-signal-headline">NO SIGNAL</div>
-                    <div class="no-signal-meta" id="no-signal-meta">CHANNEL: CAM-042 (CANAL ST) &bull; LINK DOWN</div>
+                    <div class="no-signal-meta" id="no-signal-meta">CHANNEL: CAM-042 (CAPITAL CORRIDOR) &bull; LINK DOWN</div>
                     <div class="no-signal-sub">
                       Auto-reconnect watchdog active &bull; Retrying in <span id="no-signal-timer">2.5s</span>
                     </div>
@@ -1531,6 +1485,7 @@
   </div>
 
   <div id="toast-container" class="toast-container"></div>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

@@ -405,15 +405,19 @@ body {
    2. EMERGENCY ALERT RIBBON & KPI CARDS
    ========================================================================== */
 .emergency-alert-banner {
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
-  border: 1px solid rgba(239, 68, 68, 0.5);
   border-radius: var(--radius-md);
   padding: 12px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
+  transition: all 0.3s ease;
+}
+
+.emergency-alert-banner.alert {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.25), rgba(239, 68, 68, 0.1));
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
   animation: pulseAlertBanner 2.5s infinite ease-in-out;
 }
 
@@ -422,11 +426,53 @@ body {
   50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 30px rgba(239, 68, 68, 0.35); }
 }
 
-.alert-banner-left { display: flex; align-items: center; gap: 12px; }
-.alert-pulse-icon { font-size: 20px; }
-.alert-banner-content { display: flex; align-items: center; gap: 10px; }
-.alert-banner-tag { background: var(--crimson); color: #fff; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 4px; }
-.alert-banner-text { font-size: 13px; font-weight: 600; color: #fff; }
+.emergency-alert-banner.alert .alert-banner-tag {
+  background: var(--crimson);
+  color: #fff;
+}
+
+.emergency-alert-banner.alert .alert-pulse-icon svg {
+  color: var(--crimson);
+}
+
+.emergency-alert-banner.nominal {
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.12), rgba(0, 229, 255, 0.04));
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 15px rgba(0, 229, 255, 0.08);
+  animation: none;
+}
+
+.emergency-alert-banner.nominal .alert-banner-tag {
+  background: var(--cyan-neon);
+  color: #04070e;
+}
+
+.emergency-alert-banner.nominal .alert-pulse-icon svg {
+  color: var(--cyan-neon);
+}
+
+.emergency-alert-banner.nominal .btn-alert-action {
+  background: rgba(0, 229, 255, 0.15);
+  border: 1px solid var(--cyan-neon);
+  color: var(--cyan-neon);
+}
+
+.emergency-alert-banner.nominal .btn-alert-action:hover {
+  background: var(--cyan-neon);
+  color: #04070e;
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+}
+
+.custom-radar-icon {
+  background: transparent;
+  border: none;
+}
+
+@keyframes radarPulse {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  50% { transform: scale(1.25); opacity: 0.5; box-shadow: 0 0 18px currentColor; }
+  100% { transform: scale(0.95); opacity: 0.9; }
+}
 
 .alert-banner-right { display: flex; align-items: center; gap: 12px; }
 .alert-sla-badge { background: #030712; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 10px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; color: var(--crimson); display: flex; align-items: center; gap: 6px; }
