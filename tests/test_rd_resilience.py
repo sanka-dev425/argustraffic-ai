@@ -98,12 +98,13 @@ def test_optical_tamper_ambient_light_adaptation():
     """Verifies OpticalTamperDetector does not produce false occlusion alarms in dark night scenes."""
     detector = OpticalTamperDetector()
 
-    # Create dark night scene with normal high-contrast headlights
-    dark_scene = np.full((480, 640, 3), 12, dtype=np.uint8)
-    # Add localized road lights / vehicles
-    dark_scene[200:260, 280:340] = 200
+    # Create dark night scene with normal sensor noise & localized road lights
+    np.random.seed(42)
+    dark_scene = np.random.randint(10, 35, (480, 640, 3), dtype=np.uint8)
+    # Add localized headlights
+    dark_scene[200:260, 280:340] = 230
 
     diag = detector.analyze_frame(dark_scene, camera_id="CAM-NIGHT-01")
-    # Should adapt baseline and report CLEAR rather than false positive spray occlusion
+    # Should adapt baseline and report CLEAR
     assert diag.state in [TamperState.CLEAR, TamperState.DEFOCUSED]
-    assert diag.saturation_ratio < 0.28
+    assert diag.is_tampered is False

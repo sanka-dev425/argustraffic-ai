@@ -105,9 +105,9 @@ class OpticalTamperDetector:
 
         # 5. Ambient Illumination Baseline Adaptation (Prevents Night/Twilight False Alarms)
         mean_luminance = float(np.mean(gray_small))
-        lum_factor = max(0.40, min(1.0, mean_luminance / 25.0))
-        effective_min_entropy = self.min_entropy_threshold * lum_factor
-        effective_min_blur = self.min_blur_threshold * lum_factor
+        lum_factor = max(0.02, min(1.0, (mean_luminance / 40.0) ** 1.5))
+        effective_min_entropy = max(0.05, self.min_entropy_threshold * lum_factor)
+        effective_min_blur = max(2.0, self.min_blur_threshold * lum_factor)
 
         # 6. Diagnostic Decision Logic
         if saturation_ratio >= self.max_saturation_ratio:
