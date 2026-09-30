@@ -259,8 +259,8 @@ def process_single_frame(frame_idx: int):
     # 1. Detect
     detections, inf_ms = detector.detect(proc_frame)
 
-    # 2. Track
-    tracked_dets = tracker.update(detections)
+    # 2. Track with Visual Re-ID
+    tracked_dets = tracker.update(detections, frame=proc_frame)
 
     # 3. Incident Evaluation
     new_alerts = incident_eng.analyze_frame(

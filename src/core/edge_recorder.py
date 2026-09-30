@@ -103,6 +103,11 @@ class EdgeStorageVault:
             max_workers=2,
             thread_name_prefix="ArgusClipWriter",
         )
+        try:
+            from src.core.evidence_vault_crypto import VaultCryptoEngine
+            self.crypto_engine = VaultCryptoEngine()
+        except Exception:
+            self.crypto_engine = None
 
         self.clips_dir.mkdir(parents=True, exist_ok=True)
         self.manifests_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +118,7 @@ class EdgeStorageVault:
         frames: List[Tuple[float, np.ndarray]],
         metadata: Dict[str, Any],
         fps: float = 30.0,
+        encrypt_at_rest: bool = True,
     ) -> concurrent.futures.Future:
         """Asynchronously encodes and saves incident video clip without blocking the vision loop."""
         return self._executor.submit(
@@ -121,6 +127,7 @@ class EdgeStorageVault:
             frames,
             metadata,
             fps,
+            encrypt_at_rest,
         )
 
     def shutdown(self, wait: bool = False) -> None:
@@ -133,10 +140,11 @@ class EdgeStorageVault:
         frames: List[Tuple[float, np.ndarray]],
         metadata: Dict[str, Any],
         fps: float = 30.0,
+        encrypt_at_rest: bool = True,
     ) -> Optional[Path]:
         """
-        Compiles captured frames into an H.264/MP4 or JPEG package and locks it
-        in local edge storage for store-and-forward dispatch.
+        Compiles captured frames into an H.264/MP4 or JPEG package, optionally encrypts
+        with defense-grade AES-256-GCM, and locks it in local edge storage.
         """
         if not frames:
             logger.warning(f"No frames provided to lock incident clip for {incident_id}")
@@ -163,12 +171,26 @@ class EdgeStorageVault:
             clip_path = self.clips_dir / clip_filename
             cv2.imwrite(str(clip_path), first_frame)
 
+        # AES-256 Encryption at rest
+        is_encrypted = False
+        final_path = clip_path
+        if encrypt_at_rest and self.crypto_engine and clip_path.exists():
+            try:
+                enc_path = self.crypto_engine.encrypt_file(clip_path)
+                clip_path.unlink(missing_ok=True)
+                final_path = enc_path
+                is_encrypted = True
+            except Exception as e:
+                logger.warning(f"Failed to encrypt clip at rest: {e}, keeping raw container.")
+
         # Store sync manifest
         manifest = {
             "incident_id": incident_id,
-            "clip_path": str(clip_path),
-            "clip_size_bytes": clip_path.stat().st_size if clip_path.exists() else 0,
+            "clip_path": str(final_path),
+            "clip_size_bytes": final_path.stat().st_size if final_path.exists() else 0,
             "created_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+            "encrypted": is_encrypted,
+            "cipher_suite": "AES-256-GCM-AUTH" if is_encrypted else "RAW",
             "metadata": metadata,
             "synced_to_hq": False,
         }
@@ -176,8 +198,8 @@ class EdgeStorageVault:
         with open(manifest_path, "w", encoding="utf-8") as f:
             json.dump(manifest, f, indent=2)
 
-        logger.info(f"Edge Vault locked incident clip: {clip_path.name} ({manifest['clip_size_bytes']} bytes)")
-        return clip_path
+        logger.info(f"Edge Vault locked incident clip: {final_path.name} ({manifest['clip_size_bytes']} bytes, encrypted={is_encrypted})")
+        return final_path
 
     def get_pending_sync_queue(self) -> List[Dict[str, Any]]:
         """Returns all offline clips waiting to be uploaded to Central Headquarters."""

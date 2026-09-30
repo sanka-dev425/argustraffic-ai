@@ -27,6 +27,7 @@ class Track:
     frames_since_update: int = 0
     total_frames: int = 1
     state: str = "active"  # active, lost, removed
+    appearance_embedding: Optional[np.ndarray] = None
 
     @property
     def center(self) -> Tuple[float, float]:
@@ -40,6 +41,31 @@ class Track:
     @property
     def height(self) -> float:
         return self.bbox[3] - self.bbox[1]
+
+
+def extract_appearance_embedding(frame: Optional[np.ndarray], bbox: Tuple[float, float, float, float]) -> Optional[np.ndarray]:
+    """Extracts normalized color histogram appearance descriptor for visual Re-ID."""
+    if frame is None or frame.size == 0:
+        return None
+    try:
+        import cv2
+        h, w = frame.shape[:2]
+        x1 = max(0, min(int(bbox[0]), w - 1))
+        y1 = max(0, min(int(bbox[1]), h - 1))
+        x2 = max(x1 + 1, min(int(bbox[2]), w))
+        y2 = max(y1 + 1, min(int(bbox[3]), h))
+
+        crop = frame[y1:y2, x1:x2]
+        if crop.size == 0 or crop.shape[0] < 4 or crop.shape[1] < 4:
+            return None
+
+        hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+        # 8 bins H, 8 bins S
+        hist = cv2.calcHist([hsv], [0, 1], None, [8, 8], [0, 180, 0, 256])
+        cv2.normalize(hist, hist)
+        return hist.flatten().astype(np.float32)
+    except Exception:
+        return None
 
 
 def batch_iou(boxes_a: np.ndarray, boxes_b: np.ndarray) -> np.ndarray:
@@ -80,6 +106,7 @@ class SpatialTracker:
     """
     High-speed online multi-object tracker that tracks targets across frames,
     computes motion vectors, smoothing, and keeps track lifetimes.
+    Integrates Visual Appearance Re-ID embeddings to resolve occlusions and vehicle crossovers.
     """
 
     def __init__(
@@ -97,10 +124,11 @@ class SpatialTracker:
         self.next_track_id = 1
         self.tracks: Dict[int, Track] = {}
 
-    def update(self, detections: List[Detection]) -> List[Detection]:
+    def update(self, detections: List[Detection], frame: Optional[np.ndarray] = None) -> List[Detection]:
         """
         Updates tracks with new detections from the current frame.
         Attaches track_id and velocity to each matched detection.
+        Optionally uses visual appearance embeddings from frame for Re-ID.
         """
         active_track_ids = list(self.tracks.keys())
         unmatched_detections = list(range(len(detections)))
@@ -116,6 +144,19 @@ class SpatialTracker:
             track_classes = np.array([self.tracks[tid].class_id for tid in active_track_ids])[:, None]
             det_classes = np.array([d.class_id for d in detections])[None, :]
             cost_matrix += np.where(track_classes == det_classes, 0.1, 0.0)
+
+            # Visual Appearance Re-ID Bonus if frame is available
+            if frame is not None:
+                det_embeddings = [extract_appearance_embedding(frame, d.bbox) for d in detections]
+                for t_idx, tid in enumerate(active_track_ids):
+                    t_emb = self.tracks[tid].appearance_embedding
+                    if t_emb is not None:
+                        for d_idx, d_emb in enumerate(det_embeddings):
+                            if d_emb is not None:
+                                # Cosine similarity
+                                sim = float(np.dot(t_emb, d_emb) / (np.linalg.norm(t_emb) * np.linalg.norm(d_emb) + 1e-6))
+                                if sim > 0.65:
+                                    cost_matrix[t_idx, d_idx] += 0.20 * sim
 
             # Greedy Hungarian-style matching
             matched_track_indices = set()
@@ -139,7 +180,7 @@ class SpatialTracker:
 
                 t_id = active_track_ids[t_idx]
                 det = detections[d_idx]
-                self._update_track(t_id, det)
+                self._update_track(t_id, det, frame)
                 unmatched_tracks.discard(t_id)
 
             unmatched_detections = [i for i in range(len(detections)) if i not in matched_det_indices]
@@ -157,6 +198,7 @@ class SpatialTracker:
             new_id = self.next_track_id
             self.next_track_id += 1
 
+            new_emb = extract_appearance_embedding(frame, det.bbox) if frame is not None else None
             new_track = Track(
                 track_id=new_id,
                 class_id=det.class_id,
@@ -164,6 +206,7 @@ class SpatialTracker:
                 bbox=det.bbox,
                 confidence=det.confidence,
                 history=deque(maxlen=self.history_length),
+                appearance_embedding=new_emb,
             )
             new_track.history.append(new_track.center)
             self.tracks[new_id] = new_track
@@ -179,8 +222,8 @@ class SpatialTracker:
 
         return detections
 
-    def _update_track(self, track_id: int, det: Detection) -> None:
-        """Updates track position, history, and smoothed velocity."""
+    def _update_track(self, track_id: int, det: Detection, frame: Optional[np.ndarray] = None) -> None:
+        """Updates track position, history, smoothed velocity, and appearance embedding."""
         track = self.tracks[track_id]
         old_center = track.center
         new_center = det.center
@@ -201,6 +244,18 @@ class SpatialTracker:
         track.frames_since_update = 0
         track.total_frames += 1
         track.history.append(new_center)
+
+        # Update appearance feature embedding with EMA
+        if frame is not None:
+            new_emb = extract_appearance_embedding(frame, det.bbox)
+            if new_emb is not None:
+                if track.appearance_embedding is None:
+                    track.appearance_embedding = new_emb
+                else:
+                    track.appearance_embedding = 0.8 * track.appearance_embedding + 0.2 * new_emb
+                    norm = np.linalg.norm(track.appearance_embedding)
+                    if norm > 0:
+                        track.appearance_embedding /= norm
 
         det.track_id = track_id
         det.velocity = track.velocity
