@@ -129,6 +129,21 @@ class CameraSelfHealingWatchdog:
             "ticket": remediation_entry,
         }
 
+    def get_jittered_reconnect_delay(self, camera_id: str, base_delay: float = 3.0) -> float:
+        """
+        Calculates randomized jittered exponential backoff delay for RTSP reconnection.
+        Prevents thundering herd network storms across roadside switches.
+        """
+        import random
+        with self.lock:
+            cam = self.monitored_cameras.get(camera_id, {})
+            fails = cam.get("consecutive_failures", 1)
+        
+        exponential = min(30.0, base_delay * (1.5 ** min(fails, 5)))
+        # Add +/- 25% randomized jitter
+        jitter = random.uniform(-0.25, 0.25) * exponential
+        return max(1.0, round(exponential + jitter, 2))
+
     def get_fleet_diagnostics(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.monitored_cameras.values())
@@ -136,3 +151,4 @@ class CameraSelfHealingWatchdog:
     def get_remediation_history(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.remediation_log[-20:])
+

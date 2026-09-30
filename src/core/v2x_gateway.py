@@ -48,17 +48,37 @@ class RoadSafetyAdvisory:
     expires_at_utc: float
 
 
+import threading
+
 class V2XGateway:
     """
     Decoupled abstraction boundary managing vehicle-to-infrastructure messaging.
     Ingests connected vehicle telemetry and broadcasts road safety alerts.
+    Implements memory-bounded vehicle telemetry registry with automated TTL eviction.
     """
 
-    def __init__(self, world_model: Optional[ArgusWorldModel] = None):
+    def __init__(self, world_model: Optional[ArgusWorldModel] = None, vehicle_ttl_seconds: float = 30.0):
         self.world_model = world_model or ArgusWorldModel()
+        self.vehicle_ttl_seconds = vehicle_ttl_seconds
         self.active_advisories: Dict[str, RoadSafetyAdvisory] = {}
         self.connected_vehicle_registry: Dict[str, BasicSafetyMessage] = {}
         self.total_messages_ingested: int = 0
+        self._lock = threading.Lock()
+
+    def prune_stale_vehicles(self, ttl_seconds: Optional[float] = None) -> int:
+        """Removes vehicles that have stopped transmitting BSM telemetry beyond TTL window."""
+        max_age = ttl_seconds if ttl_seconds is not None else self.vehicle_ttl_seconds
+        now = time.time()
+        pruned_count = 0
+        with self._lock:
+            stale_keys = [
+                vid for vid, msg in self.connected_vehicle_registry.items()
+                if (now - msg.timestamp_utc) > max_age
+            ]
+            for vid in stale_keys:
+                del self.connected_vehicle_registry[vid]
+                pruned_count += 1
+        return pruned_count
 
     def ingest_bsm(self, msg: BasicSafetyMessage) -> bool:
         """
@@ -67,9 +87,14 @@ class V2XGateway:
         if not msg.vehicle_id or msg.speed_kmh < 0:
             return False
 
-        # Register message
-        self.connected_vehicle_registry[msg.vehicle_id] = msg
-        self.total_messages_ingested += 1
+        with self._lock:
+            # Register message
+            self.connected_vehicle_registry[msg.vehicle_id] = msg
+            self.total_messages_ingested += 1
+
+            # Periodically prune stale vehicles on every 100 ingested messages
+            if self.total_messages_ingested % 100 == 0:
+                self.prune_stale_vehicles()
 
         # Fuse into World Model as a dynamic entity
         entity = DynamicWorldEntity(
@@ -111,24 +136,28 @@ class V2XGateway:
             urgency_level=urgency,
             expires_at_utc=now + duration_sec,
         )
-        self.active_advisories[adv_id] = advisory
+        with self._lock:
+            self.active_advisories[adv_id] = advisory
         return advisory
 
     def get_active_advisories(self) -> List[RoadSafetyAdvisory]:
         """Returns non-expired safety warnings."""
         now = time.time()
-        # Clean expired
-        self.active_advisories = {
-            aid: adv for aid, adv in self.active_advisories.items() if adv.expires_at_utc > now
-        }
-        return list(self.active_advisories.values())
+        with self._lock:
+            # Clean expired
+            self.active_advisories = {
+                aid: adv for aid, adv in self.active_advisories.items() if adv.expires_at_utc > now
+            }
+            return list(self.active_advisories.values())
 
     def get_gateway_telemetry(self) -> Dict[str, Any]:
         """Telemetry diagnostics for the V2X plane."""
-        return {
-            "gateway_status": "ONLINE",
-            "active_connected_vehicles": len(self.connected_vehicle_registry),
-            "total_bsm_ingested": self.total_messages_ingested,
-            "active_broadcast_advisories": len(self.get_active_advisories()),
-            "supported_standards": ["SAE J2735", "ETSI ITS-G5", "C-V2X 3GPP Rel-16"],
-        }
+        self.prune_stale_vehicles()
+        with self._lock:
+            return {
+                "gateway_status": "ONLINE",
+                "active_connected_vehicles": len(self.connected_vehicle_registry),
+                "total_bsm_ingested": self.total_messages_ingested,
+                "active_broadcast_advisories": len(self.get_active_advisories()),
+                "supported_standards": ["SAE J2735", "ETSI ITS-G5", "C-V2X 3GPP Rel-16"],
+            }

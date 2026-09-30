@@ -103,24 +103,30 @@ class OpticalTamperDetector:
         saturated_pixels = int(np.sum(gray_small >= 250))
         saturation_ratio = float(saturated_pixels / total_pixels) if total_pixels > 0 else 0.0
 
-        # 5. Diagnostic Decision Logic
+        # 5. Ambient Illumination Baseline Adaptation (Prevents Night/Twilight False Alarms)
+        mean_luminance = float(np.mean(gray_small))
+        lum_factor = max(0.40, min(1.0, mean_luminance / 25.0))
+        effective_min_entropy = self.min_entropy_threshold * lum_factor
+        effective_min_blur = self.min_blur_threshold * lum_factor
+
+        # 6. Diagnostic Decision Logic
         if saturation_ratio >= self.max_saturation_ratio:
             state = TamperState.BLINDED
             is_tampered = True
             msg = f"High-intensity sensor saturation ({saturation_ratio*100:.1f}%). Possible laser blinding or direct glare attack."
             conf = min(0.99, 0.70 + (saturation_ratio * 0.5))
 
-        elif entropy_score < self.min_entropy_threshold:
+        elif entropy_score < effective_min_entropy:
             state = TamperState.OCCLUDED
             is_tampered = True
-            msg = f"Low scene entropy ({entropy_score:.2f}). Lens obstructed, spray painted, or physically covered."
-            conf = min(0.99, 0.75 + ((self.min_entropy_threshold - entropy_score) / self.min_entropy_threshold) * 0.25)
+            msg = f"Low scene entropy ({entropy_score:.2f} < {effective_min_entropy:.2f}). Lens obstructed, spray painted, or physically covered."
+            conf = min(0.99, 0.75 + ((effective_min_entropy - entropy_score) / max(0.1, effective_min_entropy)) * 0.25)
 
-        elif blur_score < self.min_blur_threshold:
+        elif blur_score < effective_min_blur:
             state = TamperState.DEFOCUSED
             is_tampered = True
-            msg = f"Low spatial frequency variance ({blur_score:.1f}). Camera lens defocused or severely blurred."
-            conf = min(0.95, 0.70 + ((self.min_blur_threshold - blur_score) / self.min_blur_threshold) * 0.25)
+            msg = f"Low spatial frequency variance ({blur_score:.1f} < {effective_min_blur:.1f}). Camera lens defocused or severely blurred."
+            conf = min(0.95, 0.70 + ((effective_min_blur - blur_score) / max(0.1, effective_min_blur)) * 0.25)
 
         else:
             state = TamperState.CLEAR

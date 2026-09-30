@@ -3,6 +3,7 @@ Automatic Number Plate Recognition with ROI extraction, OCR character transcript
 deterministic tracking association, and Zero-Trust privacy masking.
 """
 
+from collections import OrderedDict
 from datetime import datetime, timezone
 import hashlib
 import re
@@ -13,7 +14,7 @@ from src.core.config_schema import ANPRSettings, get_platform_config
 
 
 class ANPREngine:
-    """Enterprise Automatic Number Plate Recognition (ANPR / ALPR) pipeline."""
+    """Enterprise Automatic Number Plate Recognition (ANPR / ALPR) pipeline with bounded LRU caching."""
 
     # Common international license plate formats
     PLATE_PATTERNS = [
@@ -27,6 +28,7 @@ class ANPREngine:
         self,
         settings: Optional[ANPRSettings] = None,
         confidence_threshold: Optional[float] = None,
+        max_cache_size: int = 5000,
     ):
         self.settings = settings or get_platform_config().anpr
         self.confidence_threshold = (
@@ -34,8 +36,9 @@ class ANPREngine:
             if confidence_threshold is not None
             else self.settings.confidence_threshold
         )
-        # Cache track_id -> persistent license plate record
-        self._plate_cache: Dict[int, Dict] = {}
+        self.max_cache_size = max_cache_size
+        # Bounded LRU Cache: track_id -> persistent license plate record
+        self._plate_cache: OrderedDict[int, Dict] = OrderedDict()
 
     def extract_plate_roi(
         self, frame_w: int, frame_h: int, bbox: List[float]
@@ -68,12 +71,13 @@ class ANPREngine:
         confidence: float,
         raw_plate_text: Optional[str] = None,
     ) -> Dict:
-        """Transcribes license plate characters with persistence and privacy masking per vehicle track.
+        """Transcribes license plate characters with persistence, LRU caching, and privacy masking.
 
         Returns:
             Dict containing plate_number, masked_plate, confidence, jurisdiction, verified, and created_at.
         """
         if track_id in self._plate_cache:
+            self._plate_cache.move_to_end(track_id)
             return self._plate_cache[track_id]
 
         if raw_plate_text and self._validate_format(raw_plate_text):
@@ -98,6 +102,8 @@ class ANPREngine:
         }
 
         self._plate_cache[track_id] = record
+        if len(self._plate_cache) > self.max_cache_size:
+            self._plate_cache.popitem(last=False)
         return record
 
     @staticmethod
