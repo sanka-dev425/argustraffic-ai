@@ -203,6 +203,68 @@ class WantedVehicleHotlistEngine:
             "interception_priority": "PRIORITY_1_HIGH_IMPACT",
         }
 
+    def bulk_import_csv(self, csv_content: str, default_agency: str = "Traffic Police Headquarters") -> Dict[str, Any]:
+        """
+        Parses CSV or multi-line plain text and bulk registers hotlist records.
+        Expected format per line: plate, category, severity, vehicle_model, description, owner_name
+        """
+        import csv
+        import io
+
+        lines = [l.strip() for l in csv_content.strip().splitlines() if l.strip()]
+        added = 0
+        updated = 0
+        errors = 0
+
+        # Detect and parse CSV
+        reader = csv.reader(io.StringIO("\n".join(lines)))
+        for row_idx, row in enumerate(reader, 1):
+            if not row or row[0].startswith("#") or row[0].lower() in ["plate", "license_plate", "plateno"]:
+                continue  # Skip header or comment
+
+            try:
+                plate = row[0].strip()
+                if not plate:
+                    continue
+
+                category = row[1].strip().upper() if len(row) > 1 and row[1].strip() else "STOLEN_VEHICLE"
+                severity = row[2].strip().upper() if len(row) > 2 and row[2].strip() else "CRITICAL"
+                model = row[3].strip() if len(row) > 3 else "Unspecified Vehicle"
+                desc = row[4].strip() if len(row) > 4 else "Bulk imported police record"
+                owner = row[5].strip() if len(row) > 5 else "Unregistered / Unknown"
+
+                norm = normalize_plate(plate)
+                with self.lock:
+                    if norm in self.hotlist:
+                        updated += 1
+                    else:
+                        added += 1
+
+                self.add_record(
+                    plate,
+                    {
+                        "category": category,
+                        "severity": severity,
+                        "vehicle_model": model,
+                        "description": desc,
+                        "owner_name": owner,
+                        "flagged_by": default_agency,
+                        "reported_date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    },
+                )
+            except Exception as e:
+                logger.warning(f"Error parsing row {row_idx} in bulk import: {e}")
+                errors += 1
+
+        return {
+            "success": True,
+            "total_lines_processed": len(lines),
+            "records_added": added,
+            "records_updated": updated,
+            "errors": errors,
+            "total_active_hotlist": len(self.hotlist),
+        }
+
     def get_all_records(self) -> List[Dict[str, Any]]:
         with self.lock:
             return list(self.hotlist.values())
@@ -215,3 +277,4 @@ class WantedVehicleHotlistEngine:
                 "total_matches": self.total_matches,
                 "match_rate_pct": round((self.total_matches / max(1, self.total_queries)) * 100, 2),
             }
+

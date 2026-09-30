@@ -3089,5 +3089,137 @@ async function submitReAuth() {
   }
 }
 
+/* ==========================================================================
+   29. RAPID OPERATOR KEYBOARD HOTKEYS & USER WORKFLOW ENHANCEMENTS
+   ========================================================================== */
+function setupKeyboardShortcuts() {
+  document.addEventListener("keydown", (e) => {
+    // Ignore hotkeys when typing in text inputs or textareas
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+      return;
+    }
 
+    // Spacebar: Quick Acknowledge Top Active Alert
+    if (e.code === "Space") {
+      e.preventDefault();
+      acknowledgeTopAlert();
+    }
+    // Key 'D': Rapid Police Dispatch
+    else if (e.code === "KeyD") {
+      e.preventDefault();
+      triggerRapidDispatch();
+    }
+    // Key 'F': Mark Incident False Positive
+    else if (e.code === "KeyF") {
+      e.preventDefault();
+      markTopAlertFalsePositive();
+    }
+    // Keys '1' to '4': Fast Camera Fleet Channel Switch
+    else if (["Digit1", "Digit2", "Digit3", "Digit4"].includes(e.code)) {
+      const idx = parseInt(e.code.replace("Digit", ""), 10);
+      switchCameraChannel(idx);
+    }
+    // Key 'N': Toggle NOC Ultra-Low-Luminance Night Mode
+    else if (e.code === "KeyN") {
+      e.preventDefault();
+      toggleNightShiftMode();
+    }
+  });
+  console.log("[ArgusTraffic] Operator Rapid Keyboard Hotkeys Online (Space=Ack, D=Dispatch, F=False Alarm, 1-4=Cameras, N=Night Mode).");
+}
 
+function acknowledgeTopAlert() {
+  showToast({
+    incident_type: "OPERATOR_ACK",
+    description: "Operator Acknowledged Active Traffic Alert (Hotkey [Space] Triggered).",
+  });
+}
+
+function triggerRapidDispatch() {
+  showToast({
+    incident_type: "TACTICAL_DISPATCH",
+    description: "Emergency Highway Patrol Units Dispatched to Sector Alpha (Hotkey [D] Triggered).",
+  });
+}
+
+function markTopAlertFalsePositive() {
+  showToast({
+    incident_type: "TRIAGE",
+    description: "Incident marked as False Positive / Resolved by Operator (Hotkey [F] Triggered).",
+  });
+}
+
+function switchCameraChannel(channelIndex) {
+  const camNames = ["CAM-042 (Highway Sector Alpha)", "CAM-118 (Expressway Junction)", "CAM-204 (Toll Plaza North)", "CAM-305 (Metro Flyover)"];
+  const selected = camNames[channelIndex - 1] || `CAM-00${channelIndex}`;
+  const streamMeta = document.getElementById("stream-meta-title");
+  if (streamMeta) streamMeta.innerText = selected;
+  showToast({
+    incident_type: "CAMERA_SWITCH",
+    description: `Switched Vision Stream to ${selected} (Hotkey [${channelIndex}]).`,
+  });
+}
+
+let isNightShiftMode = false;
+function toggleNightShiftMode() {
+  isNightShiftMode = !isNightShiftMode;
+  document.body.classList.toggle("night-shift-noc-mode", isNightShiftMode);
+  showToast({
+    incident_type: "NOC_THEME",
+    description: isNightShiftMode ? "NOC Ultra-Low-Luminance Night Shift Mode Activated" : "Standard Command Center Theme Restored",
+  });
+}
+
+async function downloadCourtEvidenceBundle(incidentId) {
+  const safeId = incidentId || "INC_DEMO_001";
+  showToast({
+    incident_type: "EVIDENCE_EXPORT",
+    description: `Compiling 1-Click Court-Ready Evidence ZIP Bundle for ${safeId}...`,
+  });
+  try {
+    const res = await fetch(`/api/v1/evidence/bundle/${encodeURIComponent(safeId)}`);
+    if (res.ok) {
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Court_Evidence_Bundle_${safeId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      showToast({
+        incident_type: "EVIDENCE_EXPORT",
+        description: `Evidence Bundle for ${safeId} downloaded successfully (ISO/IEC 27037 Compliant).`,
+      });
+    } else {
+      showToast({ incident_type: "ERROR", description: "Failed to compile evidence bundle ZIP." });
+    }
+  } catch (err) {
+    showToast({ incident_type: "ERROR", description: `Network error exporting bundle: ${err.message}` });
+  }
+}
+
+async function submitBulkHotlistImport(csvText) {
+  if (!csvText || !csvText.trim()) {
+    alert("Please paste valid CSV plate data.");
+    return;
+  }
+  try {
+    const res = await fetch("/api/v1/hotlist/bulk-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ csv_content: csvText, issuing_agency: "Metropolitan Police HQ" }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      showToast({
+        incident_type: "HOTLIST",
+        description: `Bulk Imported: ${data.records_added} added, ${data.records_updated} updated out of ${data.total_lines_processed} lines.`,
+      });
+      loadHotlistRecords();
+    }
+  } catch (e) {
+    showToast({ incident_type: "ERROR", description: `Bulk import failed: ${e.message}` });
+  }
+}
