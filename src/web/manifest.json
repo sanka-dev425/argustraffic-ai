@@ -1,0 +1,22 @@
+{
+  "name": "ArgusTraffic AI - National Command & Field Dispatch Terminal",
+  "short_name": "ArgusTraffic",
+  "description": "Autonomous Edge Vision, Live Traffic Telemetry & Police Incident Dispatch",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060913",
+  "theme_color": "#00e5ff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/static/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

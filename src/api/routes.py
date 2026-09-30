@@ -1818,5 +1818,189 @@ async def set_hardware_governor_load(
     return {"status": "SUCCESS", "telemetry": gov.get_telemetry()}
 
 
+# ==============================================================================
+# Air-Gapped Machine Fingerprinting & Enterprise Licensing Endpoints
+# ==============================================================================
+class InstallLicenseRequest(BaseModel):
+    license_token: str = Field(..., description="Cryptographically signed ARGUS_* license certificate token.")
+
+
+class IssueLicenseRequest(BaseModel):
+    customer_name: str = Field(..., description="Name of municipal or defense entity.")
+    tier: str = Field("ENTERPRISE_MUNICIPAL", description="License tier.")
+    max_cameras: int = Field(64, ge=1, le=10000, description="Max allowed streams.")
+    validity_days: int = Field(365, ge=1, le=3650, description="Validity period in days.")
+    bind_fingerprint: Optional[str] = Field(None, description="Optional target machine fingerprint.")
+
+
+@router.get("/license/status", tags=["Enterprise Licensing"])
+async def get_license_status():
+    """Returns the cryptographic license status, active tier, and machine hardware signature."""
+    state = get_components()
+    lic_mgr = state.get("license_manager")
+    if not lic_mgr:
+        from src.core.license_manager import LicenseManager
+        lic_mgr = LicenseManager()
+    return lic_mgr.get_license_status()
+
+
+@router.post("/license/install", tags=["Enterprise Licensing"])
+async def install_license_token(
+    req: InstallLicenseRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Installs and cryptographically activates an air-gapped license token."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="License installation requires Administrator privileges.")
+
+    state = get_components()
+    lic_mgr = state.get("license_manager")
+    if not lic_mgr:
+        from src.core.license_manager import LicenseManager
+        lic_mgr = LicenseManager()
+
+    success, msg = lic_mgr.install_license(req.license_token)
+    if not success:
+        raise HTTPException(status_code=400, detail=msg)
+
+    return {"status": "SUCCESS", "message": msg, "license": lic_mgr.get_license_status()}
+
+
+@router.post("/license/issue", tags=["Enterprise Licensing"])
+async def issue_license_token(
+    req: IssueLicenseRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Issues a new HMAC-SHA256 signed license token (Super Admin only)."""
+    from src.core.auth_rbac import Role
+    from src.core.license_manager import LicenseTier
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role != Role.SUPER_ADMIN:
+        raise HTTPException(status_code=403, detail="Issuing enterprise license tokens requires Super Admin privileges.")
+
+    state = get_components()
+    lic_mgr = state.get("license_manager")
+    if not lic_mgr:
+        from src.core.license_manager import LicenseManager
+        lic_mgr = LicenseManager()
+
+    try:
+        tier_enum = LicenseTier(req.tier)
+    except ValueError:
+        tier_enum = LicenseTier.ENTERPRISE
+
+    token_str = lic_mgr.generate_license_token(
+        customer_name=req.customer_name,
+        tier=tier_enum,
+        max_cameras=req.max_cameras,
+        validity_days=req.validity_days,
+        bind_machine_fingerprint=req.bind_fingerprint,
+    )
+    return {
+        "status": "SUCCESS",
+        "license_token": token_str,
+        "customer_name": req.customer_name,
+        "tier": tier_enum.value,
+        "max_cameras": req.max_cameras,
+        "validity_days": req.validity_days,
+    }
+
+
+# ==============================================================================
+# Continuous Merkle Evidence Ledger Sentinel Endpoints
+# ==============================================================================
+@router.get("/ledger/sentinel/status", tags=["Cryptographic Ledger Sentinel"])
+async def get_ledger_sentinel_status():
+    """Returns the latest automated Merkle ledger integrity audit report."""
+    state = get_components()
+    sentinel = state.get("ledger_sentinel")
+    if not sentinel:
+        from src.core.ledger_sentinel import ContinuousLedgerSentinel
+        sentinel = ContinuousLedgerSentinel()
+    return sentinel.get_latest_audit_report()
+
+
+@router.post("/ledger/sentinel/audit", tags=["Cryptographic Ledger Sentinel"])
+async def trigger_ledger_sentinel_audit(
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Executes a full recalculation of SHA-256 Merkle chain integrity across all SQLite evidence."""
+    from src.core.auth_rbac import Role
+    role, _, caller = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN, Role.TRAFFIC_OPERATOR):
+        raise HTTPException(status_code=403, detail="Audit execution requires authorized operator privileges.")
+
+    state = get_components()
+    sentinel = state.get("ledger_sentinel")
+    if not sentinel:
+        from src.core.ledger_sentinel import ContinuousLedgerSentinel
+        sentinel = ContinuousLedgerSentinel()
+
+    report = sentinel.run_integrity_audit(auditor_identity=f"CALLER_{caller}")
+    return report.__dict__
+
+
+# ==============================================================================
+# Camera Optical Anti-Tamper & Lens Obstruction AI Endpoints
+# ==============================================================================
+class DiagnoseTamperRequest(BaseModel):
+    camera_id: str = Field("CAM-01", description="Identifier of camera stream.")
+    image_base64: Optional[str] = Field(None, description="Optional raw base64 JPEG image to evaluate.")
+
+
+@router.post("/cameras/tamper/diagnose", tags=["Optical Anti-Tamper AI"])
+async def diagnose_camera_tampering(req: DiagnoseTamperRequest):
+    """Analyzes a frame for lens occlusion (spray paint/cloth), focus shift blur, or laser dazzling."""
+    state = get_components()
+    tamper_ai = state.get("optical_tamper_detector")
+    if not tamper_ai:
+        from src.core.optical_tamper_detector import OpticalTamperDetector
+        tamper_ai = OpticalTamperDetector()
+
+    frame = None
+    if req.image_base64:
+        try:
+            raw_bytes = base64.b64decode(req.image_base64.split(",")[-1])
+            np_arr = np.frombuffer(raw_bytes, np.uint8)
+            frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Failed to decode image_base64: {e}")
+    else:
+        stream = state.get("video_stream")
+        if stream:
+            _, frame = stream.read_frame()
+
+    if frame is None:
+        # Generate diagnostic test frame if no stream available
+        frame = np.full((720, 1280, 3), 120, dtype=np.uint8)
+
+    diag = tamper_ai.analyze_frame(frame, camera_id=req.camera_id)
+    return {
+        "camera_id": diag.camera_id,
+        "state": diag.state.value,
+        "is_tampered": diag.is_tampered,
+        "blur_score": diag.blur_score,
+        "entropy_score": diag.entropy_score,
+        "saturation_ratio": diag.saturation_ratio,
+        "confidence": diag.confidence,
+        "message": diag.message,
+        "analyzed_at": diag.analyzed_at,
+    }
+
+
+@router.get("/cameras/{camera_id}/tamper", tags=["Optical Anti-Tamper AI"])
+async def get_camera_tamper_status(camera_id: str):
+    """Runs instant optical tamper diagnostics on the camera's active video feed."""
+    safe_id = sanitize_identifier(camera_id)
+    req = DiagnoseTamperRequest(camera_id=safe_id)
+    return await diagnose_camera_tampering(req)
+
+
+
 
 

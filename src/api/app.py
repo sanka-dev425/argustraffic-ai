@@ -40,6 +40,9 @@ from src.core.evidence_report import ReportTemplateManager
 from src.core.system_settings import SystemSettingsManager
 from src.core.storage_watchdog import StorageWatchdogManager
 from src.core.hardware_governor import HardwareGovernor
+from src.core.optical_tamper_detector import OpticalTamperDetector
+from src.core.license_manager import LicenseManager
+from src.core.ledger_sentinel import ContinuousLedgerSentinel
 from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
@@ -147,6 +150,9 @@ def init_app_state():
     app_state["settings_mgr"] = SystemSettingsManager()
     app_state["storage_watchdog"] = StorageWatchdogManager()
     app_state["hardware_governor"] = HardwareGovernor()
+    app_state["optical_tamper_detector"] = OpticalTamperDetector()
+    app_state["license_manager"] = LicenseManager()
+    app_state["ledger_sentinel"] = ContinuousLedgerSentinel()
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 
@@ -192,6 +198,22 @@ async def get_index():
     if index_file.exists():
         return FileResponse(str(index_file))
     return HTMLResponse("<h1>ArgusTraffic AI Command Center</h1><p>UI loading...</p>")
+
+
+@app.get("/manifest.json", tags=["PWA"])
+async def get_pwa_manifest():
+    manifest_file = BASE_DIR / "src" / "web" / "manifest.json"
+    if manifest_file.exists():
+        return FileResponse(str(manifest_file), media_type="application/manifest+json")
+    return HTMLResponse("{}", media_type="application/json")
+
+
+@app.get("/sw.js", tags=["PWA"])
+async def get_service_worker():
+    sw_file = BASE_DIR / "src" / "web" / "sw.js"
+    if sw_file.exists():
+        return FileResponse(str(sw_file), media_type="application/javascript")
+    return HTMLResponse("// noop", media_type="application/javascript")
 
 
 def process_single_frame(frame_idx: int):
