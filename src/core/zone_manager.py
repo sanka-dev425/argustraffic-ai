@@ -60,26 +60,45 @@ class TrafficZone:
         }
 
 
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from src.utils.paths import get_data_dir
+
+
 class ZoneManager:
-    """Manages geometric road zones, lane configurations, and flow rules."""
+    """Manages geometric road zones, lane configurations, and flow rules per camera channel."""
 
-    def __init__(self):
+    def __init__(self, data_dir: Optional[Union[str, Path]] = None):
         self.zones: Dict[str, TrafficZone] = {}
+        self.camera_zones: Dict[str, Dict[str, TrafficZone]] = {}
+        self.data_dir = Path(data_dir) if data_dir else (get_data_dir() / "zones")
+        self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    def add_zone(self, zone: TrafficZone) -> None:
+    def add_zone(self, zone: TrafficZone, camera_id: Optional[str] = None) -> None:
         self.zones[zone.zone_id] = zone
+        if camera_id:
+            if camera_id not in self.camera_zones:
+                self.camera_zones[camera_id] = {}
+            self.camera_zones[camera_id][zone.zone_id] = zone
 
-    def remove_zone(self, zone_id: str) -> bool:
+    def remove_zone(self, zone_id: str, camera_id: Optional[str] = None) -> bool:
+        removed = False
         if zone_id in self.zones:
             del self.zones[zone_id]
-            return True
-        return False
+            removed = True
+        if camera_id and camera_id in self.camera_zones:
+            if zone_id in self.camera_zones[camera_id]:
+                del self.camera_zones[camera_id][zone_id]
+                removed = True
+        return removed
 
-    def get_zones_for_point(self, pt: Tuple[float, float]) -> List[TrafficZone]:
-        """Finds all zones containing the specified coordinates."""
-        return [zone for zone in self.zones.values() if zone.contains_point(pt)]
+    def get_zones_for_point(self, pt: Tuple[float, float], camera_id: Optional[str] = None) -> List[TrafficZone]:
+        """Finds all zones containing the specified coordinates for a given camera feed."""
+        zone_dict = self.camera_zones.get(camera_id, self.zones) if camera_id else self.zones
+        return [zone for zone in zone_dict.values() if zone.contains_point(pt)]
 
-    def create_default_traffic_zones(self, frame_width: int = 1280, frame_height: int = 720) -> None:
+    def create_default_traffic_zones(self, frame_width: int = 1280, frame_height: int = 720, camera_id: Optional[str] = None) -> None:
         """Generates standard dual-lane highway and crosswalk geometry for default scenes."""
         w, h = frame_width, frame_height
 
@@ -124,9 +143,49 @@ class ZoneManager:
             ],
         )
 
-        self.add_zone(lane_south)
-        self.add_zone(lane_north)
-        self.add_zone(crosswalk)
+        self.add_zone(lane_south, camera_id=camera_id)
+        self.add_zone(lane_north, camera_id=camera_id)
+        self.add_zone(crosswalk, camera_id=camera_id)
+
+    def save_camera_zones(self, camera_id: str, zones: Optional[List[TrafficZone]] = None) -> bool:
+        """Persists per-camera custom zone polygons to disk in JSON format."""
+        target_zones = zones or list(self.camera_zones.get(camera_id, self.zones).values())
+        payload = [z.to_dict() for z in target_zones]
+        out_file = self.data_dir / f"{camera_id}_zones.json"
+        try:
+            out_file.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            # Update cache
+            self.camera_zones[camera_id] = {z.zone_id: z for z in target_zones}
+            return True
+        except Exception:
+            return False
+
+    def load_camera_zones(self, camera_id: str) -> List[TrafficZone]:
+        """Loads per-camera custom zone polygons from disk if present."""
+        out_file = self.data_dir / f"{camera_id}_zones.json"
+        if not out_file.exists():
+            return list(self.zones.values())
+
+        try:
+            data = json.loads(out_file.read_text(encoding="utf-8"))
+            loaded = []
+            for item in data:
+                flow = None
+                if item.get("expected_flow"):
+                    flow = FlowVector(dx=item["expected_flow"]["dx"], dy=item["expected_flow"]["dy"])
+                zone = TrafficZone(
+                    zone_id=item["zone_id"],
+                    name=item["name"],
+                    zone_type=item["zone_type"],
+                    polygon=[(float(p[0]), float(p[1])) for p in item["polygon"]],
+                    expected_flow=flow,
+                    speed_limit_px=item.get("speed_limit_px", 35.0),
+                )
+                loaded.append(zone)
+            self.camera_zones[camera_id] = {z.zone_id: z for z in loaded}
+            return loaded
+        except Exception:
+            return list(self.zones.values())
 
     def to_json(self) -> str:
         return json.dumps([z.to_dict() for z in self.zones.values()], indent=2)
@@ -147,3 +206,4 @@ class ZoneManager:
                 speed_limit_px=item.get("speed_limit_px", 35.0),
             )
             self.add_zone(zone)
+

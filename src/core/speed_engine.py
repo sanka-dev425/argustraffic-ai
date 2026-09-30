@@ -46,6 +46,59 @@ class SpeedRadarEngine:
         self._trajectories: Dict[int, deque] = {}
         # Cached smoothed speeds: track_id -> km/h
         self._current_speeds: Dict[int, float] = {}
+        # Homography calibration matrix (3x3) and world metric scaling
+        self.homography_matrix = None
+        self.homography_src_quad: Optional[List[Tuple[float, float]]] = None
+        self.homography_dest_dim: Optional[Tuple[float, float]] = None
+
+
+    def set_homography_calibration(
+        self,
+        source_quad: List[Tuple[float, float]],
+        physical_width_m: float = 7.0,
+        physical_length_m: float = 25.0,
+    ) -> bool:
+        """
+        Calibrates true Bird's-Eye View (BEV) ground-plane Homography from a 4-point image trapezoid.
+        source_quad: [top_left, top_right, bottom_right, bottom_left] in pixel coordinates.
+        physical_width_m: Physical road width across top/bottom in meters.
+        physical_length_m: Physical road length along longitudinal axis in meters.
+        """
+        import cv2
+        import numpy as np
+
+        if len(source_quad) != 4:
+            return False
+
+        src_pts = np.array(source_quad, dtype=np.float32)
+        # Target metric coordinates in meters
+        dst_pts = np.array([
+            [0.0, 0.0],
+            [physical_width_m, 0.0],
+            [physical_width_m, physical_length_m],
+            [0.0, physical_length_m],
+        ], dtype=np.float32)
+
+        try:
+            H = cv2.getPerspectiveTransform(src_pts, dst_pts)
+            self.homography_matrix = H
+            self.homography_src_quad = source_quad
+            self.homography_dest_dim = (physical_width_m, physical_length_m)
+            return True
+        except Exception:
+            return False
+
+    def project_point_to_world_meters(self, x: float, y: float) -> Tuple[float, float]:
+        """Projects image pixel coordinate (x, y) into ground-plane metric coordinates (X_m, Y_m)."""
+        import cv2
+        import numpy as np
+
+        if self.homography_matrix is None:
+            return x / self.pixels_per_meter, y / self.pixels_per_meter
+
+        pt = np.array([[[x, y]]], dtype=np.float32)
+        transformed = cv2.perspectiveTransform(pt, self.homography_matrix)
+        return float(transformed[0][0][0]), float(transformed[0][0][1])
 
     def get_pixels_per_meter_at_y(self, y: float) -> float:
         """Calculates perspective depth-adjusted pixels per meter at frame height y."""
@@ -89,15 +142,18 @@ class SpeedRadarEngine:
         if dt <= 0.001:
             return self._current_speeds.get(track_id, 0.0)
 
-        # Pixel Euclidean distance
-        pixel_dist = math.hypot(x_end - x_start, y_end - y_start)
+        # Method 1: Homography-based exact metric ground plane
+        if self.homography_matrix is not None:
+            wx_start, wy_start = self.project_point_to_world_meters(x_start, y_start)
+            wx_end, wy_end = self.project_point_to_world_meters(x_end, y_end)
+            meters = math.hypot(wx_end - wx_start, wy_end - wy_start)
+        else:
+            # Method 2: Depth-aware perspective calibration or linear PPM
+            pixel_dist = math.hypot(x_end - x_start, y_end - y_start)
+            avg_y = (y_start + y_end) / 2.0
+            local_ppm = self.get_pixels_per_meter_at_y(avg_y)
+            meters = pixel_dist / local_ppm
 
-        # Depth-aware perspective calibration
-        avg_y = (y_start + y_end) / 2.0
-        local_ppm = self.get_pixels_per_meter_at_y(avg_y)
-
-        # Convert to physical meters
-        meters = pixel_dist / local_ppm
         # Metric speed: m/s -> km/h
         raw_speed_kmh = (meters / dt) * 3.6
 
@@ -110,11 +166,16 @@ class SpeedRadarEngine:
             return self._current_speeds.get(track_id, 0.0)
 
         # Exponential moving average filter with previous speed
-        prev_speed = self._current_speeds.get(track_id, raw_speed_kmh)
-        smoothed_speed = round(0.35 * raw_speed_kmh + 0.65 * prev_speed, 1)
+        prev_speed = self._current_speeds.get(track_id, 0.0)
+        if prev_speed <= 0.0:
+            smoothed_speed = round(raw_speed_kmh, 1)
+        else:
+            smoothed_speed = round(0.35 * raw_speed_kmh + 0.65 * prev_speed, 1)
 
         self._current_speeds[track_id] = smoothed_speed
         return smoothed_speed
+
+
 
     def get_speed(self, track_id: int) -> float:
         """Returns the latest estimated speed for a given vehicle track ID."""
