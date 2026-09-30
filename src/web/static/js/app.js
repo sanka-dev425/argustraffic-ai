@@ -2716,4 +2716,140 @@ function updateIncidentKpis(incidentsList = []) {
   if (topAlert) topAlert.innerText = total;
 }
 
+/* ==========================================================================
+   GLOBAL AUTHENTICATION INTERCEPTOR & 401 SESSION AUTO-RECOVERY
+   ========================================================================== */
+function getAuthToken() {
+  return localStorage.getItem("argus_auth_token") || "";
+}
+
+function setAuthToken(token, user) {
+  if (token) localStorage.setItem("argus_auth_token", token);
+  if (user) localStorage.setItem("argus_auth_user", JSON.stringify(user));
+}
+
+function getStoredUser() {
+  try {
+    return JSON.parse(localStorage.getItem("argus_auth_user") || "null");
+  } catch (e) {
+    return null;
+  }
+}
+
+function initAuthSession() {
+  const token = getAuthToken();
+  const user = getStoredUser();
+  if (user) {
+    currentUser = user;
+    const userRoleEl = document.getElementById("header-user-role");
+    const userNameEl = document.getElementById("header-user-name");
+    if (userRoleEl) userRoleEl.innerText = (user.role || "OPERATOR").replace("_", " ");
+    if (userNameEl) userNameEl.innerText = user.full_name || user.username || "Operator";
+  }
+}
+
+/**
+ * Universal fetch wrapper with automatic JWT Bearer header injection
+ * and global 401 Session Expired interceptor.
+ */
+async function fetchWithAuth(url, options = {}) {
+  const token = getAuthToken();
+  const headers = options.headers ? { ...options.headers } : {};
+
+  if (token && !headers["Authorization"]) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const enhancedOptions = {
+    ...options,
+    headers: headers,
+  };
+
+  try {
+    const response = await fetch(url, enhancedOptions);
+
+    if (response.status === 401) {
+      console.warn(`[AUTH-INTERCEPTOR] 401 Unauthorized encountered on ${url}`);
+      showSessionExpiredModal();
+    }
+
+    return response;
+  } catch (err) {
+    console.error(`[FETCH-ERROR] Network error on ${url}:`, err);
+    throw err;
+  }
+}
+
+function showSessionExpiredModal() {
+  const modal = document.getElementById("session-expired-modal");
+  const user = getStoredUser();
+  const userInp = document.getElementById("reauth-username");
+  const pwdInp = document.getElementById("reauth-password");
+  const errEl = document.getElementById("reauth-error");
+
+  if (userInp && user) {
+    userInp.value = user.username || "admin";
+  } else if (userInp) {
+    userInp.value = "admin";
+  }
+
+  if (pwdInp) {
+    pwdInp.value = "";
+    setTimeout(() => pwdInp.focus(), 200);
+  }
+  if (errEl) errEl.style.display = "none";
+  if (modal) modal.classList.remove("hidden");
+}
+
+async function submitReAuth() {
+  const userInp = document.getElementById("reauth-username");
+  const pwdInp = document.getElementById("reauth-password");
+  const errEl = document.getElementById("reauth-error");
+
+  const username = (userInp?.value || "admin").trim();
+  const password = pwdInp?.value || "";
+
+  if (!password) {
+    if (errEl) {
+      errEl.innerText = "Please enter your security passphrase.";
+      errEl.style.display = "block";
+    }
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/v1/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setAuthToken(data.token, data.user);
+      currentUser = data.user;
+
+      const modal = document.getElementById("session-expired-modal");
+      if (modal) modal.classList.add("hidden");
+
+      showToast({
+        incident_type: "SECURITY",
+        description: `Session re-authenticated successfully as ${currentUser?.full_name || username}.`,
+      });
+    } else {
+      const err = await res.json();
+      if (errEl) {
+        errEl.innerText = err.detail || "Authentication failed. Invalid password.";
+        errEl.style.display = "block";
+      }
+    }
+  } catch (e) {
+    if (errEl) {
+      errEl.innerText = `Network connection error: ${e.message}`;
+      errEl.style.display = "block";
+    }
+  }
+}
+
+
 

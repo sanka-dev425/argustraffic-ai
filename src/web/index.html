@@ -1869,6 +1869,36 @@
     </div>
   </div>
 
+  <!-- Session Expired Re-Authentication Modal -->
+  <div id="session-expired-modal" class="modal-backdrop hidden" style="z-index: 10000;">
+    <div class="modal-card" style="border: 1px solid #f59e0b; box-shadow: 0 0 30px rgba(245, 158, 11, 0.25);">
+      <div class="modal-header" style="border-bottom: 1px solid rgba(245, 158, 11, 0.3);">
+        <div class="modal-title" style="color: #f59e0b; display: flex; align-items: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="11" r="3"/></svg>
+          SECURITY SESSION TIMEOUT
+        </div>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 16px;">
+          Your cryptographic authentication token has expired or been revoked. Please re-enter your password to continue your operations without losing unsaved view state.
+        </p>
+        <div class="form-group">
+          <label>Username</label>
+          <input type="text" id="reauth-username" class="form-input" readonly style="background: rgba(15, 23, 42, 0.6); color: #94a3b8;" />
+        </div>
+        <div class="form-group">
+          <label>Password / Security Passphrase</label>
+          <input type="password" id="reauth-password" class="form-input" placeholder="Enter password to re-authenticate..." onkeydown="if(event.key==='Enter') submitReAuth()" />
+        </div>
+        <div id="reauth-error" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="window.location.reload()">Return to Full Login</button>
+        <button class="btn btn-primary" onclick="submitReAuth()" style="background: #f59e0b; border-color: #f59e0b; color: #000; font-weight: 700;">Re-Authenticate Session</button>
+      </div>
+    </div>
+  </div>
+
   <div id="toast-container" class="toast-container"></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="/static/js/app.js"></script>

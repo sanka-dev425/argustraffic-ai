@@ -13,7 +13,7 @@ from fastapi import APIRouter, File, Header, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 import numpy as np
 from PIL import Image
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from src.api.schemas import (
     DetectionItem,
@@ -1732,6 +1732,91 @@ async def get_section_control_violations(limit: int = Query(50, description="Max
     if not engine:
         return {"violations": []}
     return {"violations": engine.get_violations(limit=limit)}
+
+
+# ==============================================================================
+# Enterprise Storage & Disk Space Watchdog Endpoints
+# ==============================================================================
+class StoragePurgeRequest(BaseModel):
+    max_target_used_pct: float = Field(80.0, description="Target max disk utilization %")
+    dry_run: bool = Field(False, description="Preview purge candidates without deleting")
+
+
+@router.get("/storage/status", tags=["Storage & Hardware Watchdog"])
+async def get_storage_status():
+    """Returns host storage capacity, data folder footprint, and disk health status."""
+    state = get_components()
+    watchdog = state.get("storage_watchdog")
+    if not watchdog:
+        from src.core.storage_watchdog import StorageWatchdogManager
+        watchdog = StorageWatchdogManager()
+    return watchdog.get_storage_status()
+
+
+@router.post("/storage/purge", tags=["Storage & Hardware Watchdog"])
+async def trigger_storage_purge(
+    req: StoragePurgeRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Executes FIFO evidence pruning to prevent catastrophic disk saturation."""
+    from src.core.auth_rbac import Role
+    role, _, caller = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Storage purging requires Administrator privileges.")
+
+    state = get_components()
+    watchdog = state.get("storage_watchdog")
+    if not watchdog:
+        from src.core.storage_watchdog import StorageWatchdogManager
+        watchdog = StorageWatchdogManager()
+
+    result = watchdog.execute_fifo_purge(
+        max_target_used_pct=req.max_target_used_pct,
+        dry_run=req.dry_run,
+    )
+    return result
+
+
+# ==============================================================================
+# Enterprise Hardware Load Governor & VRAM Protection Endpoints
+# ==============================================================================
+class SetGovernorLoadRequest(BaseModel):
+    load_factor: float = Field(..., ge=0.0, le=1.0, description="System load factor (0.0 to 1.0)")
+
+
+@router.get("/system/governor", tags=["Storage & Hardware Watchdog"])
+async def get_hardware_governor_status():
+    """Returns real-time GPU/CPU load shedding and frame rate throttling telemetry."""
+    state = get_components()
+    gov = state.get("hardware_governor")
+    if not gov:
+        from src.core.hardware_governor import HardwareGovernor
+        gov = HardwareGovernor()
+    return gov.get_telemetry()
+
+
+@router.post("/system/governor/load", tags=["Storage & Hardware Watchdog"])
+async def set_hardware_governor_load(
+    req: SetGovernorLoadRequest,
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Updates load factor to dynamically test or enforce VRAM preservation states."""
+    from src.core.auth_rbac import Role
+    role, _, _ = _resolve_caller_identity(token, authorization)
+    if role not in (Role.SUPER_ADMIN, Role.STATION_ADMIN):
+        raise HTTPException(status_code=403, detail="Governor tuning requires Administrator privileges.")
+
+    state = get_components()
+    gov = state.get("hardware_governor")
+    if not gov:
+        from src.core.hardware_governor import HardwareGovernor
+        gov = HardwareGovernor()
+
+    gov.set_system_load_factor(req.load_factor)
+    return {"status": "SUCCESS", "telemetry": gov.get_telemetry()}
+
 
 
 

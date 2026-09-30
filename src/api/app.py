@@ -38,6 +38,8 @@ from src.core.device_manager import CameraInventoryManager
 from src.core.speed_engine import PointToPointAverageSpeedEngine
 from src.core.evidence_report import ReportTemplateManager
 from src.core.system_settings import SystemSettingsManager
+from src.core.storage_watchdog import StorageWatchdogManager
+from src.core.hardware_governor import HardwareGovernor
 from src.perception.preprocessing.weather_enhancer import OpticalWeatherEnhancer
 from src.utils.video_stream import VideoStream
 from src.utils.visualizer import FrameVisualizer
@@ -143,6 +145,8 @@ def init_app_state():
     app_state["camera_inventory"] = CameraInventoryManager()
     app_state["report_template_mgr"] = ReportTemplateManager()
     app_state["settings_mgr"] = SystemSettingsManager()
+    app_state["storage_watchdog"] = StorageWatchdogManager()
+    app_state["hardware_governor"] = HardwareGovernor()
 
     logger.info("All ArgusTraffic AI subsystems successfully initialized.")
 

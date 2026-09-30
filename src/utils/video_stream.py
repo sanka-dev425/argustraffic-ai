@@ -558,9 +558,15 @@ class HardwareAcceleratedCapture:
             self.connection_status = "ONLINE"
             return
 
+        # Harden RTSP socket timeouts (5s TCP timeout, 1MB socket buffer)
+        if isinstance(self.source, str) and (self.source.startswith("rtsp://") or self.source.startswith("rtsps://") or self.source.startswith("http://")):
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;5000000|buffer_size;1024000"
+
         try:
             src = int(self.source) if str(self.source).isdigit() else self.source
-            if os.name == "nt":
+            if isinstance(src, str) and (src.startswith("rtsp://") or src.startswith("http://")):
+                self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+            elif os.name == "nt":
                 self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
                 if not self.cap.isOpened():
                     self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
@@ -577,6 +583,7 @@ class HardwareAcceleratedCapture:
                 self.is_synthetic = False
                 self.connection_status = "ONLINE"
                 self.consecutive_failures = 0
+                self.reconnect_attempts = 0
             else:
                 # If physical capture failed and source is a known camera ID, fallback to distinct synthetic scene
                 if isinstance(self.source, str) and self.source.startswith("CAM-"):
@@ -594,6 +601,9 @@ class HardwareAcceleratedCapture:
         with self.lock:
             self.reconnect_attempts += 1
             self.last_reconnect_time = time.time()
+            # Calculate exponential backoff interval (2s, 4s, 8s, 16s, max 30s)
+            self.reconnect_interval_sec = min(30.0, 2.0 * (1.5 ** min(self.reconnect_attempts, 6)))
+
             if self.cap:
                 try:
                     self.cap.release()
@@ -603,7 +613,10 @@ class HardwareAcceleratedCapture:
 
             try:
                 src = int(self.source) if str(self.source).isdigit() else self.source
-                if os.name == "nt":
+                if isinstance(src, str) and (src.startswith("rtsp://") or src.startswith("http://")):
+                    os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;5000000|buffer_size;1024000"
+                    self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
+                elif os.name == "nt":
                     self.cap = cv2.VideoCapture(src, cv2.CAP_MSMF)
                     if not self.cap.isOpened():
                         self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
@@ -611,8 +624,10 @@ class HardwareAcceleratedCapture:
                     self.cap = cv2.VideoCapture(src, cv2.CAP_FFMPEG)
 
                 if self.cap and self.cap.isOpened():
+                    self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 2)
                     self.connection_status = "ONLINE"
                     self.consecutive_failures = 0
+                    self.reconnect_attempts = 0
                     return True
             except Exception:
                 pass
