@@ -1354,6 +1354,7 @@ async def get_time_sync_status():
 # ==============================================================================
 # 1. Wanted Vehicle Hotlist & Instant ANPR Interception
 # ==============================================================================
+@router.get("/hotlist", tags=["Hotlist & ANPR Interception"])
 @router.get("/hotlist/records", tags=["Hotlist & ANPR Interception"])
 async def get_hotlist_records():
     """Returns active national hotlist database records and lookup metrics."""

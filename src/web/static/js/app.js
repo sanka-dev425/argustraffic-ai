@@ -2787,7 +2787,7 @@ async function loadHotlistRecords() {
   const tabBtn = document.getElementById("tab-btn-hotlist");
 
   try {
-    const res = await fetch("/api/v1/hotlist");
+    const res = await fetch("/api/v1/hotlist/records");
     if (!res.ok) return;
     const data = await res.json();
     const records = data.records || [];
@@ -2979,10 +2979,17 @@ function initAuthSession() {
   const user = getStoredUser();
   if (user) {
     currentUser = user;
-    const userRoleEl = document.getElementById("header-user-role");
-    const userNameEl = document.getElementById("header-user-name");
+    const userRoleEl = document.getElementById("sidebar-user-role") || document.getElementById("header-user-role");
+    const userNameEl = document.getElementById("sidebar-user-name") || document.getElementById("header-user-name");
+    const userAvatarEl = document.getElementById("sidebar-user-avatar");
+
+    const displayName = user.full_name || user.username || "Operator";
     if (userRoleEl) userRoleEl.innerText = (user.role || "OPERATOR").replace("_", " ");
-    if (userNameEl) userNameEl.innerText = user.full_name || user.username || "Operator";
+    if (userNameEl) userNameEl.innerText = displayName;
+    if (userAvatarEl) {
+      const parts = displayName.trim().split(" ");
+      userAvatarEl.innerText = parts.length > 1 ? (parts[0][0] + parts[1][0]).toUpperCase() : displayName.substring(0, 2).toUpperCase();
+    }
   }
 }
 
