@@ -2216,7 +2216,106 @@ async def triage_incident(incident_id: str, req: IncidentTriageRequest):
     }
 
 
+# ==============================================================================
+# 29. MISSION COMMAND SHIFT HANDOVER & STORAGE GOVERNANCE
+# ==============================================================================
+class ShiftHandoverQuery(BaseModel):
+    duration_hours: float = Field(8.0, description="Shift duration in hours (e.g. 8.0, 12.0)")
+    outgoing_notes: Optional[str] = Field("All corridors nominal. Zero major disruptions.", description="Shift transition notes")
+    incoming_operator: Optional[str] = Field(None, description="Incoming operator username")
 
 
+@router.get("/operations/shift-handover", tags=["Command Center Operations"])
+async def get_shift_handover_report(
+    duration: float = Query(8.0, description="Shift duration in hours"),
+    notes: Optional[str] = Query("All corridors operational.", description="Outgoing notes"),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Generates an operational Shift Handover Summary JSON report."""
+    from src.core.shift_handover import ShiftHandoverEngine
+    role, division, username = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    engine = ShiftHandoverEngine()
+
+    report = engine.generate_shift_handover(
+        app_state=state,
+        operator_username=username,
+        operator_role=role,
+        operator_division=division,
+        duration_hours=duration,
+        outgoing_notes=notes or "All corridors operational.",
+    )
+    return report.to_dict()
 
 
+@router.get("/operations/shift-handover/export-html", tags=["Command Center Operations"])
+async def export_shift_handover_html(
+    duration: float = Query(8.0, description="Shift duration in hours"),
+    notes: Optional[str] = Query("All corridors operational.", description="Outgoing notes"),
+    token: Optional[str] = Query(None),
+    authorization: Optional[str] = Header(None),
+):
+    """Generates a standalone dark-mode printable Shift Handover Dossier HTML."""
+    from src.core.shift_handover import ShiftHandoverEngine
+    role, division, username = _resolve_caller_identity(token, authorization)
+    state = get_components()
+    engine = ShiftHandoverEngine()
+
+    report = engine.generate_shift_handover(
+        app_state=state,
+        operator_username=username,
+        operator_role=role,
+        operator_division=division,
+        duration_hours=duration,
+        outgoing_notes=notes or "All corridors operational.",
+    )
+    html_content = engine.generate_html_dossier(report)
+    return HTMLResponse(content=html_content)
+
+
+class StorageLegalHoldRequest(BaseModel):
+    file_path: str = Field(..., description="Absolute path or relative file path to place under legal hold")
+
+
+@router.post("/storage/legal-hold", tags=["Storage & Evidence Governance"])
+async def add_storage_legal_hold(req: StorageLegalHoldRequest):
+    """Places an evidence file under strict Legal Hold to prevent FIFO pruning."""
+    from src.core.storage_watchdog import StorageWatchdogManager
+    watchdog = StorageWatchdogManager()
+    watchdog.add_legal_hold(req.file_path)
+    return {
+        "success": True,
+        "message": f"Legal hold placed on {req.file_path}",
+        "total_legal_holds": len(watchdog.legal_holds),
+    }
+
+
+@router.delete("/storage/legal-hold", tags=["Storage & Evidence Governance"])
+async def remove_storage_legal_hold(req: StorageLegalHoldRequest):
+    """Removes a file from Legal Hold protection."""
+    from src.core.storage_watchdog import StorageWatchdogManager
+    watchdog = StorageWatchdogManager()
+    watchdog.remove_legal_hold(req.file_path)
+    return {
+        "success": True,
+        "message": f"Legal hold removed from {req.file_path}",
+        "total_legal_holds": len(watchdog.legal_holds),
+    }
+
+
+class StoragePurgeRequest(BaseModel):
+    max_target_used_pct: float = Field(80.0, description="Target disk utilization threshold")
+    dry_run: bool = Field(False, description="Simulate purge without actually unlinking files")
+
+
+@router.post("/storage/purge", tags=["Storage & Evidence Governance"])
+async def trigger_storage_purge(req: StoragePurgeRequest):
+    """Manually triggers FIFO unflagged evidence purge while respecting Legal Holds and DB locks."""
+    from src.core.storage_watchdog import StorageWatchdogManager
+    watchdog = StorageWatchdogManager()
+    result = watchdog.execute_fifo_purge(
+        max_target_used_pct=req.max_target_used_pct,
+        dry_run=req.dry_run,
+    )
+    return result
