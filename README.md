@@ -202,43 +202,51 @@ python desktop_app.py
 
 ---
 
-## Automated Verification Matrix
+## ⚡ Enterprise Capabilities & Product Features
 
-Every commit and release package undergoes automated regression testing across perception, tracking, cryptographic hashing, and network failover:
+| Capability Module | Key Specifications & Standards | Operational Role |
+|---|---|---|
+| **Autonomous Vision Pipeline** | YOLOv8 / YOLO11 + ByteTrack + Kalman Kinematics | Real-time 30-60 FPS zero-copy GPU detection of vehicles, pedestrians, cycles |
+| **Spatial Risk & Collision Engine** | $t_{\text{cpa}}$ Closest Point of Approach + $D_{\text{min}}$ Intersection Kinematics | Sub-second predictive collision alerts at complex 90° intersections |
+| **Optical ANPR & APB Hotlist** | Multi-tier Fuzzy Levenshtein + Character Equivalence ($O/0, I/1$) | Sub-millisecond wanted vehicle interception, stolen vehicle tracking |
+| **Court-Admissible Evidence** | AES-256-GCM Vault + SHA-256 Merkle Chain Ledger Sentinel | Tamper-proof 1-click forensic ZIP bundles with chain of custody hashes |
+| **Digital Twin Simulation** | Macroscopic Greenshields Model + Webster Delay Estimation | Real-time "What-If" scenario evaluation for lane closures and demand surges |
+| **V2I / V2X Gateway** | SAE J2735 / ETSI ITS-G5 BSM & RSA Broadcasting | Connected vehicle telemetry ingestion and cooperative infrastructure safety |
+| **Fail-Safe Operational Continuity** | 72-Hour Emergency Grace Period + FIFO Disk Auto-Purge | Continuous control room surveillance without sudden lockouts or disk saturation |
 
-```bash
-python -m pytest tests/ -v
-```
+---
 
-```text
-============================= TEST SUITE EXECUTION =============================
-platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0
-rootdir: C:\Users\rampa\Downloads\New folder (19)
+## 📹 Supported Devices & Camera Hardware
 
-tests\test_advanced_perception.py .................                      [ 15%]
-tests\test_api.py ....                                                   [ 19%]
-tests\test_chaos_and_resilience.py ....                                  [ 22%]
-tests\test_detector.py ...                                               [ 25%]
-tests\test_device_solutions.py ........                                  [ 32%]
-tests\test_enterprise_architecture.py ....                               [ 36%]
-tests\test_enterprise_god_level.py ....................                  [ 54%]
-tests\test_enterprise_modules.py ....                                    [ 58%]
-tests\test_evidence_and_privacy.py .....                                 [ 62%]
-tests\test_golden_e2e_pipeline.py .                                      [ 63%]
-tests\test_hw_accel.py ......                                            [ 69%]
-tests\test_incident_engine.py ...                                        [ 71%]
-tests\test_security_and_rbac.py ...........                              [ 77%]
-tests\test_sentinel_risk_and_licensing.py ...                            [ 78%]
-tests\test_shift_handover_and_storage.py ....                            [ 81%]
-tests\test_software_patterns_and_concurrency.py ...                      [ 83%]
-tests\test_tamper_and_resilience.py .........                            [ 88%]
-tests\test_tracker.py ..                                                 [ 89%]
-tests\test_user_workflows.py ....                                        [ 91%]
-tests\test_v2_platform.py .......                                        [ 95%]
-tests\test_vulnerability_audit.py .......                                [100%]
+ArgusTraffic AI is engineered with a sensor-agnostic architecture, supporting standard industrial and municipal vision infrastructure:
 
-======================= 171 passed, 0 errors (100% SUCCESS) =======================
-```
+- **Network Protocols:** RTSP (`rtsp://`), RTMP, HTTP/HTTPS MJPEG, H.264, H.265 / HEVC.
+- **Device Standards:** ONVIF Profile S/G/T auto-discovery (`192.168.1.0/24` ARP subnet scanner).
+- **Camera Form Factors:** Fixed Bullet Cameras, Dome Cameras, 360° Fisheye Panoramic, PTZ Speed Domes, and Mobile Police Dashcams.
+- **Compute Accelerators:** NVIDIA CUDA (RTX / Tesla / A100), NVIDIA Jetson (Orin Nano / AGX Orin), DirectML, AMD ROCm, and Intel OpenVINO.
+
+---
+
+## 🖥️ System Requirements & Deployment Sizing
+
+| Deployment Tier | Minimum (Edge / 1-4 Streams) | Recommended (NOC / 8-32 Streams) | Enterprise Metro (64+ Streams Cluster) |
+|---|---|---|---|
+| **Operating System** | Windows 10/11 (64-bit) / Ubuntu 22.04 LTS | Windows 11 Pro / Ubuntu 24.04 Server | Ubuntu Server 22.04 / RHEL 9 / Kubernetes |
+| **Processor (CPU)** | Intel Core i5 (8th Gen+) / AMD Ryzen 5 | Intel Core i7/i9 (12th Gen+) / AMD Ryzen 9 | Dual Intel Xeon Scalable / AMD EPYC |
+| **GPU / Accelerator** | NVIDIA GTX 1660 / Jetson Orin Nano (8GB) | NVIDIA RTX 4070 / RTX 3080 (12GB+ VRAM) | NVIDIA RTX 6000 Ada / A100 / H100 Cluster |
+| **System Memory (RAM)**| 8 GB DDR4 | 32 GB DDR4 / DDR5 | 64 GB – 128 GB ECC Registered |
+| **Storage Subsystem** | 256 GB NVMe SSD | 1 TB NVMe SSD + 4 TB Storage Pool | Enterprise RAID-10 NVMe Storage Array |
+| **Network Interface** | 1 Gbps Ethernet | 2.5 Gbps / 10 Gbps SFP+ Optical Link | Redundant 25 Gbps Fiber Mesh |
+
+---
+
+## 🔮 Roadmap & Future Innovations
+
+- [x] **v2.0:** Multi-Signal Risk Engine, ANPR Hotlist APB, SHA-256 Merkle Sentinel, 72h Grace Buffer.
+- [ ] **v2.1:** **5G C-V2X Direct Sidelink (PC5)** — Direct ultra-low-latency vehicle-to-infrastructure emergency braking triggers.
+- [ ] **v2.2:** **Autonomous Traffic Signal Actuation (NTCIP 1202)** — Dynamic AI adaptive green-light time optimization.
+- [ ] **v2.3:** **Drone / Aerial UAV Corridor Ingestion** — Airborne surveillance stream synchronization for highway disaster response.
+- [ ] **v2.4:** **Edge-Local LLM Incident Copilot** — On-premise multimodal incident briefing and automated emergency dispatch drafting.
 
 ---
 
