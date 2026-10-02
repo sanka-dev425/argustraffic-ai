@@ -10,8 +10,12 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11"]
+
+    env:
+      PYTHONPATH: .
 
     steps:
       - name: Checkout Repository
@@ -26,7 +30,7 @@ jobs:
       - name: Install System Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0 ffmpeg || sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 ffmpeg
+          sudo apt-get install -y libgl1 libglib2.0-0 ffmpeg xvfb libgirepository1.0-dev libcairo2-dev || sudo apt-get install -y libgl1-mesa-glx libglib2.0-0 ffmpeg
 
       - name: Install Python Dependencies
         run: |

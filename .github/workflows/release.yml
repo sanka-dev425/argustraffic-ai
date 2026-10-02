@@ -6,12 +6,15 @@ on:
       - "v*"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     name: Build & Package Windows Distribution
     runs-on: windows-latest
-    permissions:
-      contents: write
+    env:
+      PYTHONPATH: .
 
     steps:
       - name: Checkout Code
@@ -34,54 +37,58 @@ jobs:
           pip install -e .
 
       - name: Run Test Suite Verification
-        run: pytest tests/ -v
+        run: python -m pytest tests/ -v
+
+      - name: Create Output Directory
+        run: |
+          if (-not (Test-Path Output)) { New-Item -ItemType Directory -Path Output -Force }
 
       - name: Compile PyInstaller Standalone Executable
         run: pyinstaller argustraffic.spec --noconfirm
 
       - name: Compile Inno Setup Enterprise Installer
         run: |
-          if (Get-Command iscc -ErrorAction SilentlyContinue) {
-            iscc installer_inno.iss
-          } elseif (Test-Path "C:\Program Files\Inno Setup 7\ISCC.exe") {
-            & "C:\Program Files\Inno Setup 7\ISCC.exe" installer_inno.iss
-          } elseif (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe") {
-            & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer_inno.iss
-          } else {
-            & "C:\Program Files\Inno Setup 6\ISCC.exe" installer_inno.iss
+          $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source -First 1
+          if (-not $iscc) {
+            $candidates = @(
+              "C:\ProgramData\chocolatey\bin\iscc.exe",
+              "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+              "C:\Program Files\Inno Setup 6\ISCC.exe",
+              "C:\Program Files\Inno Setup 7\ISCC.exe"
+            )
+            foreach ($c in $candidates) {
+              if (Test-Path $c) { $iscc = $c; break }
+            }
           }
+          if ($iscc) {
+            Write-Host "[+] Compiling installer via $iscc..."
+            & $iscc installer_inno.iss
+          } else {
+            Write-Error "Inno Setup compiler (ISCC.exe) not found!"
+            exit 1
+          }
+
+      - name: Generate Checksums Manifest
+        run: |
+          Get-FileHash -Algorithm SHA256 Output\ArgusTraffic_Setup.exe | ForEach-Object { "$($_.Hash) *ArgusTraffic_Setup.exe" } | Out-File -Encoding ascii Output\SHA256SUMS.txt
 
       - name: Archive Portable Binary Distribution
         run: |
-          Compress-Archive -Path dist\ArgusTraffic\* -DestinationPath Output\ArgusTraffic_Portable_v2.0.0.zip
+          Compress-Archive -Path dist\ArgusTraffic\* -DestinationPath Output\ArgusTraffic_Portable_v2.0.0.zip -Force
+          Get-FileHash -Algorithm SHA256 Output\ArgusTraffic_Portable_v2.0.0.zip | ForEach-Object { "$($_.Hash) *ArgusTraffic_Portable_v2.0.0.zip" } | Out-File -Encoding ascii -Append Output\SHA256SUMS.txt
 
       - name: Create GitHub Release & Upload Binaries
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          name: "ArgusTraffic AI Enterprise v2.0.0"
+          name: "ArgusTraffic AI Enterprise ${{ github.ref_name }}"
           tag_name: ${{ github.ref_name }}
-          body: |
-            ## 🚦 ArgusTraffic AI Enterprise Command Center Release v2.0.0
-            
-            **Industrial-grade Real-Time Edge Vision Platform for Autonomous Traffic Hazard & Incident Detection.**
-            
-            ### 📦 Release Assets
-            - **`ArgusTraffic_Setup.exe`**: Complete Windows 10/11 Guided Setup Wizard with automatic VC++ and WebView2 bootstrapping.
-            - **`ArgusTraffic_Portable_v2.0.0.zip`**: Zero-dependency portable desktop binary bundle.
-            
-            ### ✨ What's New in v2.0.0
-            - **Cyber-Tactical Command Center**: High-density UI matching Figma design with live 4-Up video wall matrix.
-            - **Edge Ring-Buffer & Offline Vault**: In-memory pre-event buffer with store-and-forward sync upon link restoration.
-            - **Wanted Vehicle Hotlist & Fuzzy ANPR**: Sub-millisecond OCR-noise tolerant plate matching with immediate police interception alerts.
-            - **Optical Weather Enhancer**: Dark-channel atmospheric de-haze, low-light night boost, and headlight anti-glare bloom suppression.
-            - **SLA Escalation & Operator Accountability**: ISO/IEC 27037 non-repudiation logging with automated supervisory escalation countdowns.
-            - **National Police HQ Mesh**: Multi-station aggregation connecting Colombo, Kandy, Galle, and Jaffna with Zero-Trust division isolation.
-            - **Remote PoE Camera Self-Healing**: Automated ONVIF soft resets and SNMP PoE power-cycling for unattended highway poles.
-            - **Hardware-Accelerated Decoding**: Real-time NVDEC / VAAPI / QuickSync GPU decoding for 16+ 4K edge feeds.
-            - **100% Test Coverage**: All 100 enterprise test suites verified green without errors.
+          body_path: Output/RELEASE_NOTES.md
           files: |
             Output/ArgusTraffic_Setup.exe
             Output/ArgusTraffic_Portable_v2.0.0.zip
+            Output/SHA256SUMS.txt
           draft: false
           prerelease: false
